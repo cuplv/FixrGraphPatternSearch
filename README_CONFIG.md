@@ -1,7 +1,7 @@
 The search is deployed on an AWS instance. Send me your public key, so you can login there.
 I am filling Solr with data now.
 
-1. You can try the pipeline on your local machine:
+# 1. Test on your local machine
 
 I have prepared some mock data that you can use to test everything on your local machine:
 - Get the archive here: https://drive.google.com/open?id=0B4gcRlSUsv5FWjFianY5dFJGQ0E
@@ -35,7 +35,7 @@ To run the example solr must run:
 ```python <PATH-TO-FixrGraphPatternSearch-REPO>/fixrsearch/search.py -d /test_env/testextraction/graphs -u BarcodeEye -r BarcodeEye -z 0e59cf40d83d3da67413b0b20410d6c57cca0b9e -m com.google.zxing.client.android.camera.CameraConfigurationManager_setDesiredCameraParameters -c /test_env/testextraction/clusters -i <PATH-TO-FixrGraphIso-REPO>/build/src/fixrgraphiso/fixrgraphiso ```
 
 
-- Groum blackbox pipeline:
+# 2. Groum blackbox pipeline:
 The search tool is implemented in the <PATH-TO-FixrGraphPatternSearch-REPO>/fixrsearch/search.py script.
 
 INPUT:
@@ -108,15 +108,15 @@ If the search fails, you will get something like this:
 You have to pack this results and send it as output of the service (see later)
 
 
-2. Changes to the endpoints
+# 3. Changes to the endpoints
 
-2.1. /compute/method/groums
+## 3.1. /compute/method/groums
 
 The output should be changed as follows:
 output: { patterns: LIST { weight : <FLOAT>, pattern : <PATTERN_JSON_DOCUMENT>} }
 where <PATTERN_JSON_DOCUMENT> is the json document obtained from Solr.
 
-2.2. /query/provenance/groums
+## 3.2. /query/provenance/groums
 The endpoint takes as input the solr id of a groum document on solr and returns the associated solr document.
 It is just a facade to Solr.
 
@@ -129,5 +129,5 @@ I would rename the endpoint as /compute/method/solrid and make it general for si
 This way we can retrieve also the other kind of documents we need (e.g. clusters).
 
 
-2.3. I don't understand the secondary route of the service.
+## 3.3 I don't understand the secondary route of the service.
 
