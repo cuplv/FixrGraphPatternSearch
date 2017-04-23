@@ -4,6 +4,7 @@ Implement the index/search for clusters
 
 import logging
 import itertools
+import os
 from cStringIO import StringIO
 from fixrgraph.solr.patterns_utils import parse_clusters, parse_cluster_info
 
@@ -216,7 +217,7 @@ class ClusterIndex(object):
       if cluster_info.id in self.pattern_map:
          return self.pattern_map[cluster_info.id]
 
-      cluster_base_path = os.dirname(self.cluster_file)
+      cluster_base_path = os.path.dirname(self.cluster_file)
       current_path = os.path.join(cluster_base_path,
                                   "all_clusters",
                                   "cluster_%d" % cluster_info.id)
