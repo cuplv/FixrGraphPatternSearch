@@ -1,0 +1,14 @@
+I:  <get>.android.graphics.Point.x_int, <get>.android.graphics.Point.y_int, android.util.Log.d( 5 )
+F: /tmp/testextraction/graphs/BarcodeEye/BarcodeEye/0e59cf40d83d3da67413b0b20410d6c57cca0b9e/com.google.zxing.client.android.camera.PreviewCallback_onPreviewFrame.acdfg.bin
+F: /tmp/testextraction/graphs/BarcodeEye/BarcodeEye/0e59cf40d83d3da67413b0b20410d6c57cca0b9e/com.google.zxing.client.android.camera.CameraManager_setManualFramingRect.acdfg.bin
+F: /tmp/testextraction/graphs/BarcodeEye/BarcodeEye/0e59cf40d83d3da67413b0b20410d6c57cca0b9e/com.google.zxing.client.android.camera.CameraConfigurationManager_findBestPreviewSizeValue.acdfg.bin
+F: /tmp/testextraction/graphs/BarcodeEye/BarcodeEye/0e59cf40d83d3da67413b0b20410d6c57cca0b9e/com.google.zxing.client.android.camera.CameraConfigurationManager_setDesiredCameraParameters.acdfg.bin
+F: /tmp/testextraction/graphs/BarcodeEye/BarcodeEye/0e59cf40d83d3da67413b0b20410d6c57cca0b9e/com.google.zxing.client.android.camera.CameraManager_getFramingRect.acdfg.bin
+E
+I:  android.content.Intent.<init>, android.content.Intent.setData, android.net.Uri.parse( 5 )
+F: /tmp/testextraction/graphs/BarcodeEye/BarcodeEye/0e59cf40d83d3da67413b0b20410d6c57cca0b9e/com.github.barcodeeye.scan.CaptureActivityHandler_handleMessage.acdfg.bin
+F: /tmp/testextraction/graphs/BarcodeEye/BarcodeEye/0e59cf40d83d3da67413b0b20410d6c57cca0b9e/com.github.barcodeeye.scan.result.internal.ProductResultProcessor_getCardResults.acdfg.bin
+F: /tmp/testextraction/graphs/BarcodeEye/BarcodeEye/0e59cf40d83d3da67413b0b20410d6c57cca0b9e/com.github.barcodeeye.scan.result.internal.IsbnResultProcessor_getCardResults.acdfg.bin
+F: /tmp/testextraction/graphs/BarcodeEye/BarcodeEye/0e59cf40d83d3da67413b0b20410d6c57cca0b9e/com.github.barcodeeye.scan.result.internal.UriResultProcessor_getCardResults.acdfg.bin
+F: /tmp/testextraction/graphs/BarcodeEye/BarcodeEye/0e59cf40d83d3da67413b0b20410d6c57cca0b9e/com.github.barcodeeye.scan.result.internal.TextResultProcessor_getCardResults.acdfg.bin
+E

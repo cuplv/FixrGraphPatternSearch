@@ -1,14 +1,16 @@
-""" Test the creation of the index 
+""" Test the creation of the index
 
 """
 
+import os
 import logging
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from fixrsearch.index import IndexNode
+from fixrsearch.index import IndexNode, ClusterIndex
+import fixrsearch
 
 class TestIndex(unittest.TestCase):
 
@@ -75,4 +77,37 @@ class TestIndex(unittest.TestCase):
         self.assertTrue(index.get_all_supersets([]) == [set([1,2]),
                                                         set([3,4,5]),
                                                         set([5])])
+
+    def test_index(self):
+        test_path = os.path.dirname(fixrsearch.test.__file__)
+        index = ClusterIndex(os.path.join(test_path,"clusters.txt"))
+
+        set_1 = ["<get>.android.graphics.Point.x_int",
+                 "<get>.android.graphics.Point.y_int",
+                 "android.util.Log.d"]
+        set_2 = ["android.content.Intent.<init>", "android.content.Intent.setData",
+                 "android.net.Uri.parse"]
+        set_3 = ["android.content.Intent.<init>", "android.content.Intent.setData"]
+        set_4 = ["android.content.Intent.<init>", "android.content.Intent.setData",
+                 "cavallo"]
+
+        res = index.get_clusters(set_1, 2)
+        print res
+        self.assertTrue(len(res) == 1)
+
+        res = index.get_clusters(set_2, 2)
+        self.assertTrue(len(res) == 1)
+
+        res = index.get_clusters(set_3, 2)
+        self.assertTrue(len(res) == 1)
+
+        res = index.get_clusters(set_4, 2)
+        self.assertTrue(len(res) == 1)
+
+        res = index.get_clusters(set([]), 2)
+        self.assertTrue(len(res) == 0)
+
+        res = index.get_clusters(set([]), 0)
+        self.assertTrue(len(res) == 2)
+
 

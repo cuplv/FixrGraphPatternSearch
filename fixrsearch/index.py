@@ -3,6 +3,7 @@ Implement the index/search for clusters
 """
 
 import logging
+import itertools
 from cStringIO import StringIO
 from fixrgraph.solr.patterns_utils import parse_clusters
 
@@ -148,8 +149,13 @@ class ClusterIndex(object):
       self.m2i = {}
       self.i2m = {}
 
-   def _build_int_mappings(self):
-      methods_set = {}
+      self.cluster_file = cluster_file
+      self.methods_set = None
+      self._create_index()
+
+
+   def _build_int_mappings(self,cluster_infos):
+      methods_set = set()
       # collect the methods
       for ci in cluster_infos:
          for m in ci.methods_list:
@@ -160,7 +166,8 @@ class ClusterIndex(object):
       for m in methods_set:
          count += 1
          self.m2i[m] = count
-         self.i2m[i] = m
+         self.i2m[count] = m
+      self.methods_set = methods_set
 
    def _convert_list(self, src_list, src2dst):
       dst_list = []
@@ -179,12 +186,27 @@ class ClusterIndex(object):
       return dst_list
 
    def _create_index(self):
-      with open(cluster_file, "r") as cluster_stream:
+      with open(self.cluster_file, "r") as cluster_stream:
          cluster_infos = parse_clusters(cluster_stream)
          cluster_stream.close()
 
-      self._build_int_mappings()
+      self._build_int_mappings(cluster_infos)
 
       for c in cluster_infos:
          int_list = self._m2i_list(c.methods_list)
-         self.index.insert(int_list, c)
+         self.index_node.insert(int_list, c)
+
+   def get_clusters(self, methods_list, min_methods_in_common):
+      # Remove methods that are not in the index
+      methods_set = set(methods_list)
+      methods_set.intersection_update(self.methods_set)
+
+      # enumerate all the min_methods_in_common size
+      # subset of methods_set
+
+      clusters = set()
+      for s in itertools.combinations(methods_set, min_methods_in_common):
+         int_method_list = self._m2i_list(s)
+         new_clusters = self.index_node.get_all_supersets(int_method_list)
+         clusters.update(new_clusters)
+      return clusters
