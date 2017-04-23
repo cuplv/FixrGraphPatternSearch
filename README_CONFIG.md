@@ -119,10 +119,10 @@ where <PATTERN_JSON_DOCUMENT> is the json document obtained from Solr.
 ## 3.2. /query/provenance/groums
 The endpoint takes as input the solr id of a groum document on solr and returns the associated solr document.
 It is just a facade to Solr.
-
+```
 input: { id : <TEXT> }
 output : { groum_document : <TEXT>}
-
+```
 You just need to call solr and retrieve the document http://localhost:8983/solr/groums/get?id=<GROUM_ID>
 
 I would rename the endpoint as /compute/method/solrid and make it general for simplicity now.
