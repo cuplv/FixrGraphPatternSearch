@@ -92,7 +92,6 @@ class TestIndex(unittest.TestCase):
                  "cavallo"]
 
         res = index.get_clusters(set_1, 2)
-        print res
         self.assertTrue(len(res) == 1)
 
         res = index.get_clusters(set_2, 2)

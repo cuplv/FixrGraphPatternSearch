@@ -5,8 +5,7 @@ Implement the index/search for clusters
 import logging
 import itertools
 from cStringIO import StringIO
-from fixrgraph.solr.patterns_utils import parse_clusters
-
+from fixrgraph.solr.patterns_utils import parse_clusters, parse_cluster_info
 
 class IndexNode(object):
    """
@@ -153,6 +152,7 @@ class ClusterIndex(object):
       self.methods_set = None
       self._create_index()
 
+      self.pattern_map = {}
 
    def _build_int_mappings(self,cluster_infos):
       methods_set = set()
@@ -210,3 +210,21 @@ class ClusterIndex(object):
          new_clusters = self.index_node.get_all_supersets(int_method_list)
          clusters.update(new_clusters)
       return clusters
+
+   def get_patterns(self, cluster_info):
+
+      if cluster_info.id in self.pattern_map:
+         return self.pattern_map[cluster_info.id]
+
+      cluster_base_path = os.dirname(self.cluster_file)
+      current_path = os.path.join(cluster_base_path,
+                                  "all_clusters",
+                                  "cluster_%d" % cluster_info.id)
+      cluster_info_file = os.path.join(current_path,
+                                       "cluster_%d_info.txt" % cluster_info.id)
+
+      with open(cluster_info_file, 'r') as f:
+         pattern_list = parse_cluster_info(f)
+         f.close()
+      self.pattern_map[cluster_info.id] = pattern_list
+      return pattern_list
