@@ -155,8 +155,15 @@ def main():
 
     p = optparse.OptionParser()
     p.add_option('-g', '--groum', help="Path to the GROUM file to search")
+
+    p.add_option('-d', '--graph_dir', help="Base path containing the graphs")
+    p.add_option('-u', '--user', help="Username")
+    p.add_option('-r', '--repo', help="Repo name")
+    p.add_option('-z', '--hash', help="Hash number")
+    p.add_option('-m', '--method', help="Fully qualified method name")
+
     p.add_option('-c', '--cluster_path', help="Base path to the cluster directory")
-    p.add_option('-i', '--iso_path', help="Path to the isomorphism computation executable")
+    p.add_option('-i', '--iso_path', help="Path to the isomorphism computation exeBarcodeEye/BarcodeEye/0e59cf40d83d3da67413b0b20410d6c57cca0b9ecutable")
 
     def usage(msg=""):
         if JSON_OUTPUT:
@@ -175,9 +182,17 @@ def main():
         sys.exit(1)
     opts, args = p.parse_args()
 
-    if (not opts.groum): usage("GROUM file not provided!")
-    if (not os.path.isfile(opts.groum)):
-        usage("GROUM file %s does not exist!" % opts.groum)
+    use_groum_file = False
+    if (not opts.groum):
+        if (not opts.graph_dir): usage("Graph dir not provided!")
+        if (not os.path.isdir(opts.graph_dir)): usage("%s does not exist!" % opts.graph_dir)
+        if (not opts.user): usage("User not provided")
+        if (not opts.repo): usage("Repo not provided")
+        if (not opts.method): usage("Method not provided")
+    else:
+        use_groum_file = True
+        if (not os.path.isfile(opts.groum)):
+            usage("GROUM file %s does not exist!" % opts.groum)
     if (not opts.cluster_path):
         usage("Cluster path not provided!")
     if (not os.path.isdir(opts.cluster_path)):
@@ -187,8 +202,31 @@ def main():
         usage("Iso executable %s does not exist!" % opts.iso_path)
 
 
+    if use_groum_file:
+        groum_file = opts.groum
+    else:
+        repo_path = os.path.join(opts.graph_dir,
+                                 opts.user,
+                                 opts.repo)
+        if (opts.hash):
+            repo_path = os.path.join(repo_path, opts.hash)
+        else:
+            first_hash = None
+            for root, dirs, files in os.walk(opts.graph_dir):
+                if len(dirs) > 1:
+                    first_hash = dirs[0]
+                break
+            if first_hash is None:
+                usage("Username/repo not found!")
+            repo_path = os.path.join(repo_path, first_hash)
+        groum_file = os.path.join(repo_path, opts.method + ".acdfg.bin")
+
+        if (not os.path.isfile(groum_file)):
+            usage("Groum file %s does not exist!" % groum_file)
+
+
     search = Search(opts.cluster_path, opts.iso_path)
-    solr_results = search.search_from_groum(opts.groum, True)
+    solr_results = search.search_from_groum(groum_file, True)
 
     result = {RESULT_CODE : SEARCH_SUCCEEDED_RESULT,
               RESULTS_LIST : solr_results}
