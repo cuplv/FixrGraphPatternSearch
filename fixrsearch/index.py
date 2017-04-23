@@ -2,7 +2,7 @@
 Implement the index/search for clusters
 """
 
-
+import logging
 from cStringIO import StringIO
 from fixrgraph.solr.patterns_utils import parse_clusters
 
@@ -21,6 +21,9 @@ class IndexNode(object):
       self.key = key
       self.children = []
       self.clusters = []
+
+   def is_root(self):
+      return self.key < 0
 
    @staticmethod
    def _find_index(children, key):
@@ -62,27 +65,32 @@ class IndexNode(object):
 
    def _get_all_supersets_rec(self, int_list,
                               supersets,
-                              l, h):
-      if (l > h):
+                              l, h, found):
+      if (l > h and found):
          supersets.extend(self.clusters)
          for c in self.children:
             c._get_all_supersets_rec(int_list,
                                      supersets,
-                                     l,h)
+                                     l,h, found)
       else:
-         # Find a node that matches the current element of
-         # int_list
-         assert len(first_elem) > l
-         first_elem = int_list[l]
-         (i1,i2) = IndexNode._find_index(self.children, first_elem)
-         if i1 == i2:
-            index_elem = self.children[i1]
-            # search the next word in the trie
-            index_elem._get_all_supersets_rec(int_list, value,
-                                              l + 1, h)
-         else:
-            # There is no superset
-            return
+         match_current = ((not self.is_root() and self.key == int_list[l]) or
+                          (self.is_root()))
+         current_less_than = ((not self.is_root() and self.key <= int_list[l]) or
+                              (self.is_root()))
+         if (l == h and match_current):
+            # Consumed the word
+            self._get_all_supersets_rec(int_list, supersets, l+1, h, True)
+         elif match_current:
+            # Explore the rest of the word
+            next_elem = int_list[l+1]
+            for child in self.children:
+               if child.key <= next_elem:
+                  child._get_all_supersets_rec(int_list, supersets, l+1, h, False)
+         elif current_less_than:
+            current_elem = int_list[l]
+            for child in self.children:
+               if child.key <= current_elem:
+                  child._get_all_supersets_rec(int_list, supersets, l, h, False)
 
    def get_all_supersets(self, int_list):
       """
@@ -96,7 +104,8 @@ class IndexNode(object):
       supersets = []
       self._get_all_supersets_rec(int_list,
                                   supersets,
-                                  0, len(int_list) - 1)
+                                  -1, len(int_list) - 1,
+                                  False)
       return supersets
 
    def _print_(self, stream, ind):

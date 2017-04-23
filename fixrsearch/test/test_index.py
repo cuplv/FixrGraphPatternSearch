@@ -57,5 +57,22 @@ class TestIndex(unittest.TestCase):
         index.insert([1,3], set([1,3]))
         self.assertTrue(index == res)
 
+    def test_search_subsets(self):
+        index = IndexNode(-1)
+        self.assertTrue(index.get_all_supersets([1]) == [])
 
+        # {1,2}, {3,4,5}, {5}
+        index = IndexNode(-1)
+        index.insert([1,2], set([1,2]))
+        index.insert([3,4,5], set([3,4,5]))
+        index.insert([5], set([5]))
+
+        self.assertTrue(index.get_all_supersets([1]) == [set([1,2])])
+        self.assertTrue(index.get_all_supersets([5]) == [set([3,4,5]),set([5])])
+        self.assertTrue(index.get_all_supersets([5,7]) == [])
+        self.assertTrue(index.get_all_supersets([3,4]) == [set([3,4,5])])
+
+        self.assertTrue(index.get_all_supersets([]) == [set([1,2]),
+                                                        set([3,4,5]),
+                                                        set([5])])
 
