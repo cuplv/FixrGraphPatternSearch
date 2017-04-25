@@ -171,6 +171,7 @@ def main():
                       ERROR_MESSAGE: msg,
                       RESULTS_LIST : []}
             json.dump(result,sys.stdout)
+            sys.exit(0)
         else:
             if msg:
                 print "----%s----\n" % msg
@@ -212,8 +213,9 @@ def main():
             repo_path = os.path.join(repo_path, opts.hash)
         else:
             first_hash = None
-            for root, dirs, files in os.walk(opts.graph_dir):
-                if len(dirs) > 1:
+            # print repo_path
+            for root, dirs, files in os.walk(repo_path):
+                if len(dirs) > 0:
                     first_hash = dirs[0]
                 break
             if first_hash is None:
