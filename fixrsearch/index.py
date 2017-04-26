@@ -224,8 +224,12 @@ class ClusterIndex(object):
       cluster_info_file = os.path.join(current_path,
                                        "cluster_%d_info.txt" % cluster_info.id)
 
-      with open(cluster_info_file, 'r') as f:
-         pattern_list = parse_cluster_info(f)
-         f.close()
-      self.pattern_map[cluster_info.id] = pattern_list
+      if os.path.isfile(cluster_info_file):
+         with open(cluster_info_file, 'r') as f:
+            pattern_list = parse_cluster_info(f)
+            f.close()
+         self.pattern_map[cluster_info.id] = pattern_list
+      else:
+         logging.info("Cluster not computed %s" % cluster_info_file)
+         pattern_list = []
       return pattern_list

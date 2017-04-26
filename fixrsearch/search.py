@@ -66,8 +66,8 @@ class Search():
         # Returns patterns as Solr documents
         if solr_results:
             solr_results = []
-            for (obj_val, pattern_info) in results:
-                solr_key = _get_pattern_key(cluster_info.id,
+            for (obj_val, pattern_info, ci) in results:
+                solr_key = _get_pattern_key(ci.id,
                                             pattern_info.id,
                                             pattern_info.type)
                 solr_results.append({PATTERN_KEY : solr_key,
@@ -89,7 +89,7 @@ class Search():
 
             (is_iso, obj_val) = self.call_iso(groum_path, bin_path)
             if is_iso:
-                matching_patterns.append((obj_val, p))
+                matching_patterns.append((obj_val, p, cluster_info))
 
         return matching_patterns
 
@@ -171,6 +171,7 @@ def main():
                       ERROR_MESSAGE: msg,
                       RESULTS_LIST : []}
             json.dump(result,sys.stdout)
+            sys.exit(0)
         else:
             if msg:
                 print "----%s----\n" % msg
@@ -212,8 +213,9 @@ def main():
             repo_path = os.path.join(repo_path, opts.hash)
         else:
             first_hash = None
-            for root, dirs, files in os.walk(opts.graph_dir):
-                if len(dirs) > 1:
+            # print repo_path
+            for root, dirs, files in os.walk(repo_path):
+                if len(dirs) > 0:
                     first_hash = dirs[0]
                 break
             if first_hash is None:
