@@ -221,7 +221,12 @@ def main():
             if first_hash is None:
                 usage("Username/repo not found!")
             repo_path = os.path.join(repo_path, first_hash)
-        groum_file = os.path.join(repo_path, opts.method + ".acdfg.bin")
+
+        splitted = opts.method.split(".")
+        class_list = splitted[:-1]
+        method_list = splitted[-1:]
+        fs_name = ".".join(class_list) + "_" + "".join(method_list)
+        groum_file = os.path.join(repo_path, fs_name + ".acdfg.bin")
 
         if (not os.path.isfile(groum_file)):
             usage("Groum file %s does not exist!" % groum_file)
