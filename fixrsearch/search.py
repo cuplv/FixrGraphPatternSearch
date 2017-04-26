@@ -66,8 +66,8 @@ class Search():
         # Returns patterns as Solr documents
         if solr_results:
             solr_results = []
-            for (obj_val, pattern_info) in results:
-                solr_key = _get_pattern_key(cluster_info.id,
+            for (obj_val, pattern_info, ci) in results:
+                solr_key = _get_pattern_key(ci.id,
                                             pattern_info.id,
                                             pattern_info.type)
                 solr_results.append({PATTERN_KEY : solr_key,
@@ -89,7 +89,7 @@ class Search():
 
             (is_iso, obj_val) = self.call_iso(groum_path, bin_path)
             if is_iso:
-                matching_patterns.append((obj_val, p))
+                matching_patterns.append((obj_val, p, cluster_info))
 
         return matching_patterns
 
