@@ -11,6 +11,7 @@ import tempfile
 from threading import Timer
 from subprocess import Popen, PIPE
 import re
+import tempfile
 
 from fixrsearch.index import ClusterIndex
 import fixrgraph.annotator.protobuf.proto_acdfg_pb2 as proto_acdfg_pb2
@@ -21,11 +22,56 @@ JSON_OUTPUT = True
 RESULT_CODE="result_code"
 ERROR_MESSAGE="error_messages"
 PATTERN_KEY = "pattern_key"
+ISO_DOT = "iso_dot"
 RESULTS_LIST = "patterns"
 OBJ_VAL = "obj_val"
 SEARCH_SUCCEEDED_RESULT = 0
 ERROR_RESULT = 1
 
+FAKE_RES="""digraph isoAB { 
+rankdir=TB;
+ node[shape=box,style="filled,rounded",penwidth=2.0,fontsize=13,]; 
+ edge[ arrowhead=onormal,penwidth=2.0,]; 
+
+subgraph cluster_A { 
+rank=same;
+ 
+ style="rounded"
+ label="ACDFG A"
+"a_1" [ shape=ellipse,color=red,style=dashed,label="DataNode #1: org.droidplanner.android.droneshare.data.DroneShareDB  $r0"];
+
+"a_4" [ shape=ellipse,color=red,style=dashed,label="DataNode #4: android.database.sqlite.SQLiteDatabase  $r1"];
+
+"a_5" [  shape=box, style=filled, color=lightgray, label=" android.database.sqlite.SQLiteOpenHelper.getWritableDatabase[#1]()"];
+
+} /* Cluster A */
+subgraph cluster_B { 
+rank=same;
+ color=gray;
+ style="rounded"
+ label="ACDFG B"
+"b_7" [ shape=ellipse,color=red,style=dashed,label="DataNode #7: ollitos.platform.andr.AndrKeyValueDatabase  $r0"];
+
+"b_9" [ shape=ellipse,color=red,style=dashed,label="DataNode #9: android.database.sqlite.SQLiteDatabase  db"];
+
+"b_10" [  shape=box, style=filled, color=lightgray, label=" android.database.sqlite.SQLiteOpenHelper.getWritableDatabase[#7]()"];
+
+} /* Cluster B */
+"a_1" -> "b_7"[color=red,Damping=0.7,style=dashed]; 
+
+"a_4" -> "b_9"[color=red,Damping=0.7,style=dashed]; 
+
+"a_5" -> "b_10"[color=red,Damping=0.7,style=dashed]; 
+
+"a_1" -> "a_5"[color=green, penwidth=2];
+
+"b_7" -> "b_10"[color=green, penwidth=2];
+
+"a_5" -> "a_4"[color=blue, penwidth=2];
+
+"b_10" -> "b_9"[color=blue, penwidth=2];
+
+ } """
 
 class Search():
     def __init__(self, cluster_path, iso_path):
@@ -66,12 +112,13 @@ class Search():
         # Returns patterns as Solr documents
         if solr_results:
             solr_results = []
-            for (obj_val, pattern_info, ci) in results:
+            for (obj_val, pattern_info, iso_dot, ci) in results:
                 solr_key = _get_pattern_key(ci.id,
                                             pattern_info.id,
                                             pattern_info.type)
                 solr_results.append({PATTERN_KEY : solr_key,
-                                     OBJ_VAL : str(obj_val)})
+                                     OBJ_VAL : str(obj_val),
+                                     ISO_DOT : iso_dot})
             results = solr_results
 
         return results
@@ -87,9 +134,9 @@ class Search():
             dot_path = os.path.join(groum_path, current_path, p.dot_name)
             bin_path = dot_path.replace(".dot",".acdfg.bin")
 
-            (is_iso, obj_val) = self.call_iso(groum_path, bin_path)
+            (is_iso, obj_val, iso_dot) = self.call_iso(groum_path, bin_path)
             if is_iso:
-                matching_patterns.append((obj_val, p, cluster_info))
+                matching_patterns.append((obj_val, p, iso_dot, cluster_info))
 
         return matching_patterns
 
@@ -120,8 +167,15 @@ class Search():
 
 
     def call_iso(self, g1, g2):
-        args = [self.iso_path, g1, g2, "search_res"]
+        iso_file, iso_path = tempfile.mkstemp(suffix=".dot", prefix="computed_iso", text=True)
+        os.close(iso_file)
+
+        iso_path_args = iso_path.replace(".dot","")
+
+        args = [self.iso_path, g1, g2, iso_path_args]
         logging.debug("Command line %s" % " ".join(args))
+
+        
 
         # Kill the process after the timout expired
         def kill_function(p, cmd):
@@ -143,11 +197,18 @@ class Search():
         if (return_code != 0):
             err_msg = "Error code is %s\nCommand line is: %s\n%s" % (str(return_code), str(" ".join(args)),"\n")
             logging.error("Error executing %s\n%s" % (" ".join(args), err_msg))
-            return (False, -1.0)
+            (is_iso, objective_val, iso_dot) = (False, -1.0, "")
         else:
             logging.info("Computed isomorphism...")
             (is_iso, objective_val) = self._parse_iso_res(stdout)
-        return (is_iso, objective_val)
+            with open(iso_path, 'r') as fiso:                
+                iso_dot = fiso.read()
+                fiso.close()
+                
+        if os.path.isfile(iso_path):
+            os.remove(iso_path)
+
+        return (is_iso, objective_val, iso_dot)
 
 
 def main():
@@ -213,7 +274,6 @@ def main():
             repo_path = os.path.join(repo_path, opts.hash)
         else:
             first_hash = None
-            # print repo_path
             for root, dirs, files in os.walk(repo_path):
                 if len(dirs) > 0:
                     first_hash = dirs[0]
