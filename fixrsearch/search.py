@@ -28,51 +28,6 @@ OBJ_VAL = "obj_val"
 SEARCH_SUCCEEDED_RESULT = 0
 ERROR_RESULT = 1
 
-FAKE_RES="""digraph isoAB { 
-rankdir=TB;
- node[shape=box,style="filled,rounded",penwidth=2.0,fontsize=13,]; 
- edge[ arrowhead=onormal,penwidth=2.0,]; 
-
-subgraph cluster_A { 
-rank=same;
- 
- style="rounded"
- label="ACDFG A"
-"a_1" [ shape=ellipse,color=red,style=dashed,label="DataNode #1: org.droidplanner.android.droneshare.data.DroneShareDB  $r0"];
-
-"a_4" [ shape=ellipse,color=red,style=dashed,label="DataNode #4: android.database.sqlite.SQLiteDatabase  $r1"];
-
-"a_5" [  shape=box, style=filled, color=lightgray, label=" android.database.sqlite.SQLiteOpenHelper.getWritableDatabase[#1]()"];
-
-} /* Cluster A */
-subgraph cluster_B { 
-rank=same;
- color=gray;
- style="rounded"
- label="ACDFG B"
-"b_7" [ shape=ellipse,color=red,style=dashed,label="DataNode #7: ollitos.platform.andr.AndrKeyValueDatabase  $r0"];
-
-"b_9" [ shape=ellipse,color=red,style=dashed,label="DataNode #9: android.database.sqlite.SQLiteDatabase  db"];
-
-"b_10" [  shape=box, style=filled, color=lightgray, label=" android.database.sqlite.SQLiteOpenHelper.getWritableDatabase[#7]()"];
-
-} /* Cluster B */
-"a_1" -> "b_7"[color=red,Damping=0.7,style=dashed]; 
-
-"a_4" -> "b_9"[color=red,Damping=0.7,style=dashed]; 
-
-"a_5" -> "b_10"[color=red,Damping=0.7,style=dashed]; 
-
-"a_1" -> "a_5"[color=green, penwidth=2];
-
-"b_7" -> "b_10"[color=green, penwidth=2];
-
-"a_5" -> "a_4"[color=blue, penwidth=2];
-
-"b_10" -> "b_9"[color=blue, penwidth=2];
-
- } """
-
 class Search():
     def __init__(self, cluster_path, iso_path):
         self.cluster_path = cluster_path
@@ -85,6 +40,11 @@ class Search():
 
         self.match_status = re.compile("Isomorphism status: (.+)")
         self.match_objective = re.compile("Objective value: (.+)")
+        self.match_node_ratio = re.compile("NODETYPE: (\d+) = ([\d|\.]+)")
+        self.match_method_node = re.compile("TOT_MET_NODES: ([\d|\.]+)")
+        self.match_edge_ratio = re.compile("EDGETYPE: (\d+) = ([\d|\.]+)")
+
+
 
     def search_from_groum(self, groum_path, solr_results=True):
         # 1. Get the method list from the GROUM
@@ -136,7 +96,13 @@ class Search():
 
             (is_iso, obj_val, iso_dot) = self.call_iso(groum_path, bin_path)
             if is_iso:
-                matching_patterns.append((obj_val, p, iso_dot, cluster_info))
+                if p.type == "popular":
+                    if obj_val <= 0.95:
+                        matching_patterns.append((obj_val, p, "", cluster_info))
+                else:
+                    if obj_val >= 0.95:
+                        matching_patterns.append((obj_val, p, "", cluster_info))                
+
 
         return matching_patterns
 
@@ -145,6 +111,13 @@ class Search():
         # parse the results
         is_iso = False
         objective_val = -1.0
+
+        tot_nodes = 0.0
+        count_nodes = 0
+        tot_edges = 0.0
+        count_edges = 0
+        interesting = False
+
         for line in proc_out.split("\n"):
             res = self.match_status.match(line)
             if res:
@@ -163,6 +136,52 @@ class Search():
                     logging.debug("Objective value: %f" % objective_val)
                 except Exception as e:
                     logging.debug("Error reading the objective value")
+
+            res = self.match_node_ratio.match(line)
+            if res:
+                count_nodes += 1
+                val_str = res.group(2)
+                tot_nodes += float(val_str)
+
+            res = self.match_edge_ratio.match(line)
+            if res:
+                count_edges += 1
+                val_str = res.group(2)
+                tot_edges += float(val_str)
+
+            res = self.match_method_node.match(line)
+            if res:
+                totmet= int(res.group(1))
+                if totmet >= 3:
+                    interesting = True            
+
+        if count_nodes != 0:
+            assert tot_nodes <= count_nodes
+            obj_nodes = float(tot_nodes) / float(count_nodes)
+        else:
+            obj_nodes = 1.0
+        if count_edges != 0:
+            assert tot_edges <= count_edges
+            obj_edges = float(tot_edges) / float(count_edges)
+        else:
+            obj_edges = 1.0
+
+        if objective_val > 0.4 and is_iso:
+            objective_val = (obj_nodes + obj_edges) / 2.0
+        else:
+            is_iso = False
+            objective_val = -1.0
+
+        if not interesting:
+            is_iso = False
+            objective_val = -1.0
+
+        # match at least 75% of the pattern
+        if objective_val < 0.75:
+            is_iso = False
+            objective_val = -1.0
+
+        assert (not is_iso) or objective_val > 0.4
         return (is_iso, objective_val)
 
 
