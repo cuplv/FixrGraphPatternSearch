@@ -11,6 +11,7 @@ import tempfile
 from threading import Timer
 from subprocess import Popen, PIPE
 import re
+import tempfile
 
 from fixrsearch.index import ClusterIndex
 import fixrgraph.annotator.protobuf.proto_acdfg_pb2 as proto_acdfg_pb2
@@ -21,11 +22,11 @@ JSON_OUTPUT = True
 RESULT_CODE="result_code"
 ERROR_MESSAGE="error_messages"
 PATTERN_KEY = "pattern_key"
+ISO_DOT = "iso_dot"
 RESULTS_LIST = "patterns"
 OBJ_VAL = "obj_val"
 SEARCH_SUCCEEDED_RESULT = 0
 ERROR_RESULT = 1
-
 
 class Search():
     def __init__(self, cluster_path, iso_path):
@@ -39,6 +40,11 @@ class Search():
 
         self.match_status = re.compile("Isomorphism status: (.+)")
         self.match_objective = re.compile("Objective value: (.+)")
+        self.match_node_ratio = re.compile("NODETYPE: (\d+) = ([\d|\.]+)")
+        self.match_method_node = re.compile("TOT_MET_NODES: ([\d|\.]+)")
+        self.match_edge_ratio = re.compile("EDGETYPE: (\d+) = ([\d|\.]+)")
+
+
 
     def search_from_groum(self, groum_path, solr_results=True):
         # 1. Get the method list from the GROUM
@@ -66,12 +72,13 @@ class Search():
         # Returns patterns as Solr documents
         if solr_results:
             solr_results = []
-            for (obj_val, pattern_info) in results:
-                solr_key = _get_pattern_key(cluster_info.id,
+            for (obj_val, pattern_info, iso_dot, ci) in results:
+                solr_key = _get_pattern_key(ci.id,
                                             pattern_info.id,
                                             pattern_info.type)
                 solr_results.append({PATTERN_KEY : solr_key,
-                                     OBJ_VAL : str(obj_val)})
+                                     OBJ_VAL : str(obj_val),
+                                     ISO_DOT : iso_dot})
             results = solr_results
 
         return results
@@ -87,9 +94,15 @@ class Search():
             dot_path = os.path.join(groum_path, current_path, p.dot_name)
             bin_path = dot_path.replace(".dot",".acdfg.bin")
 
-            (is_iso, obj_val) = self.call_iso(groum_path, bin_path)
+            (is_iso, obj_val, iso_dot) = self.call_iso(groum_path, bin_path)
             if is_iso:
-                matching_patterns.append((obj_val, p))
+                if p.type == "popular":
+                    if obj_val <= 0.95:
+                        matching_patterns.append((obj_val, p, "", cluster_info))
+                else:
+                    if obj_val >= 0.95:
+                        matching_patterns.append((obj_val, p, "", cluster_info))                
+
 
         return matching_patterns
 
@@ -98,6 +111,13 @@ class Search():
         # parse the results
         is_iso = False
         objective_val = -1.0
+
+        tot_nodes = 0.0
+        count_nodes = 0
+        tot_edges = 0.0
+        count_edges = 0
+        interesting = False
+
         for line in proc_out.split("\n"):
             res = self.match_status.match(line)
             if res:
@@ -116,12 +136,65 @@ class Search():
                     logging.debug("Objective value: %f" % objective_val)
                 except Exception as e:
                     logging.debug("Error reading the objective value")
+
+            res = self.match_node_ratio.match(line)
+            if res:
+                count_nodes += 1
+                val_str = res.group(2)
+                tot_nodes += float(val_str)
+
+            res = self.match_edge_ratio.match(line)
+            if res:
+                count_edges += 1
+                val_str = res.group(2)
+                tot_edges += float(val_str)
+
+            res = self.match_method_node.match(line)
+            if res:
+                totmet= int(res.group(1))
+                if totmet >= 3:
+                    interesting = True            
+
+        if count_nodes != 0:
+            assert tot_nodes <= count_nodes
+            obj_nodes = float(tot_nodes) / float(count_nodes)
+        else:
+            obj_nodes = 1.0
+        if count_edges != 0:
+            assert tot_edges <= count_edges
+            obj_edges = float(tot_edges) / float(count_edges)
+        else:
+            obj_edges = 1.0
+
+        if objective_val > 0.4 and is_iso:
+            objective_val = (obj_nodes + obj_edges) / 2.0
+        else:
+            is_iso = False
+            objective_val = -1.0
+
+        if not interesting:
+            is_iso = False
+            objective_val = -1.0
+
+        # match at least 75% of the pattern
+        if objective_val < 0.75:
+            is_iso = False
+            objective_val = -1.0
+
+        assert (not is_iso) or objective_val > 0.4
         return (is_iso, objective_val)
 
 
     def call_iso(self, g1, g2):
-        args = [self.iso_path, g1, g2, "search_res"]
+        iso_file, iso_path = tempfile.mkstemp(suffix=".dot", prefix="computed_iso", text=True)
+        os.close(iso_file)
+
+        iso_path_args = iso_path.replace(".dot","")
+
+        args = [self.iso_path, g1, g2, iso_path_args]
         logging.debug("Command line %s" % " ".join(args))
+
+        
 
         # Kill the process after the timout expired
         def kill_function(p, cmd):
@@ -143,11 +216,18 @@ class Search():
         if (return_code != 0):
             err_msg = "Error code is %s\nCommand line is: %s\n%s" % (str(return_code), str(" ".join(args)),"\n")
             logging.error("Error executing %s\n%s" % (" ".join(args), err_msg))
-            return (False, -1.0)
+            (is_iso, objective_val, iso_dot) = (False, -1.0, "")
         else:
             logging.info("Computed isomorphism...")
             (is_iso, objective_val) = self._parse_iso_res(stdout)
-        return (is_iso, objective_val)
+            with open(iso_path, 'r') as fiso:                
+                iso_dot = fiso.read()
+                fiso.close()
+                
+        if os.path.isfile(iso_path):
+            os.remove(iso_path)
+
+        return (is_iso, objective_val, iso_dot)
 
 
 def main():
@@ -155,8 +235,15 @@ def main():
 
     p = optparse.OptionParser()
     p.add_option('-g', '--groum', help="Path to the GROUM file to search")
+
+    p.add_option('-d', '--graph_dir', help="Base path containing the graphs")
+    p.add_option('-u', '--user', help="Username")
+    p.add_option('-r', '--repo', help="Repo name")
+    p.add_option('-z', '--hash', help="Hash number")
+    p.add_option('-m', '--method', help="Fully qualified method name")
+
     p.add_option('-c', '--cluster_path', help="Base path to the cluster directory")
-    p.add_option('-i', '--iso_path', help="Path to the isomorphism computation executable")
+    p.add_option('-i', '--iso_path', help="Path to the isomorphism computation exeBarcodeEye/BarcodeEye/0e59cf40d83d3da67413b0b20410d6c57cca0b9ecutable")
 
     def usage(msg=""):
         if JSON_OUTPUT:
@@ -164,6 +251,7 @@ def main():
                       ERROR_MESSAGE: msg,
                       RESULTS_LIST : []}
             json.dump(result,sys.stdout)
+            sys.exit(0)
         else:
             if msg:
                 print "----%s----\n" % msg
@@ -175,9 +263,17 @@ def main():
         sys.exit(1)
     opts, args = p.parse_args()
 
-    if (not opts.groum): usage("GROUM file not provided!")
-    if (not os.path.isfile(opts.groum)):
-        usage("GROUM file %s does not exist!" % opts.groum)
+    use_groum_file = False
+    if (not opts.groum):
+        if (not opts.graph_dir): usage("Graph dir not provided!")
+        if (not os.path.isdir(opts.graph_dir)): usage("%s does not exist!" % opts.graph_dir)
+        if (not opts.user): usage("User not provided")
+        if (not opts.repo): usage("Repo not provided")
+        if (not opts.method): usage("Method not provided")
+    else:
+        use_groum_file = True
+        if (not os.path.isfile(opts.groum)):
+            usage("GROUM file %s does not exist!" % opts.groum)
     if (not opts.cluster_path):
         usage("Cluster path not provided!")
     if (not os.path.isdir(opts.cluster_path)):
@@ -187,8 +283,36 @@ def main():
         usage("Iso executable %s does not exist!" % opts.iso_path)
 
 
+    if use_groum_file:
+        groum_file = opts.groum
+    else:
+        repo_path = os.path.join(opts.graph_dir,
+                                 opts.user,
+                                 opts.repo)
+        if (opts.hash):
+            repo_path = os.path.join(repo_path, opts.hash)
+        else:
+            first_hash = None
+            for root, dirs, files in os.walk(repo_path):
+                if len(dirs) > 0:
+                    first_hash = dirs[0]
+                break
+            if first_hash is None:
+                usage("Username/repo not found!")
+            repo_path = os.path.join(repo_path, first_hash)
+
+        splitted = opts.method.split(".")
+        class_list = splitted[:-1]
+        method_list = splitted[-1:]
+        fs_name = ".".join(class_list) + "_" + "".join(method_list)
+        groum_file = os.path.join(repo_path, fs_name + ".acdfg.bin")
+
+        if (not os.path.isfile(groum_file)):
+            usage("Groum file %s does not exist!" % groum_file)
+
+
     search = Search(opts.cluster_path, opts.iso_path)
-    solr_results = search.search_from_groum(opts.groum, True)
+    solr_results = search.search_from_groum(groum_file, True)
 
     result = {RESULT_CODE : SEARCH_SUCCEEDED_RESULT,
               RESULTS_LIST : solr_results}
