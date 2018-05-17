@@ -1,0 +1,15 @@
+version: '3'
+services:
+  biggroum_solr:
+    image: biggroum_solr
+    ports:
+    - "30071:8983"
+    hostname : biggroum_solr
+  biggroum_search:
+    image: biggroum_search
+    ports:
+    - "30072:8081"
+    - "30073:5000"
+    hostname: biggroum_search
+    stdin_open: true
+    tty: true
