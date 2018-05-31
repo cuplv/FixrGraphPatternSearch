@@ -18,16 +18,16 @@ RUN curl --retry 3 http://archive.apache.org/dist/lucene/solr/$SOLR_VERSION/$SOL
 RUN mv /opt/$SOLR /opt/solr
 RUN useradd --home-dir /opt/solr --comment "Solr Server" solr
 
-RUN curl -L https://github.com/circulosmeos/gdown.pl/raw/master/gdown.pl -o gdown.pl
-
-RUN cd /opt/solr \
-    && perl /gdown.pl $SOLR_CORE_URL $SOLR_CORE_ARCHIVE \
-    && tar xjf $SOLR_CORE_ARCHIVE \
-    && rm -rf $SOLR_CORE_ARCHIVE
-RUN rm gdown.pl
+# RUN curl -L https://github.com/circulosmeos/gdown.pl/raw/master/gdown.pl -o gdown.pl
+# RUN cd /opt/solr \
+#     && perl /gdown.pl $SOLR_CORE_URL $SOLR_CORE_ARCHIVE \
+#     && tar xjf $SOLR_CORE_ARCHIVE \
+#     && rm -rf $SOLR_CORE_ARCHIVE
+# RUN rm gdown.pl
 
 RUN chown -R solr:solr /opt/solr
-
+RUN mkdir /persist
+RUN chown -R solr:solr /persist 
 RUN apt-get update
 RUN apt-get install -y unzip openjdk-8-jdk lsof
 
@@ -36,4 +36,5 @@ USER solr
 EXPOSE 8983
 WORKDIR /opt/solr
 
-CMD ["bin/solr", "start", "-f", "-d", "server/", "-s", "/opt/solr/solr_groum/solr"]
+# opt/solr/solr_groum/solr
+CMD ["bin/solr", "start", "-f", "-d", "server/", "-s", "/persistent/solr"]
