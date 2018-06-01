@@ -37,4 +37,4 @@ EXPOSE 8983
 WORKDIR /opt/solr
 
 # opt/solr/solr_groum/solr
-CMD ["bin/solr", "start", "-f", "-d", "server/", "-s", "/persistent/solr"]
+CMD ["bin/solr", "start", "-f", "-d", "server/", "-s", "/persist/solr"]

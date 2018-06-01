@@ -80,20 +80,10 @@ RUN usermod -a -G admin biggroum
 RUN sudo chsh -s /bin/bash biggroum
 
 RUN sudo apt-get install perl bzip2
+RUN pip install requests
 
 USER biggroum
 WORKDIR /home/biggroum
-
-RUN echo "test"
-
-# ENV SEARCH_DATA_URL https://drive.google.com/file/d/1ivVhP5aIeUYBZAV_hdTTIdXirz3XsvUi
-# ENV SEARCH_ARCHIVE_NAME sitevisit_extraction.tar.gz2
-
-# RUN curl -L https://github.com/circulosmeos/gdown.pl/raw/master/gdown.pl -o gdown.pl \
-#     && perl ./gdown.pl $SEARCH_DATA_URL $SEARCH_ARCHIVE_NAME \
-#     && tar xjf $SEARCH_ARCHIVE_NAME \
-#     && rm -rf $SEARCH_ARCHIVE_NAME \
-#     && rm gdown.pl
 
 RUN mkdir .ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
@@ -114,63 +104,73 @@ RUN cd biggroum/FixrGraphIso \
 RUN protoc -I=./biggroum/FixrGraphExtractor/src/main/protobuf --python_out=./biggroum/python/fixrgraph/annotator/protobuf ./biggroum/FixrGraphExtractor/src/main/protobuf/proto_acdfg.proto \
     && protoc -I=./biggroum/FixrGraphExtractor/src/main/protobuf --python_out=./biggroum/python/fixrgraph/annotator/protobuf ./biggroum/FixrGraphExtractor/src/main/protobuf/proto_iso.proto
 
-
 # Include the project in the PYTHONPATH variable
 ENV PYTHONPATH=/home/biggroum/biggroum/python:$PYTHONPATH
 ENV PYTHONPATH=/home/biggroum/biggroum/FixrGraphPatternSearch:$PYTHONPATH
 
-# Set up test extraction data
-RUN curl -L https://github.com/circulosmeos/gdown.pl/raw/master/gdown.pl -o gdown.pl \
-    && perl ./gdown.pl https://drive.google.com/file/d/0B4gcRlSUsv5FWjFianY5dFJGQ0E test_env.tar.gz \
-    && tar xzf test_env.tar.gz \
-    && rm -rf test_env.tar.gz \
-    && rm gdown.pl
-
-# Open the FixrService-Backend port
-EXPOSE 80
-
 USER root
+
+RUN mkdir /persist
+RUN chown -R biggroum:admin /persist
+
+EXPOSE 8081
+EXPOSE 5000
+
+RUN usermod -a -G sudo biggroum
+RUN sed -s "s:%sudo:sudo:" -i /etc/sudoers
+RUN echo "biggroum ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+RUN sudo pip install requests
 
 RUN apt-get remove nodejs npm nodejs-legacy
 RUN curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
-RUN  sudo apt-get install -y nodejs
-
-
+RUN sudo apt-get install -y nodejs
 RUN sudo npm cache clean -f
 RUN sudo npm install -g npm
 RUN sudo npm install -g n
 RUN sudo n stable
 
 
-RUN cd /home/biggroum/biggroum/fixr_groum_search_frontend \
-    && pip install -r requirements.txt \
-    && npm install -g webpack \
-    && npm install
-
 USER biggroum
 WORKDIR /home/biggroum
-RUN cd /home/biggroum/biggroum/fixr_groum_search_frontend \
-    && webpack
-
-USER root
-EXPOSE 8081
-EXPOSE 5000 
-
-USER biggroum
-WORKDIR /home/biggroum
-
 
 # Workaround  - remove plugins not working with new scala version (to fix in repo)
-RUN cd /home/biggroum/biggroum && git pull
-
+RUN cd /home/biggroum/biggroum \
+    && git pull \
+    && git submodule update --init --recursive
 
 RUN cd /home/biggroum/biggroum/FixrService-Backend && sbt stage
 
-RUN ls /home/biggroum/biggroum/FixrService-Backend
+RUN cd /home/biggroum/biggroum/ \
+    && git pull \
+    && cd fixr_groum_search_frontend \
+    && sudo chown -R biggroum:admin . \
+    && pip install -r requirements.txt
 
-# cd /home/biggroum/biggroum/fixr_groum_search_frontend && python   app.py
+RUN echo "Webapp" \
+    && cd /home/biggroum/biggroum \
+    && git pull \
+    && git submodule update --init --recursive \
+    && cd fixr_groum_search_frontend \
+    && npm install webpack@1.12.12 \
+    && npm install babel-preset-env \
+    && npm install babel-preset-stage-3 \
+    && npm install babel-loader \
+    && npm install babel-core \
+    && npm install
 
-# overwrite this with 'CMD []' in a dependent Dockerfile
-WORKDIR /home/biggroum/biggroum/FixrService-Backend/target/universal/stage/bin
-CMD ["/bin/bash"]
-#nohup ./fixrservice-backend &
+#    && sudo npm install -g react-svg-pan-zoom \
+
+RUN cd /home/biggroum/biggroum/fixr_groum_search_frontend \
+    && echo "Compiling web interface..." \
+    && npm run build
+
+
+
+RUN cat /dev/zero | ssh-keygen -q -N "" -f ~/.ssh/id_rsa \
+    && cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys \
+    && echo "StrictHostKeyChecking no" >> ~/.ssh/config
+
+COPY wrapper_start.bash wrapper_start.bash
+
+ENTRYPOINT ["/bin/bash", "wrapper_start.bash"]
