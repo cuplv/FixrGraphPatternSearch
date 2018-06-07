@@ -1,8 +1,8 @@
-To build the image:
-    ```docker build -t biggroum_solr .```
+- build the image
+```docker build -t biggroum_solr .```
 
-To run the solr server:
+- download the data for solr from google drive
+```bash download_data.bash```
 
-```docker run -d -p 30071:8983 --name=biggroum_solr biggroum_solr```
-
-```docker run -d -p 30071:8983 --mount type=bind,source=/Users/sergiomover/works/projects/muse/bck/solr_groum,target=/persist --name=biggroum_solr biggroum_solr```
+- run the docker container
+```docker run -d -p 30071:8983 --mount type=bind,source=./solr_groum,target=/persist --name=biggroum_solr biggroum_solr```
