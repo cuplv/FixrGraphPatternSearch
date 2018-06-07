@@ -5,7 +5,8 @@ services:
     ports:
     - "30071:8983"
     hostname : biggroum_solr
-    volumes: ../docker_solr/solr_groum:/persist
+    volumes:
+    - ../docker_solr/solr_groum:/persist
   biggroum_search:
     image: biggroum_search
     ports:
@@ -14,5 +15,6 @@ services:
     links:
     - biggroum_solr
     hostname: biggroum_search
-    volumes: ../docker_search/sitevisit_extraction:/persist
+    volumes:
+    - ../docker_search/sitevisit_extraction:/persist
 

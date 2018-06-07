@@ -15,3 +15,5 @@ The services should be up. Run the tests to see if everything is ok:
 
 
 `docker-compose-global.yml` contains the setup used when using the images deployed on the HELICON inftrastructure.
+
+To run it rename it to docker-compose.yml
