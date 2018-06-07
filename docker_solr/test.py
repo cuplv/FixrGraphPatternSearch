@@ -26,9 +26,8 @@ address="%s:%s" % (opts.address, opts.port)
 
 r = requests.get("http://%s/solr/groums/get?id=69/popular/1" % address)
 
-assert r.status_code == 200
+test(r.status_code == 200)
 json_res = r.json()
-
 test(u"doc" in json_res)
 test("doc_type_sni" in json_res[u"doc"])
 test(json_res[u"doc"][u"doc_type_sni"] == "pattern")
