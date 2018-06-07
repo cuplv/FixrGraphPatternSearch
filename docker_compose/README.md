@@ -13,3 +13,5 @@ The services should be up. Run the tests to see if everything is ok:
 
 ```cd ../docker_search && python test.py -a localhost -p 30072```
 
+
+`docker-compose-global.yml` contains the setup used when using the images deployed on the HELICON inftrastructure.
