@@ -56,14 +56,8 @@ r = requests.post("http://%s/compute/method/groums" % address, json=data)
 test(r.status_code == 200)
 json_res = r.json()
 
-print r.json()
-
-test(u"doc" in json_res)
-test("doc_type_sni" in json_res[u"doc"])
-test(json_res[u"doc"][u"doc_type_sni"] == "pattern")
-test("type_sni" in json_res[u"doc"])
-test(json_res[u"doc"][u"type_sni"] == "popular")
-
+test(u"patterns" in json_res)
+test(len(json_res[u"patterns"]) > 0)
 
 print "SUCCESS"
 
