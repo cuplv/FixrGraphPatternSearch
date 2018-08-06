@@ -1,16 +1,21 @@
 FROM ubuntu:16.04
 
-
 ################################################################################
 # Install dependencies
 ################################################################################
 
 # openssh-server, gcc, make, sudo, cmake, apt-transport-https
 RUN apt-get update -qq -y \
-    && apt-get install -y openssh-server gcc make sudo cmake apt-transport-https software-properties-common binutils g++ glpk-utils libglpk-dev python-cffi libssl-dev time binutils ant python python-pip python-sqlalchemy curl wget \
+    && apt-get install -y openssh-server gcc make sudo cmake \
+    apt-transport-https software-properties-common binutils \
+    g++ glpk-utils libglpk-dev python-cffi libssl-dev time \
+    ant python python-pip python-sqlalchemy curl wget \
+    unzip autoconf automake libtool \
+    perl bzip2 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Install libgit2 library
 RUN sudo mkdir app \
     && cd app \
     && curl -OL https://github.com/libgit2/libgit2/archive/v0.27.0.tar.gz \
@@ -22,17 +27,18 @@ RUN sudo mkdir app \
     && cmake --build . --target install \
     && sudo ldconfig \
     && rm -rf /app
+
 RUN sudo pip install nose six pygit2 protobuf
 
 # Oracle Java Jdk 8
 RUN \
-  echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
+  echo oracle-java8-installer \
+  shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
   add-apt-repository -y ppa:webupd8team/java && \
   apt-get update && \
   apt-get install -y oracle-java8-installer && \
   rm -rf /var/lib/apt/lists/* && \
   rm -rf /var/cache/oracle-jdk7-installer
-# Define commonly used JAVA_HOME variable
 ENV JAVA_HOME /usr/lib/jvm/java-8-oracle
 
 # sbt
@@ -42,7 +48,6 @@ RUN sudo apt-get update
 RUN sudo apt-get install -y sbt
 
 # Google protobuffer
-RUN sudo apt-get install -y curl unzip autoconf automake libtool
 RUN curl -OL https://github.com/google/protobuf/releases/download/v3.5.0/protobuf-all-3.5.0.zip \
     && unzip protobuf-all-3.5.0.zip \
     && cd protobuf-3.5.0 \
@@ -79,8 +84,22 @@ RUN groupadd admin
 RUN usermod -a -G admin biggroum
 RUN sudo chsh -s /bin/bash biggroum
 
-RUN sudo apt-get install perl bzip2
-RUN pip install requests
+# Filesystem
+RUN mkdir /persist
+RUN chown -R biggroum:admin /persist
+
+RUN usermod -a -G sudo biggroum
+RUN sed -s "s:%sudo:sudo:" -i /etc/sudoers
+RUN echo "biggroum ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+EXPOSE 8081
+EXPOSE 5000
+
+
+################################################################################
+# Now in userspace
+#
+################################################################################
 
 USER biggroum
 WORKDIR /home/biggroum
@@ -101,71 +120,18 @@ RUN cd biggroum/FixrGraphIso \
     && cd ../../
 
 # Build the protobuffer files
-RUN protoc -I=./biggroum/FixrGraphExtractor/src/main/protobuf --python_out=./biggroum/python/fixrgraph/annotator/protobuf ./biggroum/FixrGraphExtractor/src/main/protobuf/proto_acdfg.proto \
-    && protoc -I=./biggroum/FixrGraphExtractor/src/main/protobuf --python_out=./biggroum/python/fixrgraph/annotator/protobuf ./biggroum/FixrGraphExtractor/src/main/protobuf/proto_iso.proto
+RUN protoc -I=./biggroum/FixrGraphExtractor/src/main/protobuf \
+    --python_out=./biggroum/python/fixrgraph/annotator/protobuf \
+    ./biggroum/FixrGraphExtractor/src/main/protobuf/proto_acdfg.proto \
+    && protoc -I=./biggroum/FixrGraphExtractor/src/main/protobuf \
+    --python_out=./biggroum/python/fixrgraph/annotator/protobuf \
+    ./biggroum/FixrGraphExtractor/src/main/protobuf/proto_iso.proto
 
 # Include the project in the PYTHONPATH variable
 ENV PYTHONPATH=/home/biggroum/biggroum/python:$PYTHONPATH
 ENV PYTHONPATH=/home/biggroum/biggroum/FixrGraphPatternSearch:$PYTHONPATH
 
-USER root
-
-RUN mkdir /persist
-RUN chown -R biggroum:admin /persist
-
-EXPOSE 8081
-EXPOSE 5000
-
-RUN usermod -a -G sudo biggroum
-RUN sed -s "s:%sudo:sudo:" -i /etc/sudoers
-RUN echo "biggroum ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
-RUN sudo pip install requests
-
-RUN apt-get remove nodejs npm nodejs-legacy
-RUN curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
-RUN sudo apt-get install -y nodejs
-RUN sudo npm cache clean -f
-RUN sudo npm install -g npm
-RUN sudo npm install -g n
-RUN sudo n stable
-
-
-USER biggroum
-WORKDIR /home/biggroum
-
-# Workaround  - remove plugins not working with new scala version (to fix in repo)
-RUN cd /home/biggroum/biggroum \
-    && git pull \
-    && git submodule update --init --recursive
-
 RUN cd /home/biggroum/biggroum/FixrService-Backend && sbt stage
-
-RUN cd /home/biggroum/biggroum/ \
-    && git pull \
-    && cd fixr_groum_search_frontend \
-    && sudo chown -R biggroum:admin . \
-    && pip install -r requirements.txt
-
-RUN echo "Webapp" \
-    && cd /home/biggroum/biggroum \
-    && git pull \
-    && git submodule update --init --recursive \
-    && cd fixr_groum_search_frontend \
-    && npm install webpack@1.12.12 \
-    && npm install babel-preset-env \
-    && npm install babel-preset-stage-3 \
-    && npm install babel-loader \
-    && npm install babel-core \
-    && npm install
-
-#    && sudo npm install -g react-svg-pan-zoom \
-
-RUN cd /home/biggroum/biggroum/fixr_groum_search_frontend \
-    && echo "Compiling web interface..." \
-    && npm run build
-
-
 
 RUN cat /dev/zero | ssh-keygen -q -N "" -f ~/.ssh/id_rsa \
     && cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys \
