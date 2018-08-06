@@ -35,7 +35,7 @@ services:
     - "30071:8983"
     hostname : biggroum_solr
     volumes:
-    - ../docker_solr/solr_groum:/persist
+    - ../solr_groum:/persist
 
   biggroum_search:
     image: ${SEARCH_IMAGE}
@@ -45,7 +45,7 @@ services:
     - biggroum_solr
     hostname: biggroum_search
     volumes:
-    - ../docker_search/sitevisit_extraction:/persist
+    - ../sitevisit_extraction:/persist
 
   srcfinder:
     image: ${SRC_IMAGE}

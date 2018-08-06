@@ -92,6 +92,8 @@ RUN usermod -a -G sudo biggroum
 RUN sed -s "s:%sudo:sudo:" -i /etc/sudoers
 RUN echo "biggroum ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
+RUN sudo pip install requests
+
 EXPOSE 8081
 EXPOSE 5000
 

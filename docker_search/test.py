@@ -4,9 +4,22 @@ import optparse
 import sys
 
 
-def test(condition):
+def test(json_file, condition):
+
+    out_file = "res_json.json"
+
     if not condition:
-        print "FAILURE!"
+        print("FAILURE!\n")
+
+        if (r.status_code == 200):
+            json_res = r.json()
+            with open(out_file, "w") as json_file:
+                json.dump(json_res, json_file)
+                json_file.close()
+            print("Json reply written in %s" % out_file)
+        else:
+            r.raise_for_status()
+
         sys.exit(1)
 
 p = optparse.OptionParser()
@@ -62,24 +75,28 @@ address="%s:%s" % (opts.address, opts.port)
 data = {
     "user" : "anyremote",
     "repo" : "anyremote-android-client",
-    "commit_id" : "bc762d918fc38903daa55eaa8e481cd9c12b5bd9",
-    "method" : "anyremote.client.android.TextScreen.commandAction"
+    "class" :  "anyremote.client.android.TextScreen",
+    "method" : "commandAction"
 }
+#    "commit_id" : "bc762d918fc38903daa55eaa8e481cd9c12b5bd9",
 #TextScreen.java
+# 213
+
+
+# anyremote/anyremote-android-client
+# bc762d918fc38903daa55eaa8e481cd9c12b5bd9
+# anyremote.client.android.TextScreen.commandAction
+# TextScreen.java
 # 213
 
 
 r = requests.post("http://%s/compute/method/groums" % address, json=data)
 
-test(r.status_code == 200)
-json_res = r.json()
+test(r.status_code == 200, r)
 
-with open("res_json.json", "w") as json_file:
-    json.dump(json_res, json_file)
-    json_file.close()
 
-test(u"patterns" in json_res)
-test(len(json_res[u"patterns"]) > 0)
+test(u"patterns" in r.json(), r)
+test(len((r.json())[u"patterns"]) > 0, r)
 
 print "SUCCESS"
 
