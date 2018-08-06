@@ -45,16 +45,38 @@ address="%s:%s" % (opts.address, opts.port)
 #     "class" : "org.droidplanner.android.droneshare.data.DroneShareDB",
 #     "method" : "getDataToUpload",
 # }
+# data = {
+#     "user" : "tommyd3mdi",
+#     "repo" : "c-geo-opensource",
+#     "class" : "cgeo.geocaching.apps.cache.navi.NavigonApp",
+#     "method" : "invoke",
+# }
+
+# data = {
+#     "user" : "hardikp888",
+#     "repo" : "my-daily-quest",
+#     "class" : "br.quest.PreferenceManager",
+#     "method" : "savePreference",
+# }
+
 data = {
-    "user" : "tommyd3mdi",
-    "repo" : "c-geo-opensource",
-    "class" : "cgeo.geocaching.apps.cache.navi.NavigonApp",
-    "method" : "invoke",
+    "user" : "anyremote",
+    "repo" : "anyremote-android-client",
+    "commit_id" : "bc762d918fc38903daa55eaa8e481cd9c12b5bd9",
+    "method" : "anyremote.client.android.TextScreen.commandAction"
 }
+#TextScreen.java
+# 213
+
+
 r = requests.post("http://%s/compute/method/groums" % address, json=data)
 
 test(r.status_code == 200)
 json_res = r.json()
+
+with open("res_json.json", "w") as json_file:
+    json.dump(json_res, json_file)
+    json_file.close()
 
 test(u"patterns" in json_res)
 test(len(json_res[u"patterns"]) > 0)

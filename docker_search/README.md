@@ -5,7 +5,7 @@
 ```bash download_data.bash```
 
 - run the docker container:
-```docker run -di -p 30072:8081 -p 30073:5000 --link=biggroum_solr --mount type=bind,source=./sitevisit_extraction,target=/persist --name=biggroum_search biggroum_search```
+```SEARCH_GROUM_DIR=`cd ../sitevisit_extraction && pwd` && docker run -di -p 30072:8081 -p 30073:5000 --link=biggroum_solr --mount type=bind,source=$SEARCH_GROUM_DIR,target=/persist --name=biggroum_search biggroum_search```
 
 
 - test the search API (it takes some time)

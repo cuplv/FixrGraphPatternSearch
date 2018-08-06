@@ -98,9 +98,11 @@ class Search():
             if is_iso:
                 if p.type == "popular":
                     if obj_val <= 0.95:
+                        logging.debug("Found popular pattern...")
                         matching_patterns.append((obj_val, p, "", cluster_info))
                 else:
                     if obj_val >= 0.95:
+                        logging.debug("Found isolated pattern...")
                         matching_patterns.append((obj_val, p, "", cluster_info))                
 
 
