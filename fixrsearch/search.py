@@ -14,8 +14,8 @@ import re
 import tempfile
 
 from fixrsearch.index import ClusterIndex
-import fixrgraph.annotator.protobuf.proto_acdfg_pb2 as proto_acdfg_pb2
-import fixrgraph.annotator.protobuf.proto_search_pb2 as proto_search_pb2
+from fixrgraph.annotator.protobuf.proto_acdfg_pb2 import Acdfg
+from fixrgraph.annotator.protobuf.proto_search_pb2 import SearchResults
 from fixrgraph.solr.import_patterns import _get_pattern_key
 
 JSON_OUTPUT = True
@@ -49,11 +49,11 @@ class Search():
 
 
 
-    def search_from_groum(self, groum_path, solr_results=True):
+    def search_from_groum(self, groum_path):
         logging.debug("Search for groum %s" % groum_path)
 
         # 1. Get the method list from the GROUM
-        acdfg = proto_acdfg_pb2.Acdfg()
+        acdfg = Acdfg()
         with open(groum_path,'rb') as fgroum:
             acdfg.ParseFromString(fgroum.read())
             method_list = []
@@ -73,17 +73,17 @@ class Search():
 
             results.extend(results_cluster)
 
-        # Returns patterns as Solr documents
-        if solr_results:
-            solr_results = []
-            for (obj_val, pattern_info, iso_dot, ci) in results:
-                solr_key = _get_pattern_key(ci.id,
-                                            pattern_info.id,
-                                            pattern_info.type)
-                solr_results.append({PATTERN_KEY : solr_key,
-                                     OBJ_VAL : str(obj_val),
-                                     ISO_DOT : iso_dot})
-            results = solr_results
+        # # Returns patterns as Solr documents
+        # if solr_results:
+        #     solr_results = []
+        #     for (obj_val, pattern_info, iso_dot, ci) in results:
+        #         solr_key = _get_pattern_key(ci.id,
+        #                                     pattern_info.id,
+        #                                     pattern_info.type)
+        #         solr_results.append({PATTERN_KEY : solr_key,
+        #                              OBJ_VAL : str(obj_val),
+        #                              ISO_DOT : iso_dot})
+        #     results = solr_results
 
         return results
 
@@ -141,7 +141,7 @@ class Search():
             logging.info("Search finished...")
 
             # TODO: Read an construct result
-            # result = TODO_ERROR
+            result = self.formatOutput(search_path)
 
         if os.path.isfile(search_path):
             os.remove(search_path)
@@ -149,20 +149,110 @@ class Search():
         return result
 
 
-    def formatOutput(search_path):
-        results = proto_search_pb2.SearchResults()
+    def formatOutput(self, search_path):
+        results = {}
+
+        proto_results = SearchResults()
         with open(search_path,'rb') as fsearch:
-            results.ParseFromString(fsearch.read())
+            proto_results.ParseFromString(fsearch.read())
             fsearch.close()
+
+        # Read the method names
+        proto_lattice = proto_results.lattice
+        method_names = []
+        for proto_name in proto_lattice.method_names:
+            method_names.append(proto_name)
+        results["method_names"] = method_names
+
+        id2bin = {}
+        for acdfbBin in proto_lattice.bins:
+            id2bin[acdfbBin.id] = acdfbBin
+
+
+        # Process each single result
+        search_res_list = []
+        for proto_search in proto_results.results:
+            search_res = {}
+            subsumes_ref = True
+            subsumes_anom = True
+
+            if (proto_search.type == SearchResults.SearchResult.CORRECT):
+                search_res["type"] = "CORRECT"
+                subsumes_ref = True
+                subsumes_anom = True
+            elif (proto_search.type ==
+                  SearchResults.SearchResult.CORRECT_SUBSUMED):
+                search_res["type"] = "CORRECT_SUBSUMED"
+                subsumes_ref = False
+                subsumes_anom = True
+            elif (proto_search.type ==
+                  SearchResults.SearchResult.ANOMALOUS_SUBSUMED):
+                search_res["type"] = "ANOMALOUS_SUBSUMED"
+                subsumes_ref = False
+                subsumes_anom = False
+            elif (proto_search.type ==
+                  SearchResults.SearchResult.ISOLATED_SUBSUMED):
+                search_res["type"] = "ISOLATED_SUBSUMED"
+                subsumes_ref = False
+                subsumes_anom = False
+            elif (proto_search.type ==
+                  SearchResults.SearchResult.ISOLATED_SUBSUMING):
+                search_res["type"] = "ISOLATED_SUBSUMING"
+                subsumes_anom = False
+
+            # Process the reference pattern
+            bin_id = proto_search.referencePatternId
+            ref_bin = id2bin[bin_id]
+            bin_res = self.format_bin(ref_bin,
+                                      proto_search.isoToReference,
+                                      subsumes_ref)
+            search_res["popular"] = bin_res
+
+            # Process the anomalous
+            if (proto_search.HasField("anomalousPatternId") and
+                proto_search.HasField("isoToAnomalous")):
+                bin_id = proto_search_res.anomalousPatternId
+                ref_bin = id2bin[bin_id]
+                bin_res = self.format_bin(ref_bin,
+                                          proto_search.isoToAnomalous,
+                                          subsumes_ref)
+                search_res["anomalous"] = bin_res
+
+            search_res_list.append(search_res)
+        results["search_results"] = search_res_list
+
+        print results
+
+        return results
+
+    def format_bin(self, acdfbBin, isoRes, subsumes):
+        res_bin = {}
+
+        if (acdfbBin.popular):
+            res_bin["type"] = "popular"
+        elif (acdfbBin.anomalous):
+            res_bin["type"] = "anomalous"
+        elif (acdfbBin.isolated):
+            res_bin["type"] = "isolated"
+
+        res_bin["frequency"] = len(acdfbBin.names_to_iso)
+
+        # Computes the isomorphism relation with all the
+        # samples in the pattern
+        
+
+        return res_bin
+
 #         results.
 #         proto_search_pb2
 # [
 # {
 #  "method_names" : ["", "",""],
-#  "results" : [{
+#  "search_results" : [{
 #      "type" : "CORRECT",
 #      "popular" : {
-#          "frequency" : "",
+#          "type" : "popular",
+#          "frequency" : "3",
 #          "nodes_to_ref" : [[1,2],[2,3],..],
 #          "edges_to_ref" : [[],[]],
 #          "acdfgs_infos" : [{"name": "", ...}]
@@ -256,10 +346,10 @@ def main():
             usage("Groum file %s does not exist!" % groum_file)
 
     search = Search(opts.cluster_path, opts.iso_path)
-    solr_results = search.search_from_groum(groum_file, True)
+    results = search.search_from_groum(groum_file)
 
     result = {RESULT_CODE : SEARCH_SUCCEEDED_RESULT,
-              RESULTS_LIST : solr_results}
+              RESULTS_LIST : results}
     json.dump(result,sys.stdout)
     # TODO CATCH EXCEPTION
 
