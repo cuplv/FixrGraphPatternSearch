@@ -8,6 +8,7 @@ import sys
 CLUSTER_PATH = "cluster_path"
 ISO_PATH = "iso_path"
 INDEX = "index"
+GROUM_INDEX = "groum_index"
 
 from search import (Search, RESULT_CODE,
                     ERROR_MESSAGE,
@@ -21,9 +22,35 @@ from search import (Search, RESULT_CODE,
 
 from search import get_cluster_file
 from index import ClusterIndex
+from groum_index import GroumIndex
 #from fixrsearch.search import Search, ClusterIndex, get_cluster_file
 
-#@app.route('/search', methods=['POST'])
+
+def get_apps():
+    groum_index = current_app.config[GROUM_INDEX]
+    apps = groum_index.get_apps()
+    return Response(json.dumps(apps),
+                    status=200,
+                    mimetype='application/json')
+
+def get_groums():
+     content = request.get_json(force=True)
+     if (not content is None) and ("app_key" in content):
+         app_key = content["app_key"]
+         print app_key
+
+         groum_index = current_app.config[GROUM_INDEX]
+         groums = groum_index.get_groums(app_key)
+         return Response(json.dumps(groums),
+                         status=200,
+                         mimetype='application/json')
+     else:
+         response = {'Malformed requests': 'No app_key provided'}
+         return Response(json.dumps(response),
+                         status=404,
+                         mimetype='application/json')
+
+
 def search_pattern():
     reply_json = {"hello" : "hello"}
 
@@ -37,7 +64,6 @@ def search_pattern():
 
     reply_json = {RESULT_CODE : SEARCH_SUCCEEDED_RESULT,
                   RESULTS_LIST : results}
-
 
 
     return Response(json.dumps(reply_json),
@@ -56,6 +82,7 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
     p.add_option('-d', '--debug', help="Debug mode",
                  action="store_true", default=False)
 
+    p.add_option('-g', '--graph_path', help="Base path to the acdfgs")
     p.add_option('-c', '--cluster_path', help="Base path to the cluster directory")
     p.add_option('-i', '--iso_path', help="Path to the isomorphism computation")
 
@@ -77,13 +104,20 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
         usage("Cluster path not provided!")
     if (not os.path.isdir(opts.cluster_path)):
         usage("Cluster path %s does not exist!" % (opts.cluster_path))
+    if (not opts.graph_path):
+        usage("Graph path not provided!")
+    if (not os.path.isdir(opts.graph_path)):
+        usage("Graph path %s does not exist!" % (opts.graph_path))
+
     if (not opts.iso_path): usage("Iso executable not provided!")
     if (not os.path.isfile(opts.iso_path)):
         usage("Iso executable %s does not exist!" % opts.iso_path)
 
-    app = create_app(opts.cluster_path, opts.iso_path)
+    app = create_app(opts.graph_path, opts.cluster_path, opts.iso_path)
 
     app.route('/search', methods=['POST'])(search_pattern)
+    app.route('/get_apps', methods=['GET'])(get_apps)
+    app.route('/get_groums', methods=['POST'])(get_groums)
 
     app.run(
         debug=opts.debug,
@@ -92,13 +126,15 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
     )
 
 
-def create_app(cluster_path, iso_path):
+def create_app(graph_path, cluster_path, iso_path):
     app = Flask(__name__)
     app.config[CLUSTER_PATH] = cluster_path
     app.config[ISO_PATH] = iso_path
 
     cluster_file = get_cluster_file(cluster_path)
+
     app.config[INDEX] = ClusterIndex(cluster_file)
+    app.config[GROUM_INDEX] = GroumIndex(graph_path)
 
     return app
 

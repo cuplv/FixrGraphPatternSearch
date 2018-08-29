@@ -36,7 +36,7 @@ class GroumIndex(object):
         self.groumid2path = {groum_key : groum_path}
 
     def get_apps(self):
-        return self.app_data
+        return self.apps
 
     def get_groums(self, app_id):
         if app_id in self.appid2groums:
