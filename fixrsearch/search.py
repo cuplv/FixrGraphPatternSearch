@@ -30,24 +30,21 @@ SEARCH_SUCCEEDED_RESULT = 0
 ERROR_RESULT = 1
 
 
+def get_cluster_file(cluster_path):
+    return os.path.join(cluster_path, "clusters.txt")
+
 class Search():
-    def __init__(self, cluster_path, iso_path, timeout=10):
+    def __init__(self, cluster_path, iso_path, index = None, timeout=10):
         self.cluster_path = cluster_path
         self.iso_path = iso_path
         self.timeout = timeout
 
         # 1. Build the index
-        cluster_file = os.path.join(cluster_path,
-                                    "clusters.txt")
-        self.index = ClusterIndex(cluster_file)
-
-        self.match_status = re.compile("Isomorphism status: (.+)")
-        self.match_objective = re.compile("Objective value: (.+)")
-        self.match_node_ratio = re.compile("NODETYPE: (\d+) = ([\d|\.]+)")
-        self.match_method_node = re.compile("TOT_MET_NODES: ([\d|\.]+)")
-        self.match_edge_ratio = re.compile("EDGETYPE: (\d+) = ([\d|\.]+)")
-
-
+        if (index is None):
+            cluster_file = get_cluster_file(cluster_path)
+            self.index = ClusterIndex(cluster_file)
+        else:
+            self.index = index
 
     def search_from_groum(self, groum_path):
         logging.debug("Search for groum %s" % groum_path)
