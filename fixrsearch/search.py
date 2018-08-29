@@ -239,13 +239,10 @@ class Search():
         # acdfg in the pattern
         acdfg_mappings = []
         for isoPair in acdfbBin.names_to_iso:
-            # print "NAME " + isoPair.method_name;
-            # print "SIZE " + str(len(isoPair.iso.nodesMap))
-
             mapping = {}
             source_info = {}
             if (isoPair.iso.acdfg_1.HasField("source_info")):
-                protoSource = isoPair.iso.acdfg_1["source_info"]
+                protoSource = isoPair.iso.acdfg_1.source_info
                 if (protoSource.HasField("package_name")):
                     source_info["package_name"] = protoSource.package_name
                 if (protoSource.HasField("class_name")):
