@@ -71,7 +71,7 @@ class Search():
 
             results_cluster = self.search_cluster(groum_path, cluster_info)
 
-            results.extend(results_cluster)
+            results.append(results_cluster)
 
         # # Returns patterns as Solr documents
         # if solr_results:
@@ -166,6 +166,7 @@ class Search():
 
         id2bin = {}
         for acdfbBin in proto_lattice.bins:
+            assert not acdfbBin.id in id2bin
             id2bin[acdfbBin.id] = acdfbBin
 
 
@@ -202,8 +203,7 @@ class Search():
 
             # Process the reference pattern
             bin_id = proto_search.referencePatternId
-            ref_bin = id2bin[bin_id]
-            bin_res = self.format_bin(ref_bin,
+            bin_res = self.format_bin(id2bin[bin_id],
                                       proto_search.isoToReference,
                                       subsumes_ref)
             search_res["popular"] = bin_res
@@ -212,16 +212,14 @@ class Search():
             if (proto_search.HasField("anomalousPatternId") and
                 proto_search.HasField("isoToAnomalous")):
                 bin_id = proto_search_res.anomalousPatternId
-                ref_bin = id2bin[bin_id]
-                bin_res = self.format_bin(ref_bin,
+
+                bin_res = self.format_bin(id2bin[bin_id],
                                           proto_search.isoToAnomalous,
                                           subsumes_ref)
                 search_res["anomalous"] = bin_res
 
             search_res_list.append(search_res)
         results["search_results"] = search_res_list
-
-        print results
 
         return results
 
@@ -237,32 +235,172 @@ class Search():
 
         res_bin["frequency"] = len(acdfbBin.names_to_iso)
 
-        # Computes the isomorphism relation with all the
-        # samples in the pattern
-        
+        # Creates three lists of lines association betweem
+        # the query acdf and all the other acdfgs in the
+        # pattern:
+        #   -
+        # acdfg in the pattern
+        acdfg_mappings = []
+        for isoPair in acdfbBin.names_to_iso:
+            # print "NAME " + isoPair.method_name;
+            # print "SIZE " + str(len(isoPair.iso.nodesMap))
+
+            mapping = {}
+            source_info = {}
+            if (isoPair.iso.acdfg_1.HasField("source_info")):
+                protoSource = isoPair.iso.acdfg_1["source_info"]
+                if (protoSource.HasField("package_name")):
+                    source_info["package_name"] = protoSource.package_name
+                if (protoSource.HasField("class_name")):
+                    source_info["class_name"] = protoSource.class_name
+                if (protoSource.HasField("method_name")):
+                    source_info["method_name"] = protoSource.method_name
+                if (protoSource.HasField("class_line_number")):
+                    source_info["class_line_number"] = protoSource.class_line_number
+                if (protoSource.HasField("method_line_number")):
+                    source_info["method_line_number"] = protoSource.method_line_number
+                if (protoSource.HasField("source_class_name")):
+                    source_info["source_class_name"] = protoSource.source_class_name
+                if (protoSource.HasField("abs_source_class_name")):
+                    source_info["abs_source_class_name"] = protoSource.abs_source_class_name
+                mapping["source_info"] = source_info
+
+            repo_tag = {}
+            if (isoPair.iso.acdfg_1.HasField("repo_tag")):
+                proto_tag = isoPair.iso.acdfg_1.repo_tag
+                if proto_tag.HasField("repo_name"):
+                    repo_tag["repo_name"] = proto_tag.repo_name
+                if proto_tag.HasField("user_name"):
+                    repo_tag["user_name"] = proto_tag.user_name
+                if proto_tag.HasField("url"):
+                    repo_tag["url"] = proto_tag.url
+                if proto_tag.HasField("commit_hash"):
+                    repo_tag["commit_hash"] = proto_tag.commit_hash
+                if proto_tag.HasField("commit_date"):
+                    repo_tag["commit_date"] = proto_tag.commit_date
+                mapping["repo_tag"] = repo_tag
+
+            # Computes the mapping from the acdfg used in the
+            # query and the acdfg in the bin
+            (nodes_res, edges_res) = Search.get_mapping(isoRes.acdfg_1,
+                                                        isoPair.iso.acdfg_1,
+                                                        isoRes,
+                                                        isoPair.iso,
+                                                        # Never reverse, the data is already ok
+                                                        False)
+            mapping["nodes"] = {"iso" : nodes_res[0],
+                                "add" : nodes_res[1],
+                                "remove" : nodes_res[2]}
+            mapping["edges"] = {"iso" : edges_res[0],
+                                "add" : edges_res[1],
+                                "remove" : edges_res[2]}
+            acdfg_mappings.append(mapping)
+
+        res_bin["acdfg_mappings"] = acdfg_mappings
 
         return res_bin
 
-#         results.
-#         proto_search_pb2
-# [
-# {
-#  "method_names" : ["", "",""],
-#  "search_results" : [{
-#      "type" : "CORRECT",
-#      "popular" : {
-#          "type" : "popular",
-#          "frequency" : "3",
-#          "nodes_to_ref" : [[1,2],[2,3],..],
-#          "edges_to_ref" : [[],[]],
-#          "acdfgs_infos" : [{"name": "", ...}]
-#      },
-#      "anomalous" : {
-#      }
-#  }
-#  ]
-# }
-# ]
+
+    @staticmethod
+    def get_mapping(acdfg_1, acdfg_2,
+                    isorel_1_ref, isorel_2_ref,
+                    reverse_1=False):
+        """ acdfg_1 and acdfg_2 are two (protobuffer) acdfg,
+
+        isorel_1_ref the unweightediso protobuf from acdfg_1 to
+        the reference groum
+
+        isorel_2_ref the unweightediso protobuf from acdfg_2 to
+        the reference groum
+
+        reverse is True if isorel_1_ref contains pairs
+        from ref to acdfg_1.
+        """
+        def get_all(lists):
+            res = []
+            for l in lists:
+                for elem in l:
+                    elem_id = elem.id
+                    line_no = 0
+                    line_no = int(elem.id) # DEBUG
+                    res.append((elem_id, line_no))
+                return res
+
+        def get_nodes(acdfg):
+            return get_all([acdfg.data_node, acdfg.misc_node,
+                            acdfg.method_node])
+
+        def get_edges(acdfg):
+            return get_all([acdfg.def_edge, acdfg.use_edge,
+                            acdfg.trans_edge])
+
+        # 1. Remap the maps of nodes and edges to be from
+        # acdfg_1 to acdfg_2 (it is a join on the id of ref!)
+        nodes_1_to_2 = {}
+        edges_1_to_2 = {}
+        for (my, iso_1_ref, iso_2_ref) in zip([nodes_1_to_2, edges_1_to_2],
+                                              [isorel_1_ref.nodesMap, isorel_1_ref.edgesMap],
+                                              [isorel_2_ref.nodesMap, isorel_2_ref.edgesMap]):
+            if not reverse_1:
+                ref_dst = [pair.id_1 for pair in isorel_1_ref.nodesMap]
+            else:
+                ref_dst = [pair.id_2 for pair in isorel_1_ref.nodesMap]
+
+            # Build a map from elements in ref to elements in acdfg_2
+            map_ref_2 = {}
+            for pair in iso_2_ref:
+                if pair.id_2 in map_ref_2:
+                    logging.error("%d is mapped to multiple nodes!" % pair.id_2)
+                map_ref_2[pair.id_2] = pair.id_1
+
+            # Build my from elements in 1 to elements in 2
+            for pair in iso_1_ref:
+                if not reverse_1:
+                    (el_1,el_2) = (pair.id_1, pair.id_2)
+                else:
+                    (el_1,el_2) = (pair.id_2, pair.id_1)
+
+                if el_2 in map_ref_2:
+                    my[el_1] = map_ref_2[el_2]
+                else:
+                    logging.error("%d is not mapped!" % el_2)
+
+
+        # Compute the common, added, and removed lines
+        idx_iso = 0
+        idx_to_add = 1
+        idx_to_remove = 2
+
+        nodes_res = ([],[],[])
+        edges_res = ([],[],[])
+        nodes_lists = (get_nodes(acdfg_1), get_nodes(acdfg_2))
+        edges_lists = (get_edges(acdfg_1), get_edges(acdfg_2))
+
+        print edges_lists
+
+        for (res, elem_1_to_2, elem_lists) in zip([nodes_res, edges_res],
+                                                  [nodes_1_to_2, edges_1_to_2],
+                                                  [nodes_lists, edges_lists]):
+            elem_list_1 = elem_lists[0]
+            elem_list_2 = elem_lists[1]
+
+            id_to_line_no_2 = {} # From elem id of acdfg 2 to line numbers
+            elem_2_to_1 = {}
+            for (e1, e2) in elem_1_to_2.iteritems(): elem_2_to_1[e2] = e1
+            for (e2_id, e2_line) in elem_list_2:
+                if e2_id in elem_2_to_1:
+                    e1_id = elem_2_to_1[e2_id]
+                    id_to_line_no_2[e1_id] = e2_line
+                else:
+                    res[idx_to_add].append(e2_line)
+
+            for (e1_id, e1_line) in elem_list_1:
+                if e1_id in id_to_line_no_2:
+                    res[idx_iso].append((e1_line, id_to_line_no_2[e1_id]))
+                else:
+                    res[idx_to_remove].append(e1_line)
+
+        return (nodes_res, edges_res)
 
 
 def main():
@@ -351,6 +489,13 @@ def main():
     result = {RESULT_CODE : SEARCH_SUCCEEDED_RESULT,
               RESULTS_LIST : results}
     json.dump(result,sys.stdout)
+
+    # with open("/tmp/app.json", "w") as f:
+    #     json.dump(result, f)
+    #     f.close()
+
+
+
     # TODO CATCH EXCEPTION
 
 
