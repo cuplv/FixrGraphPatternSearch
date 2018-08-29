@@ -14,6 +14,7 @@ import re
 import tempfile
 
 from fixrsearch.index import ClusterIndex
+from fixrsearch.groum_index import GroumIndex
 from fixrgraph.annotator.protobuf.proto_acdfg_pb2 import Acdfg
 from fixrgraph.annotator.protobuf.proto_search_pb2 import SearchResults
 from fixrgraph.solr.import_patterns import _get_pattern_key
@@ -406,6 +407,7 @@ def main():
     p.add_option('-r', '--repo', help="Repo name")
     p.add_option('-z', '--hash', help="Hash number")
     p.add_option('-m', '--method', help="Fully qualified method name")
+    p.add_option('-l', '--line', help="Line number of the method")
 
     p.add_option('-c', '--cluster_path', help="Base path to the cluster directory")
     p.add_option('-i', '--iso_path', help="Path to the isomorphism computation")
@@ -433,8 +435,10 @@ def main():
         if (not opts.graph_dir): usage("Graph dir not provided!")
         if (not os.path.isdir(opts.graph_dir)): usage("%s does not exist!" % opts.graph_dir)
         if (not opts.user): usage("User not provided")
+        if (not opts.hash): usage("Hash not provided")
         if (not opts.repo): usage("Repo not provided")
         if (not opts.method): usage("Method not provided")
+        if (not opts.line): usage("Line not provided")
     else:
         use_groum_file = True
         if (not os.path.isfile(opts.groum)):
@@ -447,33 +451,15 @@ def main():
     if (not os.path.isfile(opts.iso_path)):
         usage("Iso executable %s does not exist!" % opts.iso_path)
 
-
     if use_groum_file:
         groum_file = opts.groum
     else:
-        repo_path = os.path.join(opts.graph_dir,
-                                 opts.user,
-                                 opts.repo)
-        if (opts.hash):
-            repo_path = os.path.join(repo_path, opts.hash)
-        else:
-            first_hash = None
-            for root, dirs, files in os.walk(repo_path):
-                if len(dirs) > 0:
-                    first_hash = dirs[0]
-                break
-            if first_hash is None:
-                usage("Username/repo not found!")
-            repo_path = os.path.join(repo_path, first_hash)
-
-        splitted = opts.method.split(".")
-        class_list = splitted[:-1]
-        method_list = splitted[-1:]
-        fs_name = ".".join(class_list) + "_" + "".join(method_list)
-        groum_file = os.path.join(repo_path, fs_name + ".acdfg.bin")
-
-        if (not os.path.isfile(groum_file)):
-            usage("Groum file %s does not exist!" % groum_file)
+        groum_index = GroumIndex(opts.graph_dir)
+        key = groum_index.get_groum_key(opts.user, opts.repo, opts.hash,
+                                        opts.method, opts.line)
+        groum_file = groum_index.get_groum_path(key)
+        if groum_file is None:
+            usage("Cannot find groum for %s" % key)
 
     search = Search(opts.cluster_path, opts.iso_path)
     results = search.search_from_groum(groum_file)
