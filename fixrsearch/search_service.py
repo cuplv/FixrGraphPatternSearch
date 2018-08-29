@@ -1,23 +1,45 @@
-from flask import Flask, request, Response, render_template
+from flask import Flask, request, Response, render_template, current_app
 import json
 import optparse
 import logging
 import os
 import sys
 
-# from fixrsearch.search import Search
-# from fixrsearch.search import get_cluster_file
-# from fixrsearch.index import ClusterIndex
+CLUSTER_PATH = "cluster_path"
+ISO_PATH = "iso_path"
+INDEX = "index"
 
+from search import (Search, RESULT_CODE,
+                    ERROR_MESSAGE,
+                    PATTERN_KEY ,
+                    ISO_DOT ,
+                    RESULTS_LIST ,
+                    OBJ_VAL ,
+                    SEARCH_SUCCEEDED_RESULT ,
+                    ERROR_RESULT,
+                    get_cluster_file)
 
-from search import Search
 from search import get_cluster_file
 from index import ClusterIndex
-
+#from fixrsearch.search import Search, ClusterIndex, get_cluster_file
 
 #@app.route('/search', methods=['POST'])
 def search_pattern():
     reply_json = {"hello" : "hello"}
+
+    search = Search(current_app.config[CLUSTER_PATH],
+                    current_app.config[ISO_PATH],
+                    current_app.config[INDEX])
+
+    groum_file = "/Users/sergiomover/works/projects/muse/repos/FixrGraphIso/test/test_data/com.dagwaging.rosewidgets.db.widget.UpdateService_update.acdfg.bin"
+
+    results = search.search_from_groum(groum_file)
+
+    reply_json = {RESULT_CODE : SEARCH_SUCCEEDED_RESULT,
+                  RESULTS_LIST : results}
+
+
+
     return Response(json.dumps(reply_json),
                     status=200,
                     mimetype='application/json')
@@ -72,11 +94,11 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
 
 def create_app(cluster_path, iso_path):
     app = Flask(__name__)
-    app.config["cluster_path"] = cluster_path
-    app.config["iso_path"] = iso_path
+    app.config[CLUSTER_PATH] = cluster_path
+    app.config[ISO_PATH] = iso_path
 
     cluster_file = get_cluster_file(cluster_path)
-    app.config["index"] = ClusterIndex(cluster_file)
+    app.config[INDEX] = ClusterIndex(cluster_file)
 
     return app
 

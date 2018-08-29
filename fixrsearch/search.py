@@ -373,8 +373,6 @@ class Search():
         nodes_lists = (get_nodes(acdfg_1), get_nodes(acdfg_2))
         edges_lists = (get_edges(acdfg_1), get_edges(acdfg_2))
 
-        print edges_lists
-
         for (res, elem_1_to_2, elem_lists) in zip([nodes_res, edges_res],
                                                   [nodes_1_to_2, edges_1_to_2],
                                                   [nodes_lists, edges_lists]):
