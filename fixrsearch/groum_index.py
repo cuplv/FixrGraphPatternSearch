@@ -18,6 +18,17 @@ groum_data = {
 }
 groum_path="Dagwaging/RoseWidgets/7848e367734f462a085a72c9d6323262aef29900/com.dagwaging.rosewidgets.db.widget.UpdateService_update.acdfg.bin"
 
+groum_key_2 = "osmwp/MeMoPlayer/fd47ade14e3f8b256e3a332649bb567052044c70/com.orange.memoplayer.WidgetUpdate.getRemoteView/155"
+groum_data_2 = {
+    "groum_key" : groum_key_2,
+    "method_line_number": 155,
+    "package_name": "com.orange.memoplayer",
+    "class_name": "com.orange.memoplayer.WidgetUpdate",
+    "source_class_name": "WidgetUpdate.java",
+    "method_name": "getRemoteView"
+}
+groum_path_2="osmwp/MeMoPlayer/fd47ade14e3f8b256e3a332649bb567052044c70/com.orange.memoplayer.WidgetUpdate_getRemoteView.acdfg.bin"
+
 app_key = "Dagwaging/RoseWidgets/7848e367734f462a085a72c9d6323262aef29900"
 app_data = {
     "app_key" : app_key,
@@ -27,13 +38,22 @@ app_data = {
     "commit_date": "",
     "repo_name": "RoseWidgets"
 }
+app_key_2 = "osmwp/MeMoPlayer/fd47ade14e3f8b256e3a332649bb567052044c70"
+app_data_2 = {
+    "app_key" : app_key_2,
+    "url": "https://github.com/osmwp/MeMoPlayer",
+    "user_name": "osmwp",
+    "commit_hash": "fd47ade14e3f8b256e3a332649bb567052044c70",
+    "commit_date": "",
+    "repo_name": "MeMoPlayer"
+}
 
 class GroumIndex(object):
     def __init__(self, graph_path):
         self.graph_path = graph_path
-        self.apps = [app_data]
-        self.appid2groums = {app_key : [groum_data]}
-        self.groumid2path = {groum_key : groum_path}
+        self.apps = [app_data, app_data_2]
+        self.appid2groums = {app_key : [groum_data], app_key_2 : [groum_data_2]}
+        self.groumid2path = {groum_key : groum_path, groum_key_2 : groum_path_2}
 
     def get_apps(self):
         return self.apps

@@ -34,42 +34,59 @@ def get_apps():
                     mimetype='application/json')
 
 def get_groums():
-     content = request.get_json(force=True)
-     if (not content is None) and ("app_key" in content):
-         app_key = content["app_key"]
-         print app_key
+    content = request.get_json(force=True)
+    if (not content is None) and ("app_key" in content):
+        app_key = content["app_key"]
+        groum_index = current_app.config[GROUM_INDEX]
+        groums = groum_index.get_groums(app_key)
 
-         groum_index = current_app.config[GROUM_INDEX]
-         groums = groum_index.get_groums(app_key)
-         return Response(json.dumps(groums),
-                         status=200,
-                         mimetype='application/json')
-     else:
-         response = {'Malformed requests': 'No app_key provided'}
-         return Response(json.dumps(response),
-                         status=404,
-                         mimetype='application/json')
+        return Response(json.dumps(groums),
+                        status=200,
+                        mimetype='application/json')
+    else:
+        print 'Malformed requests'
+        response = {'Malformed requests': 'No app_key provided'}
+        return Response(json.dumps(response),
+                        status=404,
+                        mimetype='application/json')
 
 
 def search_pattern():
-    reply_json = {"hello" : "hello"}
+    content = request.get_json(force=True)
 
-    search = Search(current_app.config[CLUSTER_PATH],
-                    current_app.config[ISO_PATH],
-                    current_app.config[INDEX])
-
-    groum_file = "/Users/sergiomover/works/projects/muse/repos/FixrGraphIso/test/test_data/com.dagwaging.rosewidgets.db.widget.UpdateService_update.acdfg.bin"
-
-    results = search.search_from_groum(groum_file)
-
-    reply_json = {RESULT_CODE : SEARCH_SUCCEEDED_RESULT,
-                  RESULTS_LIST : results}
+    if (not content is None) and ("groum_key" in content):
+        groum_id = content["groum_key"]
+        groum_index = current_app.config[GROUM_INDEX]
+        groum_file = groum_index.get_groum_path(groum_id)
 
 
-    return Response(json.dumps(reply_json),
-                    status=200,
-                    mimetype='application/json')
+        if groum_file is None:
+            error_msg = "Cannot find groum for %s" % groum_
+            reply_json = {"status" : 1,
+                          "error" : error_msg}
 
+            return Response(json.dumps(reply_json),
+                            status=404,
+                            mimetype='application/json')
+
+        else:
+            search = Search(current_app.config[CLUSTER_PATH],
+                            current_app.config[ISO_PATH],
+                            current_app.config[INDEX])
+
+            results = search.search_from_groum(groum_file)
+
+            reply_json = {"status" : 0,
+                          "results" : results}
+
+            return Response(json.dumps(reply_json),
+                            status=200,
+                            mimetype='application/json')
+    else:
+        reply_json = {"status": 1, "error" : "Malformed requests"}
+        return Response(json.dumps(reply_json),
+                        status=404,
+                        mimetype='application/json')
 
 
 def flaskrun(default_host="127.0.0.1", default_port="5000"):
