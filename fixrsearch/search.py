@@ -68,8 +68,12 @@ class Search():
             logging.debug("Searching in cluster %d..." % cluster_info.id)
 
             results_cluster = self.search_cluster(groum_path, cluster_info)
-
-            results.append(results_cluster)
+            if results_cluster is None:
+                logging.debug("Found 0 in cluster %d..." % cluster_info.id)
+            else:
+                logging.debug("Found %d in cluster %d..." % (len(results_cluster),
+                                                             cluster_info.id))
+                results.append(results_cluster)
 
         return results
 
@@ -81,7 +85,12 @@ class Search():
                                     "cluster_%d" % cluster_info.id)
         lattice_path = os.path.join(current_path,
                                     "cluster_%d_lattice.bin" % cluster_info.id)
-        result = self.call_iso(groum_path, lattice_path)
+
+        if (os.path.exists(lattice_path)):
+            result = self.call_iso(groum_path, lattice_path)
+        else:
+            logging.debug("Lattice file %s not found" % lattice_path)
+            result = None
 
         return result
 
@@ -126,7 +135,6 @@ class Search():
         else:
             logging.info("Search finished...")
 
-            # TODO: Read an construct result
             result = self.formatOutput(search_path)
 
         if os.path.isfile(search_path):
@@ -136,6 +144,8 @@ class Search():
 
 
     def formatOutput(self, search_path):
+        logging.debug("Formatting output...")
+
         results = {}
 
         proto_results = SearchResults()
@@ -159,6 +169,8 @@ class Search():
         # Process each single result
         search_res_list = []
         for proto_search in proto_results.results:
+            logging.debug("Processing proto search...")
+
             search_res = {}
             subsumes_ref = True
             subsumes_anom = True
@@ -206,7 +218,10 @@ class Search():
 
             search_res_list.append(search_res)
 
-        results["search_results"] = search_res_list
+        if len(results) == 0:
+            results = None
+        else:
+            results["search_results"] = search_res_list
 
         return results
 
@@ -224,9 +239,7 @@ class Search():
 
         # Creates three lists of lines association betweem
         # the query acdf and all the other acdfgs in the
-        # pattern:
-        #   -
-        # acdfg in the pattern
+        # pattern
         acdfg_mappings = []
         for isoPair in acdfbBin.names_to_iso:
             mapping = {}
@@ -264,8 +277,12 @@ class Search():
                     repo_tag["commit_date"] = proto_tag.commit_date
                 mapping["repo_tag"] = repo_tag
 
+
             # Computes the mapping from the acdfg used in the
             # query and the acdfg in the bin
+            logging.debug("Computing mapping...")
+            # logging.debug("%d" % len(isoRes.nodesMap))
+            # logging.debug("%d" % len(isoPair.iso.nodesMap))
             (nodes_res, edges_res) = Search.get_mapping(isoRes.acdfg_1,
                                                         isoPair.iso.acdfg_1,
                                                         isoRes,
@@ -278,6 +295,7 @@ class Search():
             mapping["edges"] = {"iso" : edges_res[0],
                                 "add" : edges_res[1],
                                 "remove" : edges_res[2]}
+
             acdfg_mappings.append(mapping)
 
         res_bin["acdfg_mappings"] = acdfg_mappings
@@ -300,34 +318,42 @@ class Search():
         reverse is True if isorel_1_ref contains pairs
         from ref to acdfg_1.
         """
-        def get_all(lists):
+        def get_all(id2num, lists):
             res = []
             for l in lists:
                 for elem in l:
                     elem_id = elem.id
-                    line_no = 0
-                    line_no = int(elem.id) # DEBUG
-                    res.append((elem_id, line_no))
-                return res
+                    if elem_id in id2num:
+                        line_no =id2num[elem_id]
+                        res.append((elem_id, line_no))
+            return res
 
         def get_nodes(acdfg):
-            return get_all([acdfg.data_node, acdfg.misc_node,
+            id2num = {}
+            for line_num in acdfg.node_lines:
+                id2num[line_num.id] = line_num.line
+            # logging.debug("Node lines " + str(id2num))
+
+            return get_all(id2num,
+                           [acdfg.data_node,
+                            acdfg.misc_node,
                             acdfg.method_node])
 
         def get_edges(acdfg):
-            return get_all([acdfg.def_edge, acdfg.use_edge,
+            return get_all({},
+                           [acdfg.def_edge, acdfg.use_edge,
                             acdfg.trans_edge])
 
         # 1. Remap the maps of nodes and edges to be from
         # acdfg_1 to acdfg_2 (it is a join on the id of ref!)
         nodes_1_to_2 = {}
         # edges_1_to_2 = {}
-        for (my, iso_1_ref, iso_2_ref) in zip([nodes_1_to_2],
-                                              [isorel_1_ref.nodesMap],
-                                              [isorel_2_ref.nodesMap]):
         # for (my, iso_1_ref, iso_2_ref) in zip([nodes_1_to_2, edges_1_to_2],
         #                                       [isorel_1_ref.nodesMap, isorel_1_ref.edgesMap],
         #                                       [isorel_2_ref.nodesMap, isorel_2_ref.edgesMap]):
+        for (my, iso_1_ref, iso_2_ref) in zip([nodes_1_to_2],
+                                              [isorel_1_ref.nodesMap],
+                                              [isorel_2_ref.nodesMap]):
             if not reverse_1:
                 ref_dst = [pair.id_1 for pair in isorel_1_ref.nodesMap]
             else:
@@ -353,6 +379,8 @@ class Search():
                     logging.error("%d is not mapped!" % el_2)
 
 
+        # logging.debug("Map " + str(nodes_1_to_2))
+
         # Compute the common, added, and removed lines
         idx_iso = 0
         idx_to_add = 1
@@ -362,6 +390,9 @@ class Search():
         edges_res = ([],[],[])
         nodes_lists = (get_nodes(acdfg_1), get_nodes(acdfg_2))
         # edges_lists = (get_edges(acdfg_1), get_edges(acdfg_2))
+
+        # logging.debug("Nodes acdfg1 " + str(nodes_lists[0]))
+        # logging.debug("Nodes acdfg2 " + str(nodes_lists[1]))
 
         # for (res, elem_1_to_2, elem_lists) in zip([nodes_res, edges_res],
         #                                           [nodes_1_to_2, edges_1_to_2],
