@@ -321,10 +321,13 @@ class Search():
         # 1. Remap the maps of nodes and edges to be from
         # acdfg_1 to acdfg_2 (it is a join on the id of ref!)
         nodes_1_to_2 = {}
-        edges_1_to_2 = {}
-        for (my, iso_1_ref, iso_2_ref) in zip([nodes_1_to_2, edges_1_to_2],
-                                              [isorel_1_ref.nodesMap, isorel_1_ref.edgesMap],
-                                              [isorel_2_ref.nodesMap, isorel_2_ref.edgesMap]):
+        # edges_1_to_2 = {}
+        for (my, iso_1_ref, iso_2_ref) in zip([nodes_1_to_2],
+                                              [isorel_1_ref.nodesMap],
+                                              [isorel_2_ref.nodesMap]):
+        # for (my, iso_1_ref, iso_2_ref) in zip([nodes_1_to_2, edges_1_to_2],
+        #                                       [isorel_1_ref.nodesMap, isorel_1_ref.edgesMap],
+        #                                       [isorel_2_ref.nodesMap, isorel_2_ref.edgesMap]):
             if not reverse_1:
                 ref_dst = [pair.id_1 for pair in isorel_1_ref.nodesMap]
             else:
@@ -358,11 +361,14 @@ class Search():
         nodes_res = ([],[],[])
         edges_res = ([],[],[])
         nodes_lists = (get_nodes(acdfg_1), get_nodes(acdfg_2))
-        edges_lists = (get_edges(acdfg_1), get_edges(acdfg_2))
+        # edges_lists = (get_edges(acdfg_1), get_edges(acdfg_2))
 
-        for (res, elem_1_to_2, elem_lists) in zip([nodes_res, edges_res],
-                                                  [nodes_1_to_2, edges_1_to_2],
-                                                  [nodes_lists, edges_lists]):
+        # for (res, elem_1_to_2, elem_lists) in zip([nodes_res, edges_res],
+        #                                           [nodes_1_to_2, edges_1_to_2],
+        #                                           [nodes_lists, edges_lists]):
+        for (res, elem_1_to_2, elem_lists) in zip([nodes_res],
+                                                  [nodes_1_to_2],
+                                                  [nodes_lists]):
             elem_list_1 = elem_lists[0]
             elem_list_2 = elem_lists[1]
 
