@@ -150,9 +150,13 @@ def create_app(graph_path, cluster_path, iso_path):
 
     cluster_file = get_cluster_file(cluster_path)
 
+    logging.info("Creating cluster index...")
     app.config[INDEX] = ClusterIndex(cluster_file)
+
+    logging.info("Creating graph index...")
     app.config[GROUM_INDEX] = GroumIndex(graph_path)
 
+    logging.info("Running server...")
     return app
 
 
