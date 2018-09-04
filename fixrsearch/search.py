@@ -71,18 +71,6 @@ class Search():
 
             results.append(results_cluster)
 
-        # # Returns patterns as Solr documents
-        # if solr_results:
-        #     solr_results = []
-        #     for (obj_val, pattern_info, iso_dot, ci) in results:
-        #         solr_key = _get_pattern_key(ci.id,
-        #                                     pattern_info.id,
-        #                                     pattern_info.type)
-        #         solr_results.append({PATTERN_KEY : solr_key,
-        #                              OBJ_VAL : str(obj_val),
-        #                              ISO_DOT : iso_dot})
-        #     results = solr_results
-
         return results
 
 
@@ -217,6 +205,7 @@ class Search():
                 search_res["anomalous"] = bin_res
 
             search_res_list.append(search_res)
+
         results["search_results"] = search_res_list
 
         return results
