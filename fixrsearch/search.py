@@ -332,7 +332,8 @@ class Search():
             id2num = {}
             for line_num in acdfg.node_lines:
                 id2num[line_num.id] = line_num.line
-            # logging.debug("Node lines " + str(id2num))
+
+            # logging.error("Node lines " + str(id2num))
 
             return get_all(id2num,
                            [acdfg.data_node,
@@ -363,7 +364,7 @@ class Search():
             map_ref_2 = {}
             for pair in iso_2_ref:
                 if pair.id_2 in map_ref_2:
-                    logging.error("%d is mapped to multiple nodes!" % pair.id_2)
+                    logging.debug("%d is mapped to multiple nodes!" % pair.id_2)
                 map_ref_2[pair.id_2] = pair.id_1
 
             # Build my from elements in 1 to elements in 2
@@ -376,7 +377,7 @@ class Search():
                 if el_2 in map_ref_2:
                     my[el_1] = map_ref_2[el_2]
                 else:
-                    logging.error("%d is not mapped!" % el_2)
+                    logging.debug("%d is not mapped!" % el_2)
 
 
         # logging.debug("Map " + str(nodes_1_to_2))
