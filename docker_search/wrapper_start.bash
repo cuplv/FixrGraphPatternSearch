@@ -1,11 +1,6 @@
 #!/bin/bash
 
-sudo service ssh start
-
-# echo "starting services"
-python /home/biggroum/biggroum/fixr_groum_search_frontend/app.py --host 0.0.0.0 &
-(while true; do sleep 10000; done) | /home/biggroum/biggroum/FixrService-Backend/target/universal/stage/bin/fixrservice-backend &
-
+python ./fixrsearch/search_service.py  -c /persist/clusters -i /home/biggroum/biggroum/FixrGraphIso/build/src/fixrgraphiso/searchlattice -g /persist/graphs --address 0.0.0.0 -p 8081
 
 while sleep 60; do
     echo "Monitoring..."

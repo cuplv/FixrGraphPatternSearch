@@ -41,6 +41,7 @@ RUN Z3_DIR="$(mktemp -d)" \
 
 
 RUN apt-get install -y git
+RUN pip install flask
 
 ################################################################################
 # Set up user
@@ -90,7 +91,7 @@ RUN protoc -I=./biggroum/FixrGraphExtractor/src/main/protobuf --python_out=./big
 ENV PYTHONPATH=/home/biggroum/biggroum/python:$PYTHONPATH
 ENV PYTHONPATH=/home/biggroum/biggroum/FixrGraphPatternSearch:$PYTHONPATH
 
-WORKDIR /home/biggroum
+WORKDIR /home/biggroum/biggroum/FixrGraphPatternSearch
 
 COPY wrapper_start.bash wrapper_start.bash
 
