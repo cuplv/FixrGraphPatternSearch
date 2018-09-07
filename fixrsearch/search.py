@@ -48,7 +48,7 @@ class Search():
             self.index = index
 
     def search_from_groum(self, groum_path):
-        logging.debug("Search for groum %s" % groum_path)
+        logging.info("Search for groum %s" % groum_path)
 
         # 1. Get the method list from the GROUM
         acdfg = Acdfg()
@@ -65,7 +65,8 @@ class Search():
         # 3. Search the clusters
         results = []
         for cluster_info in clusters:
-            logging.debug("Searching in cluster %d..." % cluster_info.id)
+            logging.debug("Searching in cluster %d (%s)..." % (cluster_info.id,
+                                                               ",".join(cluster_info.methods_list)))
 
             results_cluster = self.search_cluster(groum_path, cluster_info)
             if results_cluster is None:
@@ -87,6 +88,7 @@ class Search():
                                     "cluster_%d_lattice.bin" % cluster_info.id)
 
         if (os.path.exists(lattice_path)):
+            logging.debug("Searching lattice %s..." % lattice_path)
             result = self.call_iso(groum_path, lattice_path)
         else:
             logging.debug("Lattice file %s not found" % lattice_path)
@@ -199,6 +201,10 @@ class Search():
                 search_res["type"] = "ISOLATED_SUBSUMING"
                 subsumes_anom = False
 
+
+            # print("Lines iso to reference %d" %
+            #       len(proto_search.isoToReference.acdfg_1.node_lines))
+
             # Process the reference pattern
             bin_id = proto_search.referencePatternId
             bin_res = self.format_bin(id2bin[bin_id],
@@ -280,7 +286,7 @@ class Search():
 
             # Computes the mapping from the acdfg used in the
             # query and the acdfg in the bin
-            logging.debug("Computing mapping...")
+            # logging.debug("Computing mapping...")
             # logging.debug("%d" % len(isoRes.nodesMap))
             # logging.debug("%d" % len(isoPair.iso.nodesMap))
             (nodes_res, edges_res) = Search.get_mapping(isoRes.acdfg_1,
@@ -332,7 +338,8 @@ class Search():
             id2num = {}
             for line_num in acdfg.node_lines:
                 id2num[line_num.id] = line_num.line
-            # logging.debug("Node lines " + str(id2num))
+
+            # logging.error("Node lines " + str(id2num))
 
             return get_all(id2num,
                            [acdfg.data_node,
@@ -363,7 +370,7 @@ class Search():
             map_ref_2 = {}
             for pair in iso_2_ref:
                 if pair.id_2 in map_ref_2:
-                    logging.error("%d is mapped to multiple nodes!" % pair.id_2)
+                    logging.debug("%d is mapped to multiple nodes!" % pair.id_2)
                 map_ref_2[pair.id_2] = pair.id_1
 
             # Build my from elements in 1 to elements in 2
@@ -376,7 +383,7 @@ class Search():
                 if el_2 in map_ref_2:
                     my[el_1] = map_ref_2[el_2]
                 else:
-                    logging.error("%d is not mapped!" % el_2)
+                    logging.debug("%d is not mapped!" % el_2)
 
 
         # logging.debug("Map " + str(nodes_1_to_2))
