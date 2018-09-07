@@ -90,8 +90,6 @@ def search_pattern():
 
 
 def flaskrun(default_host="127.0.0.1", default_port="5000"):
-    logging.basicConfig(level=logging.INFO)
-
     p = optparse.OptionParser()
 
     p.add_option('-a', '--address', help="Host name")
@@ -129,6 +127,12 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
     if (not opts.iso_path): usage("Iso executable not provided!")
     if (not os.path.isfile(opts.iso_path)):
         usage("Iso executable %s does not exist!" % opts.iso_path)
+
+    if (opts.debug):
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
 
     app = create_app(opts.graph_path, opts.cluster_path, opts.iso_path)
 
