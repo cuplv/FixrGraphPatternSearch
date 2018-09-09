@@ -21,6 +21,8 @@ from fixrgraph.solr.import_patterns import _get_pattern_key
 
 JSON_OUTPUT = True
 
+MIN_METHODS_IN_COMMON = 2
+
 RESULT_CODE="result_code"
 ERROR_MESSAGE="error_messages"
 PATTERN_KEY = "pattern_key"
@@ -60,7 +62,7 @@ class Search():
             fgroum.close()
 
         # 2. Search the clusters
-        clusters = self.index.get_clusters(method_list,2)
+        clusters = self.index.get_clusters(method_list, MIN_METHODS_IN_COMMON)
 
         # 3. Search the clusters
         results = []
@@ -74,7 +76,24 @@ class Search():
             else:
                 logging.debug("Found %d in cluster %d..." % (len(results_cluster),
                                                              cluster_info.id))
+
                 results.append(results_cluster)
+
+        # sort results by popularity
+        def mysort(res_list):
+            if "search_results" in res_list:
+                if len(res_list["search_results"]) > 0:
+                    elem = res_list["search_results"][0]
+
+                    if "popular" in elem:
+                        return elem["popular"]["frequency"]
+                    if "anomalous" in elem:
+                        return elem["anomalous"]["frequency"]
+
+            return 0
+        results = sorted(results, key=lambda res: mysort(res), reverse=True)
+
+
 
         return results
 
@@ -194,20 +213,23 @@ class Search():
             elif (proto_search.type ==
                   SearchResults.SearchResult.ISOLATED_SUBSUMED):
                 search_res["type"] = "ISOLATED_SUBSUMED"
-                subsumes_ref = False
+                subsumes_ref = True
                 subsumes_anom = False
             elif (proto_search.type ==
                   SearchResults.SearchResult.ISOLATED_SUBSUMING):
                 search_res["type"] = "ISOLATED_SUBSUMING"
                 subsumes_anom = False
 
+            logging.debug("Search res: " + search_res["type"])
 
             # print("Lines iso to reference %d" %
             #       len(proto_search.isoToReference.acdfg_1.node_lines))
 
             # Process the reference pattern
             bin_id = proto_search.referencePatternId
-            bin_res = self.format_bin(id2bin[bin_id],
+            bin_res = self.format_bin(proto_results.lattice,
+                                      id2bin,
+                                      id2bin[bin_id],
                                       proto_search.isoToReference,
                                       subsumes_ref)
             search_res["popular"] = bin_res
@@ -217,21 +239,44 @@ class Search():
                 proto_search.HasField("isoToAnomalous")):
                 bin_id = proto_search_res.anomalousPatternId
 
-                bin_res = self.format_bin(id2bin[bin_id],
+                bin_res = self.format_bin(proto_results.lattice,
+                                          id2bin,
+                                          id2bin[bin_id],
                                           proto_search.isoToAnomalous,
                                           subsumes_ref)
                 search_res["anomalous"] = bin_res
 
             search_res_list.append(search_res)
 
-        if len(results) == 0:
+        if len(search_res_list) == 0:
             results = None
         else:
+            search_res_list = sorted(search_res_list, key=lambda res: res["popular"]["frequency"] if "popular" in res else (res["anomalous"]["frequency"] if "anomalous" in res else 0), reverse=True)
+
+
             results["search_results"] = search_res_list
 
         return results
 
-    def format_bin(self, acdfbBin, isoRes, subsumes):
+    def get_popularity(self, lattice, id2bin, acdfg_bin):
+        visited = set()
+        subsumed = [acdfg_bin]
+        popularity = 0
+        while (len(subsumed) != 0):
+            current = subsumed.pop()
+            if current.id in visited:
+                continue
+
+            popularity = popularity + len(current.names_to_iso)
+
+            for binId in current.subsuming_bins:
+                subsumed.append(id2bin[binId])
+
+            visited.add(current.id)
+        return popularity
+
+
+    def format_bin(self, lattice, id2bin, acdfbBin, isoRes, subsumes):
         res_bin = {}
 
         if (acdfbBin.popular):
@@ -241,12 +286,13 @@ class Search():
         elif (acdfbBin.isolated):
             res_bin["type"] = "isolated"
 
-        res_bin["frequency"] = len(acdfbBin.names_to_iso)
+        res_bin["frequency"] = self.get_popularity(lattice, id2bin, acdfbBin)
 
         # Creates three lists of lines association betweem
         # the query acdf and all the other acdfgs in the
         # pattern
         acdfg_mappings = []
+        visitedMapping = set()
         for isoPair in acdfbBin.names_to_iso:
             mapping = {}
             source_info = {}
@@ -283,6 +329,17 @@ class Search():
                     repo_tag["commit_date"] = proto_tag.commit_date
                 mapping["repo_tag"] = repo_tag
 
+            # remove duplicates
+            key = "%s/%s/%s/%s/%s/%s" % (repo_tag["user_name"],
+                                         repo_tag["repo_name"],
+                                         repo_tag["commit_hash"],
+                                         source_info["class_name"],
+                                         source_info["method_name"],
+                                         source_info["method_line_number"])
+
+            if key in visitedMapping:
+                continue
+            visitedMapping.add(key)
 
             # Computes the mapping from the acdfg used in the
             # query and the acdfg in the bin
