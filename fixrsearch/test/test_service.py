@@ -48,7 +48,7 @@ class TestServices(unittest.TestCase):
         assert os.path.isdir(self.base_iso_path)
 
         self.iso_bin_path = os.path.join(self.base_iso_path,
-                                         "build/src/fixrgraphiso/fixrgraphiso")
+                                         "build/src/fixrgraphiso/searchlattice")
         assert os.path.isfile(self.iso_bin_path)
  
         self.app = create_app(self.graph_path,
@@ -70,11 +70,21 @@ class TestServices(unittest.TestCase):
                                          content_type='application/json')
         json_data = json.loads(response.get_data(as_text=True))
 
-        print json_data
+        assert json_data['status'] == 0
+        assert len(json_data['results']) > 0    
 
+        found = False
+        all_results = json_data['results']
+        for search_results in all_results:
+            for res in search_results['search_results']:
+                if 'popular' in res:
+                    elem = res['popular']
+                    if (elem['type'] == 'popular' and
+                        elem['frequency'] == 48):
+                        found = True
+                        break
 
-        assert False
-
+        assert found
 
     def test_get_apps(self):        
         data = {}
