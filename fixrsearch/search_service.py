@@ -28,7 +28,7 @@ from groum_index import GroumIndex
 
 def get_apps():
     groum_index = current_app.config[GROUM_INDEX]
-    apps = groum_index.get_apps()
+    apps = groum_index.get_apps()    
     return Response(json.dumps(apps),
                     status=200,
                     mimetype='application/json')
@@ -37,6 +37,7 @@ def get_groums():
     content = request.get_json(force=True)
     if (not content is None) and ("app_key" in content):
         app_key = content["app_key"]
+
         groum_index = current_app.config[GROUM_INDEX]
         groums = groum_index.get_groums(app_key)
 
@@ -61,7 +62,7 @@ def search_pattern():
 
 
         if groum_file is None:
-            error_msg = "Cannot find groum for %s" % groum_
+            error_msg = "Cannot find groum for %s" % groum_id
             reply_json = {"status" : 1,
                           "error" : error_msg}
 
@@ -87,6 +88,16 @@ def search_pattern():
         return Response(json.dumps(reply_json),
                         status=404,
                         mimetype='application/json')
+
+
+# def process_pull_request(self):
+    
+
+# def get_patch(self):
+    
+
+# def get_pattern(self):
+
 
 
 def flaskrun(default_host="127.0.0.1", default_port="5000"):
@@ -136,15 +147,12 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
 
     app = create_app(opts.graph_path, opts.cluster_path, opts.iso_path)
 
-    app.route('/search', methods=['POST'])(search_pattern)
-    app.route('/get_apps', methods=['GET'])(get_apps)
-    app.route('/get_groums', methods=['POST'])(get_groums)
-
     app.run(
         debug=opts.debug,
         host=host,
         port=int(port)
     )
+    logging.info("Running server...")
 
 
 def create_app(graph_path, cluster_path, iso_path):
@@ -160,7 +168,11 @@ def create_app(graph_path, cluster_path, iso_path):
     logging.info("Creating graph index...")
     app.config[GROUM_INDEX] = GroumIndex(graph_path)
 
-    logging.info("Running server...")
+    logging.info("Set up routes...")
+    app.route('/search', methods=['POST'])(search_pattern)
+    app.route('/get_apps', methods=['GET'])(get_apps)
+    app.route('/get_groums', methods=['POST'])(get_groums)
+
     return app
 
 

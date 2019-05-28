@@ -49,22 +49,30 @@ class Search():
         else:
             self.index = index
 
-    def search_from_groum(self, groum_path):
-        logging.info("Search for groum %s" % groum_path)
-
+    def _get_clusters(self, groum_path):
         # 1. Get the method list from the GROUM
         acdfg = Acdfg()
         with open(groum_path,'rb') as fgroum:
             acdfg.ParseFromString(fgroum.read())
             method_list = []
             for method_node in acdfg.method_node:
-                method_list.append(method_node.name)
+                std_str = str(method_node.name)
+                
+                method_list.append(std_str)
             fgroum.close()
 
         # 2. Search the clusters
         clusters = self.index.get_clusters(method_list, MIN_METHODS_IN_COMMON)
 
-        # 3. Search the clusters
+        return clusters
+
+    def search_from_groum(self, groum_path):
+        logging.info("Search for groum %s" % groum_path)
+
+        # 1. Search the clusters
+        clusters = self._get_clusters(groum_path)
+
+        # 2. Search the clusters
         results = []
         for cluster_info in clusters:
             logging.debug("Searching in cluster %d (%s)..." % (cluster_info.id,
@@ -79,7 +87,7 @@ class Search():
 
                 results.append(results_cluster)
 
-        # sort results by popularity
+        # 3. sort results by popularity
         def mysort(res_list):
             if "search_results" in res_list:
                 if len(res_list["search_results"]) > 0:
@@ -547,6 +555,7 @@ def main():
         groum_index = GroumIndex(opts.graph_dir)
         key = groum_index.get_groum_key(opts.user, opts.repo, opts.hash,
                                         opts.method, opts.line)
+
         groum_file = groum_index.get_groum_path(key)
         if groum_file is None:
             usage("Cannot find groum for %s" % key)

@@ -200,6 +200,7 @@ class GroumIndex(object):
                      "\tNumber of graphs: %d\n" % (len(self.apps),
                                                    len(self.groumid2path)))
 
+
     def write_index(self, index_file_name):
         logging.info("Writing index...")
         index_data = {"apps" : self.apps,
