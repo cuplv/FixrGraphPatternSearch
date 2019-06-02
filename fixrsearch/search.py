@@ -57,7 +57,7 @@ class Search():
             method_list = []
             for method_node in acdfg.method_node:
                 std_str = str(method_node.name)
-                
+
                 method_list.append(std_str)
             fgroum.close()
 
@@ -531,7 +531,8 @@ def main():
     use_groum_file = False
     if (not opts.groum):
         if (not opts.graph_dir): usage("Graph dir not provided!")
-        if (not os.path.isdir(opts.graph_dir)): usage("%s does not exist!" % opts.graph_dir)
+        if (not os.path.isdir(opts.graph_dir)):
+          usage("%s does not exist!" % opts.graph_dir)
         if (not opts.user): usage("User not provided")
         if (not opts.hash): usage("Hash not provided")
         if (not opts.repo): usage("Repo not provided")
@@ -566,11 +567,6 @@ def main():
     result = {RESULT_CODE : SEARCH_SUCCEEDED_RESULT,
               RESULTS_LIST : results}
     json.dump(result,sys.stdout)
-
-    # with open("/tmp/app.json", "w") as f:
-    #     json.dump(result, f)
-    #     f.close()
-
 
 
     # TODO CATCH EXCEPTION

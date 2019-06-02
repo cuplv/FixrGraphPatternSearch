@@ -77,7 +77,8 @@ class TestDb(unittest.TestCase):
         repo_name = "biggroum"
         pr_number = 1
 
-        pull_request_ref = PullRequestReference(RepoReference(repo_name, user_name),
+        pull_request_ref = PullRequestReference(RepoReference(repo_name,
+                                                              user_name),
                                                 pr_number)
         res = self.db.new_pr(pull_request_ref)
         (res_id, pr1) = res
