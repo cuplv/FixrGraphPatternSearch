@@ -13,6 +13,7 @@ import httplib
 
 
 from fixrsearch.db import Db, SQLiteConfig
+from fixrsearch.anomaly import Anomaly
 from fixrsearch.utils import (
   RepoReference, CommitReference,
   PullRequestReference,
@@ -102,6 +103,24 @@ class TestDb(unittest.TestCase):
       (res_id, old_data) = self.db.new_pattern(data)
       self.assertEquals(old_data, data)
 
+
+    def testInsertAnomalies(self):
+      repo_ref = RepoReference("biggroum", "cuplv")
+      commit_ref = CommitReference(repo_ref,
+                                   "f0cc7668ba469c920c581536f2f364b47c91d075")
+      pr = PullRequestReference(repo_ref, 1)
+      pattern = Pattern(repo_ref, "5/2/1", "text")
+      method = MethodReference(commit_ref,
+                               "MyClass",
+                               "edu.colorado.plv",
+                               "doSomething",
+                               "12",
+                               "MyClass.java")
+
+      anomaly = Anomaly(1, method, pr, "patch", pattern)
+
+      (res_id, old_data) = self.db.new_anomaly(anomaly)
+      self.assertEquals(old_data, anomaly)
 
     def tearDown(self):
         self.db.disconnect()

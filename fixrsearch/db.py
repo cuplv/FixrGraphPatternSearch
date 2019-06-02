@@ -116,15 +116,22 @@ class Db(object):
     def get_method(self, data):
       return self._get_data(data, self._select_method)
 
+    def new_anomaly(self, data, lookup=False):
+      return self._new_data(data, self._new_anomaly,
+                            self.get_anomaly, lookup)
+    def get_anomaly(self, data):
+      return self._get_data(data, self._select_anomaly)
 
     def _new_data(self, data, new_f, get_f, lookup=False):
       if (lookup):
-        data_id = get_f(data)
+        res_get_f = get_f(data)
 
-        if (data_id is None):
-          (data_id, new_repo) = new_f(data)
+        if (res_get_f is None):
+          (data_id, data) = new_f(data)
+        else:
+          (data_id, data) = res_get_f
 
-        return (data_id, new_repo)
+        return (data_id, data)
       else:
         return new_f(data)
 
@@ -163,26 +170,26 @@ class Db(object):
 
     def _select_commit(self, commit_reference):
       commits = self.metadata.tables['commits']
-      stmt1 = self._select_repo(commit_reference.repo_reference)
-      stmt = select([commits]). \
-             where (commits.c.commit_hash == commit_reference.commit_hash and 
-                    commits.c.repo_id == stmt1.id).limit(1)
-      return stmt
+      stmt = self._select_repo(commit_reference.repo_reference).alias()
+      return select([commits]). \
+        where (commits.c.commit_hash == commit_reference.commit_hash and 
+               commits.c.repo_id == stmt.c.id).limit(1)
 
     def _new_pr(self, pr_ref, lookup=False):
       (repo_id, _) = self.new_repo(pr_ref.repo_reference, True)
       pull_requests = self.metadata.tables['pull_requests']
-      ins = pull_requests.insert().values(repo_id=repo_id,
-                                          number=pr_ref.number)
+
+      ins = pull_requests.insert().values(repo_id = repo_id,
+                                          number = pr_ref.number)
       result = self.connection.execute(ins)
       return (result.inserted_primary_key[0], pr_ref)
 
     def _select_pr(self, pr_ref):
       prs = self.metadata.tables['pull_requests']
-      stmt1 = self._select_repo(pr_ref.repo_reference)
+      stmt1 = self._select_repo(pr_ref.repo_reference).alias()
       return select([prs]). \
         where (prs.c.number == pr_ref.number and
-               prs.c.repo_id == stmt1.id).limit(1)
+               prs.c.repo_id == stmt1.c.id).limit(1)
 
     def _new_pattern(self, pattern_ref, lookup=False):
       (repo_id, _) = self.new_repo(pattern_ref.repo_reference, True)
@@ -194,10 +201,10 @@ class Db(object):
 
     def _select_pattern(self, pattern_ref):
       patterns = self.metadata.tables['patterns']
-      stmt1 = self._select_repo(pattern_ref.repo_reference)
+      stmt1 = self._select_repo(pattern_ref.repo_reference).alias()
       return select([patterns]). \
         where (patterns.c.pattern_id == pattern_ref.pattern_id and
-               patterns.c.repo_id == stmt1.id).limit(1)
+               patterns.c.repo_id == stmt1.c.id).limit(1)
 
     def _new_method(self, method_data):
       methods = self.metadata.tables['methods']
@@ -216,31 +223,48 @@ class Db(object):
       methods = self.metadata.tables['methods']
 
       stmt1 = self._select_commit(data.commit_reference)
+      # rename stuff to avoid ambiguities
+      stmt1 = stmt1.alias()
+
       return select([methods]). \
-        where (methods.commit_id == stmt1.id and
-               class_name == data.class_name,
-               package_name == data.package_name,
-               method_name == data.method_name,
-               start_line_number == data.start_line_number,
-               source_class_name == data.source_class_name).limit(1)
+        where (methods.c.commit_id == stmt1.c.id and
+               methods.c.class_name == data.class_name and
+               methods.c.package_name == data.package_name and
+               methods.c.method_name == data.method_name and
+               methods.c.start_line_number == data.start_line_number and
+               methods.c.source_class_name == data.source_class_name).limit(1)
 
-    # patterns, patches, anomalies
+    def _new_anomaly(self, anomaly):
+      anomalies = self.metadata.tables['anomalies']
 
-    def new_anomaly(self,
-                    method_reference,
-                    pull_request,
-                    pattern):
+      (method_id, _) = self.new_method(anomaly.method_reference, True)
+      (pull_request_id, _) = self.new_pr(anomaly.pull_request, True)
+      (pattern_id, _) = self.new_pattern(anomaly.pattern, True)
 
-        anomaly = Anomaly(-1,
-                          method_reference,
-                          pull_request,
-                          pattern)
+      ins = anomalies.insert().values(method_id = method_id,
+                                      pull_request_id = pull_request_id,
+                                      pattern_id = pattern_id,
+                                      numeric_id = anomaly.numeric_id,
+                                      patch = anomaly.patch,
+                                      status = anomaly.status)
 
-        # insert anomaly in the db
+      result = self.connection.execute(ins)
+      return (result.inserted_primary_key[0], anomaly)
 
-        # return anomaly
-        raise NotImplementedError
+    def _select_anomaly(self, data):
+      anomalies = self.metadata.tables['anomalies']
 
+      stmt_method = self._select_method(data.method_reference)
+      stmt_pr = self._select_pr(data.pull_request)
+      stmt_pattern = self._select_pattern(data.pattern)
+
+      return select([anomalies]). \
+        where (anomalies.c.method_id == stmt_method.c.id and
+               anomalies.c.pull_request_id == stmt_pr.c.id and
+               anomalies.c.pattern_id == stmt_pattern.c.id and
+               anomalies.c.numeric_id == data.anomaly.numeric_id and
+               anomalies.c.patch == data.anomaly.patch and
+               anomalies.c.status == data.anomaly.status).limit(1)
 
     def _create_db(self):
         # Create the database
@@ -276,19 +300,15 @@ class Db(object):
                               Column('pattern_id', String(255)),
                               Column('repo_id', Integer, ForeignKey('repos.id')))
 
-        patchesTable = Table('patches', self.metadata,
-                             Column('id', Integer, primary_key = True),
-                             Column('patch', VARCHAR, ForeignKey('repos.id')))
-
         anomaliesTable = Table('anomalies', self.metadata,
                                Column('id', Integer, primary_key=True),
+                               Column('numeric_id', Integer),
                                Column('method_id', Integer, ForeignKey('methods.id')),
                                Column('pull_request_id', Integer,
                                       ForeignKey('pull_requests.id')),
                                Column('pattern_id', Integer, ForeignKey('patterns.id')),
-                               Column('patch_id', Integer, ForeignKey('patches.id')),
-                               Column('status', Integer, ForeignKey('patches.id'))
-        )
+                               Column('patch', VARCHAR),
+                               Column('status', VARCHAR))
 
         self.metadata.create_all(self.engine)
 
