@@ -53,6 +53,7 @@ class Db(object):
         self.metadata = Metadata()
         self.metadata.reflect(bind=self.engine)
 
+
     def connect_or_create(self):
         self.engine = self.config.create_engine()
 
@@ -70,20 +71,10 @@ class Db(object):
         self.connection.close()
         self.connection = None
 
+
     def get_pattern(self,
                     pull_request,
                     anomaly_numeric_id):
-        raise NotImplementedError
-
-    def get_anomaly(self, pull_request, anomaly_numeric_id):
-        """ Return the specific anomaly
-        """
-        raise NotImplementedError
-
-    def get_anomalies(self, pull_request):
-        """ Return the list of anomalies found in the
-        pull_request
-        """
         raise NotImplementedError
 
     def new_repo(self, repo_ref, lookup=False):
@@ -92,11 +83,36 @@ class Db(object):
     def get_repo(self, repo_ref):
       return self._get_data(repo_ref, self._select_repo)
 
+    def get_repo_by_id(self, repo_id):
+      repos = self.metadata.tables['repos']
+      stmt = select([repos]).where (repos.c.id == repo_id).limit(1)
+      res = self.connection.execute(stmt)
+      res_data = res.fetchone()
+      if (res_data is None):
+        return None
+      else:
+        return RepoReference(res_data.repo_name,
+                             res_data.user_name)
+
     def new_commit(self, commit_ref, lookup=False):
       return self._new_data(commit_ref, self._new_commit,
                             self.get_commit, lookup)
     def get_commit(self, commit_ref):
       return self._get_data(commit_ref, self._select_commit)
+
+    def get_commit_by_id(self, commit_id):
+      commits = self.metadata.tables['commits']
+      stmt = select([commits]).where (commits.c.id == commit_id).limit(1)
+      res = self.connection.execute(stmt)
+      res_data = res.fetchone()
+      if (res_data is None):
+        return None
+      else:
+        repo_ref = self.get_repo_by_id(res_data.repo_id)
+        assert not repo_ref is None
+
+        return CommitReference(repo_ref,
+                               res_data.commit_hash)
 
     def new_pr(self, pr_ref, lookup=False):
       return self._new_data(pr_ref, self._new_pr,
@@ -110,17 +126,90 @@ class Db(object):
     def get_pattern(self, pattern_ref):
       return self._get_data(pattern_ref, self._select_pattern)
 
+    def get_pattern_by_id(self, pattern_db_id):
+      patterns = self.metadata.tables['patterns']
+      stmt = select([patterns]).where (patterns.c.id == pattern_db_id).limit(1)
+      res = self.connection.execute(stmt)
+      res_data = res.fetchone()
+      if (res_data is None):
+        return None
+      else:
+        repo_ref = self.get_repo_by_id(res_data.repo_id)
+        assert not repo_ref is None
+
+        return Pattern(repo_ref,
+                       res_data.pattern_id,
+                       res_data.text)
+
+
     def new_method(self, data, lookup=False):
       return self._new_data(data, self._new_method,
                             self.get_method, lookup)
     def get_method(self, data):
       return self._get_data(data, self._select_method)
 
+    def get_method_by_id(self, method_id):
+      methods = self.metadata.tables['methods']
+      stmt = select([methods]).where (methods.c.id == method_id).limit(1)
+      res = self.connection.execute(stmt)
+      res_data = res.fetchone()
+
+      if (res_data is None):
+        return None
+      else:
+        commit_ref = self.get_commit_by_id(res_data.commit_id)
+
+        return MethodReference(commit_ref,
+                               res_data.class_name,
+                               res_data.package_name,
+                               res_data.method_name,
+                               res_data.start_line_number,
+                               res_data.source_class_name)
+
+
     def new_anomaly(self, data, lookup=False):
       return self._new_data(data, self._new_anomaly,
                             self.get_anomaly, lookup)
     def get_anomaly(self, data):
       return self._get_data(data, self._select_anomaly)
+
+    def get_anomaly_by_pr_and_number(self,
+                                     pull_request,
+                                     numeric_id):
+      """ Return the anomaly for the given pull requesta witgh the given
+      numeric_id of the anomaly
+      """
+      anomalies = self.metadata.tables['anomalies']
+
+      select_pr = self._select_pr(pull_request).alias()
+      select_anomaly = select([anomalies]). \
+        where (anomalies.c.pull_request_id == select_pr.c.id and
+               anomalies.c.numeric_id == numeric_id).limit(1)
+
+      exec_res = self.connection.execute(select_anomaly)
+      res = exec_res.fetchone()
+
+      if (res is None):
+        return None
+      else:
+        pattern = self.get_pattern_by_id(res.pattern_id)
+        assert (pattern is not None)
+        method = self.get_method_by_id(res.method_id)
+        assert (method is not None)
+
+        anomaly = Anomaly(numeric_id,
+                          method,
+                          pull_request,
+                          res.patch,
+                          pattern)
+        return anomaly
+
+    def get_anomalies(self, pull_request):
+        """ Return the list of anomalies found in the
+        pull_request
+        """
+        raise NotImplementedError
+
 
     def _new_data(self, data, new_f, get_f, lookup=False):
       if (lookup):
@@ -195,7 +284,8 @@ class Db(object):
       (repo_id, _) = self.new_repo(pattern_ref.repo_reference, True)
       patterns = self.metadata.tables['patterns']
       ins = patterns.insert().values(repo_id=repo_id,
-                                     pattern_id=pattern_ref.pattern_id)
+                                     pattern_id=pattern_ref.pattern_id,
+                                     text=pattern_ref.text)
       result = self.connection.execute(ins)
       return (result.inserted_primary_key[0], pattern_ref)
 
@@ -298,7 +388,8 @@ class Db(object):
         patternsTable = Table('patterns', self.metadata,
                               Column('id', Integer, primary_key = True),
                               Column('pattern_id', String(255)),
-                              Column('repo_id', Integer, ForeignKey('repos.id')))
+                              Column('repo_id', Integer, ForeignKey('repos.id')),
+                              Column('text', VARCHAR))
 
         anomaliesTable = Table('anomalies', self.metadata,
                                Column('id', Integer, primary_key=True),

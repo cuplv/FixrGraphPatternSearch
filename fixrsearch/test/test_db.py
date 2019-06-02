@@ -34,7 +34,7 @@ class TestDbNew(unittest.TestCase):
         db = Db(config)    
         db.connect_or_create()
         db.disconnect()
-        os.remove(TestDb.DB_NAME)
+        # os.remove(TestDb.DB_NAME)
 
 class TestDb(unittest.TestCase):
     DB_NAME = "/tmp/testDB.sqlite"
@@ -122,13 +122,15 @@ class TestDb(unittest.TestCase):
       (res_id, old_data) = self.db.new_anomaly(anomaly)
       self.assertEquals(old_data, anomaly)
 
+      self.assertIsNotNone(self.db.get_anomaly_by_pr_and_number(pr, 1))
+
     def tearDown(self):
         self.db.disconnect()
         os.remove(TestDb.DB_NAME)
 
 
 
-        
+
 
 
 
