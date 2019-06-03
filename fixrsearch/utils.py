@@ -57,25 +57,23 @@ class ClusterRef(object):
   """ Represent a cluster
   """
 
-  class Type:
-    ANOMALOUS = "ANOMALOUS"
-    POPULAR = "POPULAR"
-    ISOLATED = "ISOLATED"
-
   def __init__(self,
                cluster_id,
-               cluster_type,
                frequency):
     # TODO: add popularity
     self.cluster_id = cluster_id
-    self.cluster_type = cluster_type
     self.frequency = frequency
 
 class PatternRef(object):
   """ Representation of the pattern
   """
-  def __init__(self, cluster_ref, pattern_id, text):
+  class Type:
+    ANOMALOUS = "ANOMALOUS"
+    POPULAR = "POPULAR"
+    ISOLATED = "ISOLATED"
+
+  def __init__(self, cluster_ref, pattern_id, pattern_type):
     # TODO: add list of examples
     self.cluster_ref = cluster_ref
     self.pattern_id = pattern_id
-    self.text = text
+    self.pattern_type = pattern_type

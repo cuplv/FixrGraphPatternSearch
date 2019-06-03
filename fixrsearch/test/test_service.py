@@ -29,6 +29,8 @@ class TestServices(unittest.TestCase):
         self.app = None
         self.test_client = None
         self.test_path = None
+        self.graph_path = None
+        self.cluster_path = None
 
     def setUp(self):
         # Builds the path to find the test data

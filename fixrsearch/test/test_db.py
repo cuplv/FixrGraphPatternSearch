@@ -35,7 +35,7 @@ class TestDbNew(unittest.TestCase):
         db = Db(config)
         db.connect_or_create()
         db.disconnect()
-        # os.remove(TestDb.DB_NAME)
+        os.remove(TestDb.DB_NAME)
 
 class TestDb(unittest.TestCase):
     DB_NAME = "/tmp/testDB.sqlite"
@@ -100,14 +100,15 @@ class TestDb(unittest.TestCase):
       self.assertEquals(old_data, data)
 
     def testInsertPattern(self):
-      cluster_ref = ClusterRef("5/2/1", ClusterRef.Type.POPULAR, 20.4)
-      data = PatternRef(cluster_ref, "5/2/1", "text")
+      cluster_ref = ClusterRef("5/2/1", 20.4)
+      pattern = PatternRef(cluster_ref, "5/2/1",
+                           PatternRef.Type.POPULAR)
 
-      (res_id, old_data) = self.db.new_pattern(data)
-      self.assertEquals(old_data, data)
+      (res_id, old_data) = self.db.new_pattern(pattern)
+      self.assertEquals(old_data, pattern)
 
     def testInsertCluster(self):
-      data = ClusterRef("5/2/1", ClusterRef.Type.POPULAR, 20.4)
+      data = ClusterRef("5/2/1", 20.4)
 
       (res_id, old_data) = self.db.new_cluster(data)
       self.assertEquals(old_data, data)
@@ -118,8 +119,9 @@ class TestDb(unittest.TestCase):
       commit_ref = CommitRef(repo_ref,
                              "f0cc7668ba469c920c581536f2f364b47c91d075")
       pr = PullRequestRef(repo_ref, 1, commit_ref)
-      cluster_ref = ClusterRef("5/2/1", ClusterRef.Type.POPULAR, 20.4)
-      pattern = PatternRef(cluster_ref, "5/2/1", "text")
+      cluster_ref = ClusterRef("5/2/1", 20.4)
+      pattern = PatternRef(cluster_ref, "5/2/1",
+                           PatternRef.Type.POPULAR)
       method = MethodRef(commit_ref,
                          "MyClass",
                          "edu.colorado.plv",
@@ -127,7 +129,7 @@ class TestDb(unittest.TestCase):
                          "12",
                          "MyClass.java")
 
-      anomaly = Anomaly(1, method, pr, "patch", pattern)
+      anomaly = Anomaly(1, method, pr, "patch", "pattern", pattern)
 
       (res_id, old_data) = self.db.new_anomaly(anomaly)
       self.assertEquals(old_data, anomaly)
@@ -135,5 +137,6 @@ class TestDb(unittest.TestCase):
       self.assertIsNotNone(self.db.get_anomaly_by_pr_and_number(pr, 1))
 
     def tearDown(self):
-        self.db.disconnect()
-        os.remove(TestDb.DB_NAME)
+      self.db.disconnect()
+      os.remove(TestDb.DB_NAME)
+      self.assertFalse(os.path.exists(TestDb.DB_NAME))

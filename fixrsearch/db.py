@@ -158,7 +158,7 @@ class Db(object):
         cluster_ref = self.get_cluster_by_id(res_data.cluster_id)
         return PatternRef(cluster_ref,
                           res_data.pattern_id,
-                          res_data.text)
+                          res_data.pattern_type)
 
     def new_cluster(self, cluster_ref, lookup=False):
       return self._new_data(cluster_ref, self._new_cluster,
@@ -175,7 +175,6 @@ class Db(object):
         return None
       else:
         return ClusterRef(res_data.cluster_id,
-                          res_data.cluster_type,
                           res_data.frequency)
 
 
@@ -237,7 +236,8 @@ class Db(object):
         anomaly = Anomaly(numeric_id,
                           method,
                           pull_request,
-                          res.patch,
+                          res.patch_text,
+                          res.pattern_text,
                           pattern)
         return anomaly
 
@@ -342,7 +342,7 @@ class Db(object):
       (cluster_id, _) = self.new_cluster(pattern_ref.cluster_ref, True)
       ins = patterns.insert().values(cluster_id=cluster_id,
                                      pattern_id=pattern_ref.pattern_id,
-                                     text=pattern_ref.text)
+                                     pattern_type=pattern_ref.pattern_type)
       result = self.connection.execute(ins)
       return (result.inserted_primary_key[0], pattern_ref)
 
@@ -351,13 +351,13 @@ class Db(object):
       stmt_cluster = self._select_cluster(pattern_ref.cluster_ref).alias()
 
       return select([patterns]). \
-        where (patterns.c.cluster_id == stmt_cluster.c.id and 
+        where (patterns.c.cluster_id == stmt_cluster.c.id and
+               patterns.c.pattern_type == pattern_ref.pattern_type and
                patterns.c.pattern_id == pattern_ref.pattern_id).limit(1)
 
     def _new_cluster(self, cluster_ref, lookup=False):
       clusters = self.metadata.tables['clusters']
       ins = clusters.insert().values(cluster_id=cluster_ref.cluster_id,
-                                     cluster_type=cluster_ref.cluster_type,
                                      frequency=cluster_ref.frequency)
       result = self.connection.execute(ins)
       return (result.inserted_primary_key[0], cluster_ref)
@@ -406,7 +406,8 @@ class Db(object):
                                       pull_request_id = pull_request_id,
                                       pattern_id = pattern_id,
                                       numeric_id = anomaly.numeric_id,
-                                      patch = anomaly.patch,
+                                      patch_text = anomaly.patch_text,
+                                      pattern_text = anomaly.pattern_text,
                                       status = anomaly.status)
 
       result = self.connection.execute(ins)
@@ -424,7 +425,8 @@ class Db(object):
                anomalies.c.pull_request_id == stmt_pr.c.id and
                anomalies.c.pattern_id == stmt_pattern.c.id and
                anomalies.c.numeric_id == data.anomaly.numeric_id and
-               anomalies.c.patch == data.anomaly.patch and
+               anomalies.c.patch_text == data.anomaly.patch_text and
+               anomalies.c.pattern_text == data.anomaly.pattern_text and
                anomalies.c.status == data.anomaly.status).limit(1)
 
     def _create_db(self):
@@ -460,14 +462,13 @@ class Db(object):
         clustersTable = Table('clusters', self.metadata,
                               Column('id', Integer, primary_key = True),
                               Column('cluster_id', String(255)),
-                              Column('cluster_type', String(15)),
                               Column('frequency', Float))
 
         patternsTable = Table('patterns', self.metadata,
                               Column('id', Integer, primary_key = True),
                               Column('cluster_id', Integer, ForeignKey('clusters.id')),
                               Column('pattern_id', String(255)),
-                              Column('text', VARCHAR))
+                              Column('pattern_type', String(15)))
 
         anomaliesTable = Table('anomalies', self.metadata,
                                Column('id', Integer, primary_key=True),
@@ -475,8 +476,10 @@ class Db(object):
                                Column('method_id', Integer, ForeignKey('methods.id')),
                                Column('pull_request_id', Integer,
                                       ForeignKey('pull_requests.id')),
-                               Column('pattern_id', Integer, ForeignKey('patterns.id')),
-                               Column('patch', VARCHAR),
+                               Column('pattern_id', Integer,
+                                      ForeignKey('patterns.id')),
+                               Column('patch_text', VARCHAR),
+                               Column('pattern_text', VARCHAR),
                                Column('status', VARCHAR))
 
         self.metadata.create_all(self.engine)

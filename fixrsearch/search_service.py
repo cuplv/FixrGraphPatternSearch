@@ -113,41 +113,117 @@ def search_pattern():
 def process_pull_request(self):
     # get pr data
     content = request.get_json(force=True)
-    if (not content is None):
-        fields = ["user", "repo", "commitHashes",
-                  "modifiedFiles", "pullRequestId"]
-        for f in fields:
-            if f not in content:
-                return get_malformed_request("%s not in the request" % f)
-        user_name = content["user"]
-        repo_name = content["repo"]
-        pull_request_id = content["pullRequestId"]
+    if (content is None):
+        return get_malformed_request()
 
-        commits = content["commitHashes"]
-        modifiedFiles = content["modifiedFiles"]
+    fields = ["user", "repo", "commitHashes",
+              "modifiedFiles", "pullRequestId"]
+    for f in fields:
+        if f not in content:
+            return get_malformed_request("%s not in the request" % f)
 
-        db = current_app.config[DB]
-      
-        pr = db.PullRequestRef(RepoRef(repo_name, user_name),
-                            pull_request_id,
-                            None)
-                            
+    user_name = content["user"]
+    repo_name = content["repo"]
+    repo_ref = RepoRef(repo_name, user_name)
+
+    pull_request_id = content["pullRequestId"]
+    commits = content["commitHashes"]
+    modifiedFiles = content["modifiedFiles"]
+
+    # Find right pr to access the commit id used in the merge
+    db = current_app.config[DB]      
+    pr_ref = db.PullRequestRef(repo_ref,
+                               pull_request_id,
+                               None)                            
+    pr_ref = db.get_pr_ignore_commit(pr_ref)
+
+    if pr_ref is None:
+        # Reply with an error
+        error_msg = "Cannot find pull request %s for %s/%s" % (str(pull_request_id),
+                                                               repo_ref.user_name,
+                                                               repo_ref.repo_name)
+        reply_json = {"status" : 1,
+                      "error" : error_msg}        
+        return Response(json.dumps(reply_json),
+                        status=404,
+                        mimetype='application/json')
+
+    # Search for similar graphs
+    anomalies = []
+    app_key = index.get_app_key(pr_ref.repo_ref.user_name,
+                                pr_ref.repo_ref.repo_name,
+                                pr_ref.commit_ref.commit_hash)
+    groums = index.get_groums(app_key)
+    for g in groums:
+        groum_id = g["groum_key"]
+        groum_file = groum_index.get_groum_path(groum_id)
+
+        if groum_file is None:
+            error_msg = "Cannot find groum for %s in %s" % (groum_id,
+                                                            groum_file)
+            logging.debug(error_msg)
+        else:
+            method_ref = CommitRef(pullRequest.repo_ref,
+                                   pullRequest.commit_ref,
+                                   g["class_name"],
+                                   g["package_name"],
+                                   g["method"],
+                                   g["method_line_number"],
+                                   g["source_class_name"])        
+
+            search = Search(current_app.config[CLUSTER_PATH],
+                            current_app.config[ISO_PATH],
+                            current_app.config[INDEX])
+            results = search.search_from_groum(groum_file)
 
 
-        #index = 
+            for cluster_res in results:
+                clusterRef = ClusterRef("", 0.0)
 
-        merged_pr_commit_hash = index.get_merged_pr_hash(app_key,
-                                                         pull_request_id)
-        
-        
-        # app_key = index.get_app_key(user_name,
-        #                             repo_name,
-                                    
-        groums = index.get_groums(app_key)
+                for search_res in cluster_res["search_results"]:
+                    # Test, skip for now
+                    if search_res["type"] != "ANOMALOUS_SUBSUMED":
+                        continue
+                
+                    assert "popular" in search_res
 
-    # get graphs (assume to have graphs there)
-    # process graphs, save results, spit out results
-    pass
+                    # get the pattern
+                    binRes = search_res["popular"]
+                    
+                    assert "type" in binRes
+                    assert "mappings" in binRes
+                    assert "frequency" in binRes
+
+                    # binRes["frequency"]
+                    assert(binRes["type"] == "popular")
+
+                    # TODO: Generate patch text
+                    patchText = ""
+                    # TODO: Generate pattern text
+                    patternText = ""
+                    patternRef = PatternRef(cluster_ref,
+                                            "",
+                                            PatternRef.Type.Popular)
+                
+                    # Create the anomaly
+                    anomaly = Anomaly(anomaly_count,
+                                      method_ref,
+                                      pr_ref,
+                                      patchText,
+                                      patternRef)
+
+                    anomalies.append((binRes["frequency"], anomaly))
+
+
+    # sort and add the anomalies
+    anomalies = sorted(anomalies,
+                       key = lambda pair : pair[0],
+                       reverse=False)
+    anomaly_id = 0
+    for anomaly in anomalies:
+        anomaly_id += 1
+        anomaly.numeric_id = anomaly_id
+        db.new_anomaly(anomaly)
 
 # def get_patch(self):
     
