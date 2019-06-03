@@ -51,11 +51,30 @@ class MethodReference(object):
     # Name of the source code file of the method
     self.source_class_name = source_class_name
 
-class Pattern(object):
+
+class ClusterRef(object):
+  """ Represent a cluster
   """
+
+  class Type:
+    ANOMALOUS = "ANOMALOUS"
+    POPULAR = "POPULAR"
+    ISOLATED = "ISOLATED"
+
+  def __init__(self,
+               cluster_id,
+               cluster_type,
+               frequency):
+    # TODO: add popularity
+    self.cluster_id = cluster_id
+    self.cluster_type = cluster_type
+    self.frequency = frequency
+
+class PatternRef(object):
+  """ Representation of the pattern
   """
-  def __init__(self, repo_reference, pattern_id, text):
-    # TODO: complete the Pattern object
-    self.repo_reference = repo_reference
+  def __init__(self, cluster_ref, pattern_id, text):
+    # TODO: add list of examples, add containing cluster 
+    self.cluster_ref = cluster_ref
     self.pattern_id = pattern_id
     self.text = text

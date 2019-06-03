@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, ForeignKey
 from sqlalchemy.exc import OperationalError
 from sqlalchemy import MetaData, Table
 from sqlalchemy import ForeignKey
-from sqlalchemy import Column, Integer, String, VARCHAR
+from sqlalchemy import Column, Integer, String, Float, VARCHAR
 
 from sqlalchemy.sql import select
 from sqlalchemy.ext.declarative import declarative_base
@@ -19,7 +19,8 @@ from fixrsearch.utils import (
   RepoReference, CommitReference,
   PullRequestReference,
   MethodReference,
-  Pattern)
+  ClusterRef,
+  PatternRef)
 
 class DbConfig(object):
     def create_engine(self):
@@ -134,12 +135,28 @@ class Db(object):
       if (res_data is None):
         return None
       else:
-        repo_ref = self.get_repo_by_id(res_data.repo_id)
-        assert not repo_ref is None
+        cluster_ref = self.get_cluster_by_id(res_data.cluster_id)
+        return PatternRef(cluster_ref,
+                          res_data.pattern_id,
+                          res_data.text)
 
-        return Pattern(repo_ref,
-                       res_data.pattern_id,
-                       res_data.text)
+    def new_cluster(self, cluster_ref, lookup=False):
+      return self._new_data(cluster_ref, self._new_cluster,
+                            self.get_cluster, lookup)
+    def get_cluster(self, cluster_ref):
+      return self._get_data(cluster_ref, self._select_cluster)
+
+    def get_cluster_by_id(self, cluster_db_id):
+      clusters = self.metadata.tables['clusters']
+      stmt = select([clusters]).where (clusters.c.id == cluster_db_id).limit(1)
+      res = self.connection.execute(stmt)
+      res_data = res.fetchone()
+      if (res_data is None):
+        return None
+      else:
+        return ClusterRef(res_data.cluster_id,
+                          res_data.cluster_type,
+                          res_data.frequency)
 
 
     def new_method(self, data, lookup=False):
@@ -264,7 +281,7 @@ class Db(object):
         where (commits.c.commit_hash == commit_reference.commit_hash and 
                commits.c.repo_id == stmt.c.id).limit(1)
 
-    def _new_pr(self, pr_ref, lookup=False):
+    def _new_pr(self, pr_ref):
       (repo_id, _) = self.new_repo(pr_ref.repo_reference, True)
       pull_requests = self.metadata.tables['pull_requests']
 
@@ -280,10 +297,10 @@ class Db(object):
         where (prs.c.number == pr_ref.number and
                prs.c.repo_id == stmt1.c.id).limit(1)
 
-    def _new_pattern(self, pattern_ref, lookup=False):
-      (repo_id, _) = self.new_repo(pattern_ref.repo_reference, True)
+    def _new_pattern(self, pattern_ref):
       patterns = self.metadata.tables['patterns']
-      ins = patterns.insert().values(repo_id=repo_id,
+      (cluster_id, _) = self.new_cluster(pattern_ref.cluster_ref, True)
+      ins = patterns.insert().values(cluster_id=cluster_id,
                                      pattern_id=pattern_ref.pattern_id,
                                      text=pattern_ref.text)
       result = self.connection.execute(ins)
@@ -291,10 +308,24 @@ class Db(object):
 
     def _select_pattern(self, pattern_ref):
       patterns = self.metadata.tables['patterns']
-      stmt1 = self._select_repo(pattern_ref.repo_reference).alias()
+      stmt_cluster = self._select_cluster(pattern_ref.cluster_ref).alias()
+
       return select([patterns]). \
-        where (patterns.c.pattern_id == pattern_ref.pattern_id and
-               patterns.c.repo_id == stmt1.c.id).limit(1)
+        where (patterns.c.cluster_id == stmt_cluster.c.id and 
+               patterns.c.pattern_id == pattern_ref.pattern_id).limit(1)
+
+    def _new_cluster(self, cluster_ref, lookup=False):
+      clusters = self.metadata.tables['clusters']
+      ins = clusters.insert().values(cluster_id=cluster_ref.cluster_id,
+                                     cluster_type=cluster_ref.cluster_type,
+                                     frequency=cluster_ref.frequency)
+      result = self.connection.execute(ins)
+      return (result.inserted_primary_key[0], cluster_ref)
+
+    def _select_cluster(self, cluster_ref):
+      clusters = self.metadata.tables['clusters']
+      return select([clusters]). \
+        where (clusters.c.cluster_id == cluster_ref.cluster_id).limit(1)
 
     def _new_method(self, method_data):
       methods = self.metadata.tables['methods']
@@ -385,10 +416,16 @@ class Db(object):
                              Column('start_line_number', Integer, nullable = False),
                              Column('source_class_name', VARCHAR, nullable = False))
 
+        clustersTable = Table('clusters', self.metadata,
+                              Column('id', Integer, primary_key = True),
+                              Column('cluster_id', String(255)),
+                              Column('cluster_type', String(15)),
+                              Column('frequency', Float))
+
         patternsTable = Table('patterns', self.metadata,
                               Column('id', Integer, primary_key = True),
+                              Column('cluster_id', Integer, ForeignKey('clusters.id')),
                               Column('pattern_id', String(255)),
-                              Column('repo_id', Integer, ForeignKey('repos.id')),
                               Column('text', VARCHAR))
 
         anomaliesTable = Table('anomalies', self.metadata,

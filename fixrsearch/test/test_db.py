@@ -18,7 +18,8 @@ from fixrsearch.utils import (
   RepoReference, CommitReference,
   PullRequestReference,
   MethodReference,
-  Pattern)
+  ClusterRef,
+  PatternRef)
 
 try:
     import unittest2 as unittest
@@ -98,11 +99,18 @@ class TestDb(unittest.TestCase):
       self.assertEquals(old_data, data)
 
     def testInsertPattern(self):
-      repo_ref = RepoReference("biggroum", "cuplv")
-      data = Pattern(repo_ref, "5/2/1", "text")
+      cluster_ref = ClusterRef("5/2/1", ClusterRef.Type.POPULAR, 20.4)
+      data = PatternRef(cluster_ref, "5/2/1", "text")
 
       (res_id, old_data) = self.db.new_pattern(data)
       self.assertEquals(old_data, data)
+
+    def testInsertCluster(self):
+      data = ClusterRef("5/2/1", ClusterRef.Type.POPULAR, 20.4)
+
+      (res_id, old_data) = self.db.new_cluster(data)
+      self.assertEquals(old_data, data)
+
 
 
     def testInsertAnomalies(self):
@@ -110,7 +118,8 @@ class TestDb(unittest.TestCase):
       commit_ref = CommitReference(repo_ref,
                                    "f0cc7668ba469c920c581536f2f364b47c91d075")
       pr = PullRequestReference(repo_ref, 1)
-      pattern = Pattern(repo_ref, "5/2/1", "text")
+      cluster_ref = ClusterRef("5/2/1", ClusterRef.Type.POPULAR, 20.4)
+      pattern = PatternRef(cluster_ref, "5/2/1", "text")
       method = MethodReference(commit_ref,
                                "MyClass",
                                "edu.colorado.plv",
