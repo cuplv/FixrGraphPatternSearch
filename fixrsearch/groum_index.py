@@ -73,7 +73,6 @@ class GroumIndex(object):
             self.build_index()
             self.write_index(index_file_name)
 
-
     def get_apps(self):
         return self.apps
 
@@ -88,6 +87,12 @@ class GroumIndex(object):
             return os.path.join(self.graph_path, self.groumid2path[groum_id])
         else:
             return None
+
+    def get_app_key(user_name, repo_name, commit_id):
+      app_key = "%s/%s/%s" %(user_name,
+                             repo_name,
+                             commit_id)
+      return app_key
 
     def get_groum_key(self, user_name, repo_name, commit_id,
                       method_name, line_number):

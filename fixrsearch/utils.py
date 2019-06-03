@@ -3,7 +3,7 @@ Define utility classes
 """
 
 
-class RepoReference(object):
+class RepoRef(object):
   """
   Reference a repository
   """
@@ -11,35 +11,36 @@ class RepoReference(object):
     self.repo_name = repo_name
     self.user_name = user_name
 
-class CommitReference(object):
+class CommitRef(object):
   """
   Reference a commit
   """
-  def __init__(self,repo_reference, commit_hash):
-    self.repo_reference = repo_reference
+  def __init__(self,repo_ref, commit_hash):
+    self.repo_ref = repo_ref
     self.commit_hash = commit_hash
 
-class PullRequestReference(object):
+class PullRequestRef(object):
   """
   Reference to a pull request
   """
-  def __init__(self, repo_reference, number):
-    self.repo_reference = repo_reference
+  def __init__(self, repo_ref, number, commit_ref):
+    self.repo_ref = repo_ref
     # number of the pull request
     self.number = number
+    self.commit_ref = commit_ref
 
-class MethodReference(object):
+class MethodRef(object):
   """
   Contains the sufficient data to reference a method in the corpus
   """
-  def __init__(self, commit_reference,
+  def __init__(self, commit_ref,
                class_name,
                package_name,
                method_name,
                start_line_number,
                source_class_name):
 
-    self.commit_reference = commit_reference
+    self.commit_ref = commit_ref
     # Name of the class including the package
     self.class_name = class_name
     # Package of the class
@@ -74,7 +75,7 @@ class PatternRef(object):
   """ Representation of the pattern
   """
   def __init__(self, cluster_ref, pattern_id, text):
-    # TODO: add list of examples, add containing cluster 
+    # TODO: add list of examples
     self.cluster_ref = cluster_ref
     self.pattern_id = pattern_id
     self.text = text

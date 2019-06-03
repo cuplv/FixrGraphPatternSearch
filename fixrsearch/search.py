@@ -99,15 +99,15 @@ class Search():
             return elem["anomalous"]["frequency"]
 
       return 0
+
     results = sorted(results, key=lambda res: mysort(res), reverse=True)
-
-
-
     return results
 
 
-
   def search_cluster(self, groum_path, cluster_info):
+    """
+    Search for similarities and anomalies inside a single lattice
+    """
     current_path = os.path.join(self.cluster_path,
                                 "all_clusters",
                                 "cluster_%d" % cluster_info.id)
@@ -125,6 +125,9 @@ class Search():
 
 
   def call_iso(self, groum_path, lattice_path):
+    """
+    Search the element in the lattice that are similar to the groum
+    """
     search_file, search_path = tempfile.mkstemp(suffix=".bin",
                                                 prefix="search_res",
                                                 text=True)
@@ -172,7 +175,42 @@ class Search():
     return result
 
 
+  def get_res_type(self, proto_search_type):
+    if (proto_search_type == SearchResults.SearchResult.CORRECT):
+      res_type = "CORRECT"
+      subsumes_ref = True
+      subsumes_anom = True
+    elif (proto_search_type ==
+          SearchResults.SearchResult.CORRECT_SUBSUMED):
+      res_type = "CORRECT_SUBSUMED"
+      subsumes_ref = False
+      subsumes_anom = True
+    elif (proto_search_type ==
+          SearchResults.SearchResult.ANOMALOUS_SUBSUMED):
+      res_type = "ANOMALOUS_SUBSUMED"
+      subsumes_ref = False
+      subsumes_anom = False
+    elif (proto_search_type ==
+          SearchResults.SearchResult.ISOLATED_SUBSUMED):
+      res_type = "ISOLATED_SUBSUMED"
+      subsumes_ref = True
+      subsumes_anom = False
+    elif (proto_search_type ==
+          SearchResults.SearchResult.ISOLATED_SUBSUMING):
+      res_type = "ISOLATED_SUBSUMING"
+      subsumes_anom = False
+    else:
+      res_type = None
+      subsumes_ref = True
+      subsumes_anom = True
+
+    return (res_type, subsumes_ref, subsumes_anom)
+
+
   def formatOutput(self, search_path):
+    """
+    Read the results from the search and produce the json output
+    """
     logging.debug("Formatting output...")
 
     results = {}
@@ -189,11 +227,11 @@ class Search():
       method_names.append(proto_name)
       results["method_names"] = method_names
 
+    # Map from id of the bin to bin representation
     id2bin = {}
     for acdfbBin in proto_lattice.bins:
       assert not acdfbBin.id in id2bin
       id2bin[acdfbBin.id] = acdfbBin
-
 
     # Process each single result
     search_res_list = []
@@ -201,39 +239,17 @@ class Search():
       logging.debug("Processing proto search...")
 
       search_res = {}
-      subsumes_ref = True
-      subsumes_anom = True
 
-      if (proto_search.type == SearchResults.SearchResult.CORRECT):
-        search_res["type"] = "CORRECT"
-        subsumes_ref = True
-        subsumes_anom = True
-      elif (proto_search.type ==
-            SearchResults.SearchResult.CORRECT_SUBSUMED):
-        search_res["type"] = "CORRECT_SUBSUMED"
-        subsumes_ref = False
-        subsumes_anom = True
-      elif (proto_search.type ==
-            SearchResults.SearchResult.ANOMALOUS_SUBSUMED):
-        search_res["type"] = "ANOMALOUS_SUBSUMED"
-        subsumes_ref = False
-        subsumes_anom = False
-      elif (proto_search.type ==
-            SearchResults.SearchResult.ISOLATED_SUBSUMED):
-        search_res["type"] = "ISOLATED_SUBSUMED"
-        subsumes_ref = True
-        subsumes_anom = False
-      elif (proto_search.type ==
-            SearchResults.SearchResult.ISOLATED_SUBSUMING):
-        search_res["type"] = "ISOLATED_SUBSUMING"
-        subsumes_anom = False
-
+      # Get the type of the pattern
+      (res_type, subsumes_ref, subsume_anom) = self.get_res_type(proto_search.type)
+      search_res["type"] = res_type
       logging.debug("Search res: " + search_res["type"])
 
       # print("Lines iso to reference %d" %
       #       len(proto_search.isoToReference.acdfg_1.node_lines))
 
-      # Process the reference pattern
+      # Process the reference pattern, and set it as
+      # popular key in the result
       bin_id = proto_search.referencePatternId
       bin_res = self.format_bin(proto_results.lattice,
                                 id2bin,
@@ -242,11 +258,12 @@ class Search():
                                 subsumes_ref)
       search_res["popular"] = bin_res
 
-      # Process the anomalous
+      # Process the results that have an anomalous pattern
+      # and a map showing how to transform the pattern in the
+      # popular one
       if (proto_search.HasField("anomalousPatternId") and
           proto_search.HasField("isoToAnomalous")):
         bin_id = proto_search_res.anomalousPatternId
-
         bin_res = self.format_bin(proto_results.lattice,
                                   id2bin,
                                   id2bin[bin_id],
@@ -257,16 +274,22 @@ class Search():
       search_res_list.append(search_res)
 
     if len(search_res_list) == 0:
-        results = None
+      results = None
     else:
-      search_res_list = sorted(search_res_list, key=lambda res: res["popular"]["frequency"] if "popular" in res else (res["anomalous"]["frequency"] if "anomalous" in res else 0), reverse=True)
-
+      # order the set of results wrt the popular pattern representing the bin
+      search_res_list = sorted(search_res_list,
+                               key=lambda res: res["popular"]["frequency"] if "popular" in res else (res["anomalous"]["frequency"] if "anomalous" in res else 0),
+                               reverse=True)
 
       results["search_results"] = search_res_list
 
     return results
 
   def get_popularity(self, lattice, id2bin, acdfg_bin):
+    """
+    Get the popular measure exploring the lattice
+    """
+
     visited = set()
     subsumed = [acdfg_bin]
     popularity = 0
@@ -286,6 +309,28 @@ class Search():
 
 
   def format_bin(self, lattice, id2bin, acdfbBin, isoRes, subsumes):
+    """
+    Format one of the result of the search --- i.e. a relation from a
+    pattern (either popular/anomalous/isolated) to the groum used in the
+    search.
+
+    The input are:
+    - the lattice used for the search
+    - the map from id of the bin to the bin protobuf
+    - the acdfg representative for the bin to format
+    - the isomorphism relation from the groum to the representative of the bin
+    - a boolean flag that is true iff the groum subsumes the bin
+
+    The output is a map containing:
+      - type: popular/anomalous/isolated
+      - frequency: the popularity of the bin in the lattice
+      - acdfg_mappings: a list of mappings, one for each groum in the bin.
+      A mapping maps nodes and edges from the analyzed groum to a groum in the
+      bin.
+      A mapping contains two maps, one for nodes and the other for edges.
+      Each map maps a list of nodes that are isomorphic, added from one graph
+      to the other, or removed from one graph to the other.
+    """
     res_bin = {}
 
     if (acdfbBin.popular):
@@ -297,7 +342,7 @@ class Search():
 
     res_bin["frequency"] = self.get_popularity(lattice, id2bin, acdfbBin)
 
-    # Creates three lists of lines association betweem
+    # Creates three lists of lines association between
     # the query acdf and all the other acdfgs in the
     # pattern
     acdfg_mappings = []
@@ -367,7 +412,6 @@ class Search():
       mapping["edges"] = {"iso" : edges_res[0],
                           "add" : edges_res[1],
                           "remove" : edges_res[2]}
-
       acdfg_mappings.append(mapping)
 
     res_bin["acdfg_mappings"] = acdfg_mappings

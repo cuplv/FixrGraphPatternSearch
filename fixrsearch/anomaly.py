@@ -4,7 +4,7 @@ Define the anomaly and the operation
 """
 
 from fixrsearch.utils import (
-  MethodReference
+  MethodRef
 )
 
 class Anomaly(object):
@@ -14,15 +14,15 @@ class Anomaly(object):
 
   def __init__(self,
                numeric_id,
-               method_reference,
+               method_ref,
                pull_request,
                patch,
                pattern):
     # progressive id of the anomaly in the pull request
     self.numeric_id = numeric_id
     # method for which we found the anomaly
-    self.method_reference = method_reference
-    # reference to the pull request that generated the anomaly
+    self.method_ref = method_ref
+    # ref to the pull request that generated the anomaly
     self.pull_request = pull_request
     # pattern that was violated in the anomaly
     self.pattern = pattern

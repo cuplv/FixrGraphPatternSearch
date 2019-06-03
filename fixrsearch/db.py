@@ -12,13 +12,14 @@ from sqlalchemy import MetaData, Table
 from sqlalchemy import ForeignKey
 from sqlalchemy import Column, Integer, String, Float, VARCHAR
 
-from sqlalchemy.sql import select
+from sqlalchemy.sql import select, null
 from sqlalchemy.ext.declarative import declarative_base
 
+
 from fixrsearch.utils import (
-  RepoReference, CommitReference,
-  PullRequestReference,
-  MethodReference,
+  RepoRef, CommitRef,
+  PullRequestRef,
+  MethodRef,
   ClusterRef,
   PatternRef)
 
@@ -92,8 +93,8 @@ class Db(object):
       if (res_data is None):
         return None
       else:
-        return RepoReference(res_data.repo_name,
-                             res_data.user_name)
+        return RepoRef(res_data.repo_name,
+                       res_data.user_name)
 
     def new_commit(self, commit_ref, lookup=False):
       return self._new_data(commit_ref, self._new_commit,
@@ -112,14 +113,33 @@ class Db(object):
         repo_ref = self.get_repo_by_id(res_data.repo_id)
         assert not repo_ref is None
 
-        return CommitReference(repo_ref,
-                               res_data.commit_hash)
+        return CommitRef(repo_ref,
+                         res_data.commit_hash)
 
     def new_pr(self, pr_ref, lookup=False):
       return self._new_data(pr_ref, self._new_pr,
                             self.get_pr, lookup)
     def get_pr(self, pr_ref):
       return self._get_data(pr_ref, self._select_pr)
+
+    def get_pr_ignore_commit(self, pr_ref):
+      select_pr = self._select_pr(pull_request, True).alias()
+      result = self.connection.execute(select_pr)
+      res_data = result.fetchone()
+
+      if res_data is None:
+        return None
+      else:
+        repo_ref = self.get_repo_by_id(res_data.repo_id)
+        assert not repo_ref is None
+
+        commit_ref = self.get_commit_by_id(res_data.merged_commit_id)
+        assert not commit_ref is None
+
+        return PullRequestRef(repo_ref,
+                              res_data.number,
+                              commit_ref)
+
 
     def new_pattern(self, pattern_ref, lookup=False):
       return self._new_data(pattern_ref, self._new_pattern,
@@ -176,12 +196,12 @@ class Db(object):
       else:
         commit_ref = self.get_commit_by_id(res_data.commit_id)
 
-        return MethodReference(commit_ref,
-                               res_data.class_name,
-                               res_data.package_name,
-                               res_data.method_name,
-                               res_data.start_line_number,
-                               res_data.source_class_name)
+        return MethodRef(commit_ref,
+                         res_data.class_name,
+                         res_data.package_name,
+                         res_data.method_name,
+                         res_data.start_line_number,
+                         res_data.source_class_name)
 
 
     def new_anomaly(self, data, lookup=False):
@@ -259,14 +279,14 @@ class Db(object):
       result = self.connection.execute(ins)
       return (result.inserted_primary_key[0], repo_ref)
 
-    def _select_repo(self, repo_reference):
+    def _select_repo(self, repo_ref):
       repos = self.metadata.tables['repos']
       return select([repos]). \
-        where(repos.c.user_name == repo_reference.user_name and
-              repos.c.repo_name == repo_reference.repo_name).limit(1)
+        where(repos.c.user_name == repo_ref.user_name and
+              repos.c.repo_name == repo_ref.repo_name).limit(1)
 
     def _new_commit(self, commit_ref):
-      (repo_id, _) = self.new_repo(commit_ref.repo_reference, True)
+      (repo_id, _) = self.new_repo(commit_ref.repo_ref, True)
       commits = self.metadata.tables['commits']
       ins = commits.insert().values(repo_id=repo_id,
                                     commit_hash=commit_ref.commit_hash)
@@ -274,28 +294,48 @@ class Db(object):
       result = self.connection.execute(ins)
       return (result.inserted_primary_key[0], commit_ref)
 
-    def _select_commit(self, commit_reference):
+    def _select_commit(self, commit_ref):
       commits = self.metadata.tables['commits']
-      stmt = self._select_repo(commit_reference.repo_reference).alias()
+      stmt = self._select_repo(commit_ref.repo_ref).alias()
       return select([commits]). \
-        where (commits.c.commit_hash == commit_reference.commit_hash and 
+        where (commits.c.commit_hash == commit_ref.commit_hash and 
                commits.c.repo_id == stmt.c.id).limit(1)
 
     def _new_pr(self, pr_ref):
-      (repo_id, _) = self.new_repo(pr_ref.repo_reference, True)
+      (repo_id, _) = self.new_repo(pr_ref.repo_ref, True)
+      if not pr_ref.commit_ref is None:
+        (commit_id, _) = self.new_commit(pr_ref.commit_ref, True)
+      else:
+        commit_id = null()
+
       pull_requests = self.metadata.tables['pull_requests']
 
       ins = pull_requests.insert().values(repo_id = repo_id,
-                                          number = pr_ref.number)
+                                          number = pr_ref.number,
+                                          merged_commit_id = commit_id)
+
       result = self.connection.execute(ins)
       return (result.inserted_primary_key[0], pr_ref)
 
-    def _select_pr(self, pr_ref):
+    def _select_pr(self, pr_ref, ignoreCommit = False):
       prs = self.metadata.tables['pull_requests']
-      stmt1 = self._select_repo(pr_ref.repo_reference).alias()
-      return select([prs]). \
-        where (prs.c.number == pr_ref.number and
-               prs.c.repo_id == stmt1.c.id).limit(1)
+      stmt1 = self._select_repo(pr_ref.repo_ref).alias()
+
+      if not pr_ref.commit_ref is None:
+        stmt2 = self._select_commit(pr_ref.commit_ref).alias()
+        field = stmt2.c.id
+      else:
+        field = None
+
+      if ignoreCommit:
+        return select([prs]). \
+          where (prs.c.number == pr_ref.number and
+                 prs.c.repo_id == stmt1.c.id).limit(1)
+      else:
+        return select([prs]). \
+          where (prs.c.number == pr_ref.number and
+                 prs.c.repo_id == stmt1.c.id and
+                 prs.c.merged_commit_id == field).limit(1)
 
     def _new_pattern(self, pattern_ref):
       patterns = self.metadata.tables['patterns']
@@ -329,7 +369,7 @@ class Db(object):
 
     def _new_method(self, method_data):
       methods = self.metadata.tables['methods']
-      (commit_id, _) = self.new_commit(method_data.commit_reference, True)
+      (commit_id, _) = self.new_commit(method_data.commit_ref, True)
 
       ins = methods.insert().values(commit_id = commit_id,
                                     class_name = method_data.class_name,
@@ -343,7 +383,7 @@ class Db(object):
     def _select_method(self, data):
       methods = self.metadata.tables['methods']
 
-      stmt1 = self._select_commit(data.commit_reference)
+      stmt1 = self._select_commit(data.commit_ref)
       # rename stuff to avoid ambiguities
       stmt1 = stmt1.alias()
 
@@ -358,7 +398,7 @@ class Db(object):
     def _new_anomaly(self, anomaly):
       anomalies = self.metadata.tables['anomalies']
 
-      (method_id, _) = self.new_method(anomaly.method_reference, True)
+      (method_id, _) = self.new_method(anomaly.method_ref, True)
       (pull_request_id, _) = self.new_pr(anomaly.pull_request, True)
       (pattern_id, _) = self.new_pattern(anomaly.pattern, True)
 
@@ -375,7 +415,7 @@ class Db(object):
     def _select_anomaly(self, data):
       anomalies = self.metadata.tables['anomalies']
 
-      stmt_method = self._select_method(data.method_reference)
+      stmt_method = self._select_method(data.method_ref)
       stmt_pr = self._select_pr(data.pull_request)
       stmt_pattern = self._select_pattern(data.pattern)
 
@@ -405,7 +445,8 @@ class Db(object):
         pullRequestTable = Table('pull_requests', self.metadata,
                                  Column('id', Integer, primary_key = True),
                                  Column('repo_id', Integer, ForeignKey('repos.id')),
-                                 Column('number', Integer, nullable = False))
+                                 Column('number', Integer, nullable = False),
+                                 Column('merged_commit_id', Integer, ForeignKey('commits.id')))
 
         methodsTable = Table('methods', self.metadata,
                              Column('id', Integer, primary_key = True),
