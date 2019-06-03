@@ -1,5 +1,6 @@
 """
-Keeps an index of apps and groums
+Keeps an index of apps and groums existing in the
+dataset.
 """
 
 import json
@@ -98,7 +99,6 @@ class GroumIndex(object):
         key = "%s/%s/%s" % (app_key,
                             method_name, line_number)
         return key
-
 
     def process_groum(self, apps_set, groum_abs_path):
         # Read the groum
