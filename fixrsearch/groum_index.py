@@ -88,6 +88,7 @@ class GroumIndex(object):
         else:
             return None
 
+    @staticmethod
     def get_app_key(user_name, repo_name, commit_id):
       app_key = "%s/%s/%s" %(user_name,
                              repo_name,

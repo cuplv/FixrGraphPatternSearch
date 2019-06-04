@@ -5,7 +5,7 @@ The endpoints are:
 - search: search for the similar patterns to a groum
 - get_apps: get all the apps (repos) existing in the dataset
 - get_groums: get all the groums in the dataset
-- process_pull_request: process a pull request and finds the similar pattern
+- process_graphs_pull_request: process a pull request and finds the similar pattern
 
 TODO:
 - add a service that receives an apk + metadata and extract the graph,
@@ -23,26 +23,20 @@ import sys
 
 CLUSTER_PATH = "cluster_path"
 ISO_PATH = "iso_path"
-INDEX = "index"
+CLUSTER_INDEX = "cluster_index"
 GROUM_INDEX = "groum_index"
 DB_NAME = "service_db"
 DB="db"
 
-from search import (Search, RESULT_CODE,
-                    ERROR_MESSAGE,
-                    PATTERN_KEY ,
-                    ISO_DOT ,
-                    RESULTS_LIST ,
-                    OBJ_VAL ,
-                    SEARCH_SUCCEEDED_RESULT ,
-                    ERROR_RESULT,
-                    get_cluster_file)
-
-from search import get_cluster_file
+from search import (
+    Search,
+    get_cluster_file
+)
 from index import ClusterIndex
 from groum_index import GroumIndex
-
 from db import SQLiteConfig, Db
+
+from process_pr import PrProcessor
 
 def get_malformed_request(error = None):
     if error is None:
@@ -56,7 +50,7 @@ def get_malformed_request(error = None):
 
 def get_apps():
     groum_index = current_app.config[GROUM_INDEX]
-    apps = groum_index.get_apps()    
+    apps = groum_index.get_apps()
     return Response(json.dumps(apps),
                     status=200,
                     mimetype='application/json')
@@ -96,7 +90,7 @@ def search_pattern():
         else:
             search = Search(current_app.config[CLUSTER_PATH],
                             current_app.config[ISO_PATH],
-                            current_app.config[INDEX])
+                            current_app.config[CLUSTER_INDEX])
 
             results = search.search_from_groum(groum_file)
 
@@ -110,7 +104,8 @@ def search_pattern():
         return get_malformed_request()
 
 
-def process_pull_request(self):
+
+def process_graphs_in_pull_request():
     # get pr data
     content = request.get_json(force=True)
     if (content is None):
@@ -124,109 +119,53 @@ def process_pull_request(self):
 
     user_name = content["user"]
     repo_name = content["repo"]
-    repo_ref = RepoRef(repo_name, user_name)
 
     pull_request_id = content["pullRequestId"]
     commits = content["commitHashes"]
     modifiedFiles = content["modifiedFiles"]
 
-    # Find right pr to access the commit id used in the merge
-    db = current_app.config[DB]      
-    pr_ref = db.PullRequestRef(repo_ref,
-                               pull_request_id,
-                               None)                            
-    pr_ref = db.get_pr_ignore_commit(pr_ref)
+    pr_processor = PrProcessor(current_app.config[GROUM_INDEX],
+                               current_app.config[DB],
+                               Search(current_app.config[CLUSTER_PATH],
+                                      current_app.config[ISO_PATH],
+                                      current_app.config[CLUSTER_INDEX]))
 
+    # Find the pr to access the commit id used in the merge
+    pr_ref = pr_processor.find_pr_commit(user_name, repo_name,
+                                         pull_request_id)
     if pr_ref is None:
         # Reply with an error
         error_msg = "Cannot find pull request %s for %s/%s" % (str(pull_request_id),
                                                                repo_ref.user_name,
                                                                repo_ref.repo_name)
         reply_json = {"status" : 1,
-                      "error" : error_msg}        
+                      "error" : error_msg}
         return Response(json.dumps(reply_json),
                         status=404,
                         mimetype='application/json')
+    
+    anomalies = pr_processor.process_graphs_from_pr(pr_ref)
 
-    # Search for similar graphs
-    anomalies = []
-    app_key = index.get_app_key(pr_ref.repo_ref.user_name,
-                                pr_ref.repo_ref.repo_name,
-                                pr_ref.commit_ref.commit_hash)
-    groums = index.get_groums(app_key)
-    for g in groums:
-        groum_id = g["groum_key"]
-        groum_file = groum_index.get_groum_path(groum_id)
+    # produce the json output for the anomalies
 
-        if groum_file is None:
-            error_msg = "Cannot find groum for %s in %s" % (groum_id,
-                                                            groum_file)
-            logging.debug(error_msg)
-        else:
-            method_ref = CommitRef(pullRequest.repo_ref,
-                                   pullRequest.commit_ref,
-                                   g["class_name"],
-                                   g["package_name"],
-                                   g["method"],
-                                   g["method_line_number"],
-                                   g["source_class_name"])        
-
-            search = Search(current_app.config[CLUSTER_PATH],
-                            current_app.config[ISO_PATH],
-                            current_app.config[INDEX])
-            results = search.search_from_groum(groum_file)
-
-
-            for cluster_res in results:
-                clusterRef = ClusterRef("", 0.0)
-
-                for search_res in cluster_res["search_results"]:
-                    # Test, skip for now
-                    if search_res["type"] != "ANOMALOUS_SUBSUMED":
-                        continue
-                
-                    assert "popular" in search_res
-
-                    # get the pattern
-                    binRes = search_res["popular"]
-                    
-                    assert "type" in binRes
-                    assert "mappings" in binRes
-                    assert "frequency" in binRes
-
-                    # binRes["frequency"]
-                    assert(binRes["type"] == "popular")
-
-                    # TODO: Generate patch text
-                    patchText = ""
-                    # TODO: Generate pattern text
-                    patternText = ""
-                    patternRef = PatternRef(cluster_ref,
-                                            "",
-                                            PatternRef.Type.Popular)
-                
-                    # Create the anomaly
-                    anomaly = Anomaly(anomaly_count,
-                                      method_ref,
-                                      pr_ref,
-                                      patchText,
-                                      patternRef)
-
-                    anomalies.append((binRes["frequency"], anomaly))
-
-
-    # sort and add the anomalies
-    anomalies = sorted(anomalies,
-                       key = lambda pair : pair[0],
-                       reverse=False)
-    anomaly_id = 0
+    json_data = []
+    
     for anomaly in anomalies:
-        anomaly_id += 1
-        anomaly.numeric_id = anomaly_id
-        db.new_anomaly(anomaly)
+        json_anomaly = {"id" : anomaly.numeric_id,
+                        "error" : "",
+                        "packageName" : anomaly.method_ref.package_name,
+                        "className" : anomaly.method_ref.class_name,
+                        "methodName" : anomaly.method_ref.method_name,
+                        "fileName" : anomaly.method_ref.source_class_name,
+                        "line" : anomaly.method_ref.start_line_number}
+        json_data.append(json_anomaly)
+
+    return Response(json.dumps(json_data),
+                    status=200,
+                    mimetype='application/json')
 
 # def get_patch(self):
-    
+
 
 # def get_pattern(self):
 
@@ -299,7 +238,7 @@ def create_app(graph_path, cluster_path, iso_path):
     cluster_file = get_cluster_file(cluster_path)
 
     logging.info("Creating cluster index...")
-    app.config[INDEX] = ClusterIndex(cluster_file)
+    app.config[CLUSTER_INDEX] = ClusterIndex(cluster_file)
 
     logging.info("Creating graph index...")
     app.config[GROUM_INDEX] = GroumIndex(graph_path)
@@ -308,6 +247,7 @@ def create_app(graph_path, cluster_path, iso_path):
     app.route('/search', methods=['POST'])(search_pattern)
     app.route('/get_apps', methods=['GET'])(get_apps)
     app.route('/get_groums', methods=['POST'])(get_groums)
+    app.route('/process_graphs_in_pull_request', methods=['POST'])(process_graphs_in_pull_request)
 
     # create the db object
     config = SQLiteConfig(DB_NAME)

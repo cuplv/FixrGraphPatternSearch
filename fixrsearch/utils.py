@@ -33,7 +33,8 @@ class MethodRef(object):
   """
   Contains the sufficient data to reference a method in the corpus
   """
-  def __init__(self, commit_ref,
+  def __init__(self,
+               commit_ref,
                class_name,
                package_name,
                method_name,

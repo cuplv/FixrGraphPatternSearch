@@ -123,7 +123,7 @@ class Db(object):
       return self._get_data(pr_ref, self._select_pr)
 
     def get_pr_ignore_commit(self, pr_ref):
-      select_pr = self._select_pr(pull_request, True).alias()
+      select_pr = self._select_pr(pr_ref, True).alias()
       result = self.connection.execute(select_pr)
       res_data = result.fetchone()
 

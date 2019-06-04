@@ -1,11 +1,6 @@
 """
-Define the anomaly and the operation 
-
+Define the anomaly
 """
-
-from fixrsearch.utils import (
-  MethodRef
-)
 
 class Anomaly(object):
   class Status:

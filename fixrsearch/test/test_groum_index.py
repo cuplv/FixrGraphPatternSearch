@@ -30,6 +30,12 @@ class TestGroumIndex(unittest.TestCase):
     assert os.path.isdir(self.data_path)
     self.graph_path = os.path.join(self.data_path, "graphs")
 
+  def tearDown(self):
+    index_file = os.path.join(self.graph_path, "graph_index.json")
+    if (os.path.exists(index_file)):
+      os.remove(index_file)
+
+
   def test_index_basic(self):
     index = GroumIndex(self.graph_path)
 
