@@ -1,5 +1,6 @@
 """
-Keeps an index of apps and groums
+Keeps an index of apps and groums existing in the
+dataset.
 """
 
 import json
@@ -72,7 +73,6 @@ class GroumIndex(object):
             self.build_index()
             self.write_index(index_file_name)
 
-
     def get_apps(self):
         return self.apps
 
@@ -88,6 +88,13 @@ class GroumIndex(object):
         else:
             return None
 
+    @staticmethod
+    def get_app_key(user_name, repo_name, commit_id):
+      app_key = "%s/%s/%s" %(user_name,
+                             repo_name,
+                             commit_id)
+      return app_key
+
     def get_groum_key(self, user_name, repo_name, commit_id,
                       method_name, line_number):
         key = "%s/%s/%s/%s/%s" % (user_name, repo_name, commit_id,
@@ -98,7 +105,6 @@ class GroumIndex(object):
         key = "%s/%s/%s" % (app_key,
                             method_name, line_number)
         return key
-
 
     def process_groum(self, apps_set, groum_abs_path):
         # Read the groum
@@ -199,6 +205,7 @@ class GroumIndex(object):
                      "\tNumber of repos: %d\n" \
                      "\tNumber of graphs: %d\n" % (len(self.apps),
                                                    len(self.groumid2path)))
+
 
     def write_index(self, index_file_name):
         logging.info("Writing index...")

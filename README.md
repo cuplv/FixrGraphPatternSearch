@@ -2,14 +2,19 @@
 Implement the search of a pattern from a GROUM
 
 
-# Prerequisites
-
 # Spin up the service
 
 ```
-python ./fixrsearch/search_service.py  -c ~/works/projects/muse/repos/test_clusters/clusters -i /Users/sergiomover/works/projects/muse/repos/FixrGraphIso/build/src/fixrgraphiso/searchlattice -g ~/works/projects/muse/repos/test_clusters/graphs -d - 5008
+python ./fixrsearch/search_service.py \
+  -c ~/works/projects/muse/repos/test_clusters/clusters \
+  -i /Users/sergiomover/works/projects/muse/repos/FixrGraphIso/build/src/fixrgraphiso/searchlattice \
+  -g ~/works/projects/muse/repos/test_clusters/graphs -d - 5008
 ```
 
+# Unit test
+
+Run the test with:
+```nosetests```
 
 # Test
 ```

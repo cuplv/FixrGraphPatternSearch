@@ -4,23 +4,100 @@ import optparse
 import sys
 
 
-def test(json_file, condition):
+def test_process_graph_in_pull_request(address):
+  pr_data = {"user" : "mmcguinn",
+             "repo" : "iSENSE-Hardware",
+             "commitHashes" : ["0700782f9d3aa4cb3d4c86c3ccf9dcab13fa3aad"],
+             "modifiedFiles" : [],
+             "pullRequestId" : 1}
+  expected = [{"className": "edu.uml.cs.droidsense.comm.RestAPIDbAdapter", "error": "", "fileName": "RestAPIDbAdapter.java", "id": 1, "line": 405, "methodName": "getExperiments", "packageName": "edu.uml.cs.droidsense.comm"}, {"className": "edu.uml.cs.droidsense.comm.RestAPIDbAdapter", "error": "", "fileName": "RestAPIDbAdapter.java", "id": 2, "line": 405, "methodName": "getExperiments", "packageName": "edu.uml.cs.droidsense.comm"}, {"className": "edu.uml.cs.droidsense.comm.RestAPIDbAdapter", "error": "", "fileName": "RestAPIDbAdapter.java", "id": 3, "line": 405, "methodName": "getExperiments", "packageName": "edu.uml.cs.droidsense.comm"}, {"className": "edu.uml.cs.droidsense.comm.RestAPIDbAdapter", "error": "", "fileName": "RestAPIDbAdapter.java", "id": 4, "line": 405, "methodName": "getExperiments", "packageName": "edu.uml.cs.droidsense.comm"}, {"className": "edu.uml.cs.droidsense.comm.RestAPIDbAdapter", "error": "", "fileName": "RestAPIDbAdapter.java", "id": 5, "line": 405, "methodName": "getExperiments", "packageName": "edu.uml.cs.droidsense.comm"}, {"className": "edu.uml.cs.droidsense.comm.RestAPIDbAdapter", "error": "", "fileName": "RestAPIDbAdapter.java", "id": 6, "line": 405, "methodName": "getExperiments", "packageName": "edu.uml.cs.droidsense.comm"}, {"className": "edu.uml.cs.droidsense.comm.RestAPIDbAdapter", "error": "", "fileName": "RestAPIDbAdapter.java", "id": 7, "line": 405, "methodName": "getExperiments", "packageName": "edu.uml.cs.droidsense.comm"}]
 
-    out_file = "res_json.json"
+  try:
+    r = requests.post("http://%s/process_graphs_in_pull_request" % address,
+                      json=pr_data)
 
-    if not condition:
-        print("FAILURE!\n")
+  except Exception as e:
+    print(str(e))
+    raise
 
-        if (r.status_code == 200):
-            json_res = r.json()
-            with open(out_file, "w") as json_file:
-                json.dump(json_res, json_file)
-                json_file.close()
-            print("Json reply written in %s" % out_file)
-        else:
-            r.raise_for_status()
+  assert r.status_code == 200
 
-        sys.exit(1)
+  cmp1 = json.dumps(r.json(), sort_keys=True)
+  cmp2 = json.dumps(expected, sort_keys=True)
+
+  if (cmp1 != cmp2):
+    raise Exception("Wrong result!")
+
+  return 0
+
+
+def test_inspect_anomaly(address):
+  user_name = "mmcguinn"
+  repo_name = "iSENSE-Hardware"
+  commit_hash = "0700782f9d3aa4cb3d4c86c3ccf9dcab13fa3aad"
+  pr_id = 1
+  anomaly_id = "1"
+
+  service_input = {
+    "anomalyId" : str(),
+    "pullRequest" : {"user" : user_name, "repo" : repo_name,
+                     "id" : str(pr_id)}
+  }
+
+  expected_output = {
+    "editText" : "",
+    "fileName" : "RestAPIDbAdapter.java",
+    "lineNumber" : 405
+  }
+
+  try:
+    r = requests.post("http://%s/inspect_anomaly" % address, json=service_input)
+  except Exception as e:
+    print(str(e))
+    raise
+  assert r.status_code == 200
+
+  cmp1 = json.dumps(r.json(), sort_keys=True)
+  cmp2 = json.dumps(expected_output, sort_keys=True)
+  if (cmp1 != cmp2):
+    raise Exception("Wrong result!")
+
+  return 0
+
+def test_explain_anomaly(address):
+  user_name = "mmcguinn"
+  repo_name = "iSENSE-Hardware"
+  commit_hash = "0700782f9d3aa4cb3d4c86c3ccf9dcab13fa3aad"
+  pr_id = 1
+  anomaly_id = "1"
+
+  service_input = {
+    "anomalyId" : str(),
+    "pullRequest" : {"user" : user_name, "repo" : repo_name,
+                     "id" : str(pr_id)}
+  }
+
+  expected_output = {
+    "patternCode" : "",
+    "numberOfExamples" : 1
+  }
+
+  try:
+    r = requests.post("http://%s/explain_anomaly" % address, json=service_input)
+  except Exception as e:
+    print(str(e))
+    raise
+  assert r.status_code == 200
+
+  cmp1 = json.dumps(r.json(), sort_keys=True)
+  cmp2 = json.dumps(expected_output, sort_keys=True)
+  if (cmp1 != cmp2):
+    raise Exception("Wrong result!")
+
+  return 0
+
+
+
 
 p = optparse.OptionParser()
 p.add_option('-a', '--address', help="Ip address of the solr server")
@@ -37,67 +114,8 @@ if (not opts.port):
 
 address="%s:%s" % (opts.address, opts.port)
 
-# Delvison/Student-Handbook/77b4eb417abb95e0ed1258a39db02bcdb8b07945
-# com.example.studentplanner.AssignmentActivity.clickHandler
-# {user: "BarcodeEye", repo: "BarcodeEye", class: "com.github.barcodeeye.scan.ResultsActivity", method: "newIntent", url: "http://localhost:30072/compute/method/groums"}
-# data = {
-#     "user" : "BarcodeEye",
-#     "repo" : "BarcodeEye",
-#     "class" : "com.github.barcodeeye.scan.ResultsActivity",
-#     "method" : "newIntent"
-# }
-# data = {
-#     "user" : "BarcodeEye",
-#     "repo" : "BarcodeEye",
-#     "class" : "com.google.zxing.client.android.camera.CameraConfigurationManager",
-#     "method" : "setDesiredCameraParameters",
-# }
-# data = {
-#     "user" : "DroidPlanner",
-#     "repo" : "Tower",
-#     "class" : "org.droidplanner.android.droneshare.data.DroneShareDB",
-#     "method" : "getDataToUpload",
-# }
-# data = {
-#     "user" : "tommyd3mdi",
-#     "repo" : "c-geo-opensource",
-#     "class" : "cgeo.geocaching.apps.cache.navi.NavigonApp",
-#     "method" : "invoke",
-# }
+test_process_graph_in_pull_request(address)
+test_inspect_anomaly(address)
+test_explain_anomaly(address)
 
-# data = {
-#     "user" : "hardikp888",
-#     "repo" : "my-daily-quest",
-#     "class" : "br.quest.PreferenceManager",
-#     "method" : "savePreference",
-# }
-
-data = {
-    "user" : "anyremote",
-    "repo" : "anyremote-android-client",
-    "class" :  "anyremote.client.android.TextScreen",
-    "method" : "commandAction"
-}
-#    "commit_id" : "bc762d918fc38903daa55eaa8e481cd9c12b5bd9",
-#TextScreen.java
-# 213
-
-
-# anyremote/anyremote-android-client
-# bc762d918fc38903daa55eaa8e481cd9c12b5bd9
-# anyremote.client.android.TextScreen.commandAction
-# TextScreen.java
-# 213
-
-
-r = requests.post("http://%s/compute/method/groums" % address, json=data)
-
-test(r.status_code == 200, r)
-
-
-test(u"patterns" in r.json(), r)
-test(len((r.json())[u"patterns"]) > 0, r)
-
-print "SUCCESS"
-
-
+print "All is ok!"
