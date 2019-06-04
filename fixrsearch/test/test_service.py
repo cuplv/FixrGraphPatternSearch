@@ -205,3 +205,32 @@ class TestServices(unittest.TestCase):
 
     self.assertTrue(json.dumps(json_data, sort_keys=True) ==
                     json.dumps(expectedOutput, sort_keys=True))
+
+
+  def test_explain_anomaly(self):
+    user_name = "mmcguinn"
+    repo_name = "iSENSE-Hardware"
+    commit_hash = "0700782f9d3aa4cb3d4c86c3ccf9dcab13fa3aad"
+    pr_id = 1
+    anomaly_id = "1"
+
+    service_input = {
+      "anomalyId" : str(anomaly_id),
+      "pullRequest" : {"user" : user_name, "repo" : repo_name,
+                       "id" : str(pr_id)}
+    }
+
+    expectedOutput = {
+      "patternCode" : "",
+      "numberOfExamples" : 1
+    }
+
+    response = self.test_client.post('/explain_anomaly',
+                                     data=json.dumps(service_input),
+                                     content_type='application/json')
+    self.assertTrue(200 == response.status_code)
+
+    json_data = json.loads(response.get_data(as_text=True))
+
+    self.assertTrue(json.dumps(json_data, sort_keys=True) ==
+                    json.dumps(expectedOutput, sort_keys=True))

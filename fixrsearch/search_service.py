@@ -163,9 +163,8 @@ def process_graphs_in_pull_request():
                     status=200,
                     mimetype='application/json')
 
-def inspect_anomaly():
-    content = request.get_json(force=True)
 
+def _lookup_anomaly(current_app, content):
     if (content is None): return get_malformed_request()
     for f in ["anomalyId", "pullRequest"]:
         if f not in content: return get_malformed_request("%s not in the request" % f)
@@ -187,7 +186,8 @@ def inspect_anomaly():
                                                                user_name,
                                                                repo_name)
         reply_json = {"status" : 1, "error" : error_msg}
-        return Response(json.dumps(reply_json), status=404, mimetype='application/json')
+        pr_processor = None
+        return (None, None, Response(json.dumps(reply_json), status=404, mimetype='application/json'))
 
 
     db = current_app.config[DB]
@@ -195,7 +195,19 @@ def inspect_anomaly():
     if anomaly_ref is None:
         error_msg = "Cannot find anomaly %s" % (str(anomaly_number))
         reply_json = {"status" : 1, "error" : error_msg}
-        return Response(json.dumps(reply_json), status=404, mimetype='application/json')
+        pr_processor = None
+        return (None, None, Response(json.dumps(reply_json), status=404, mimetype='application/json'))
+
+    return (pr_processor, anomaly_ref, None)
+
+
+def inspect_anomaly():
+    content = request.get_json(force=True)
+
+    (pr_processor, anomaly_ref, error) = _lookup_anomaly(current_app, content)
+
+    if (not error is None): return error
+    assert (not pr_processor is None) and (not anomaly_ref is None)
 
     # TODO: generate more meaningful data for the edit suggestion
     # This should happen when creating the patch
@@ -209,7 +221,19 @@ def inspect_anomaly():
 
 
 def explain_anomaly():
-    pass
+    content = request.get_json(force=True)
+
+    (pr_processor, anomaly_ref, error) = _lookup_anomaly(current_app, content)
+
+    if (not error is None): return error
+    assert (not pr_processor is None) and (not anomaly_ref is None)
+
+    # TODO: get the number of examples (use the pattern and cluster informations)
+    pattern_info = {"patternCode" : anomaly_ref.pattern_text, "numberOfExamples" : 1}
+
+    return Response(json.dumps(pattern_info),
+                    status=200,
+                    mimetype='application/json')
 
 
 def flaskrun(default_host="127.0.0.1", default_port="5000"):
