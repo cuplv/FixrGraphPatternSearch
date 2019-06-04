@@ -69,9 +69,12 @@ WORKDIR /home/biggroum
 
 RUN echo "Cloning repo..."
 
+RUN rm -rf biggroum
+
 # Clone our repositories
 RUN git clone https://github.com/cuplv/biggroum \
     && cd biggroum \
+    && git checkout develop \
     && git submodule update --init --recursive
 
 # Build the graph mining/frequent itemset mining tool
