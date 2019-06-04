@@ -29,7 +29,7 @@ ISO_PATH = "iso_path"
 CLUSTER_INDEX = "cluster_index"
 GROUM_INDEX = "groum_index"
 DB_NAME = "service_db"
-DB="db"
+DB_CONFIG="db_config"
 
 from search import (
     Search,
@@ -40,6 +40,15 @@ from groum_index import GroumIndex
 from db import SQLiteConfig, Db
 
 from process_pr import PrProcessor
+from utils import PullRequestRef, RepoRef, CommitRef
+
+def get_new_db(config, create=False):
+    db = Db(config)
+    if create:
+        db.connect_or_create()
+    else:
+        db.connect()
+    return db
 
 def get_malformed_request(error = None):
     if error is None:
@@ -125,23 +134,28 @@ def process_graphs_in_pull_request():
     pull_request_id = content["pullRequestId"]
 
     commits = content["commitHashes"]
+    commit_hash = commits[0]
     modifiedFiles = content["modifiedFiles"]
 
+    db = get_new_db(current_app.config[DB_CONFIG])
     pr_processor = PrProcessor(current_app.config[GROUM_INDEX],
-                               current_app.config[DB],
+                               db,
                                Search(current_app.config[CLUSTER_PATH],
                                       current_app.config[ISO_PATH],
                                       current_app.config[CLUSTER_INDEX]))
 
-    # Find the pr to access the commit id used in the merge
-    pr_ref = pr_processor.find_pr_commit(user_name, repo_name,
-                                         pull_request_id)
-    if pr_ref is None:
-        error_msg = "Cannot find pull request %s for %s/%s" % (str(pull_request_id),
-                                                               user_name,
-                                                               repo_name)
-        reply_json = {"status" : 1, "error" : error_msg}
-        return Response(json.dumps(reply_json), status=404, mimetype='application/json')
+    pr_ref = PullRequestRef(RepoRef(repo_name, user_name), pull_request_id,
+                            CommitRef(RepoRef(repo_name, user_name),
+                                      commit_hash))
+
+    # # Find the pr to access the commit id used in the merge
+    # pr_ref = pr_processor.find_pr_commit(user_name, repo_name, pull_request_id)
+    # if pr_ref is None:
+    #     error_msg = "Cannot find pull request %s for %s/%s" % (str(pull_request_id),
+    #                                                            user_name,
+    #                                                            repo_name)
+    #     reply_json = {"status" : 1, "error" : error_msg}
+    #     return Response(json.dumps(reply_json), status=404, mimetype='application/json')
     
     anomalies = pr_processor.process_graphs_from_pr(pr_ref)
 
@@ -158,6 +172,8 @@ def process_graphs_in_pull_request():
                         "fileName" : anomaly.method_ref.source_class_name,
                         "line" : anomaly.method_ref.start_line_number}
         json_data.append(json_anomaly)
+
+    db.disconnect()
 
     return Response(json.dumps(json_data),
                     status=200,
@@ -176,7 +192,8 @@ def _lookup_anomaly(current_app, content):
     pull_request_id = content["pullRequest"]["id"]
     anomaly_number = content["anomalyId"]
 
-    pr_processor = PrProcessor(current_app.config[GROUM_INDEX], current_app.config[DB],
+    db = get_new_db(current_app.config[DB_CONFIG])
+    pr_processor = PrProcessor(current_app.config[GROUM_INDEX], db,
                                Search(current_app.config[CLUSTER_PATH], current_app.config[ISO_PATH],
                                       current_app.config[CLUSTER_INDEX]))
 
@@ -190,13 +207,15 @@ def _lookup_anomaly(current_app, content):
         return (None, None, Response(json.dumps(reply_json), status=404, mimetype='application/json'))
 
 
-    db = current_app.config[DB]
+
     anomaly_ref = db.get_anomaly_by_pr_and_number(pr_ref, anomaly_number)
     if anomaly_ref is None:
         error_msg = "Cannot find anomaly %s" % (str(anomaly_number))
         reply_json = {"status" : 1, "error" : error_msg}
         pr_processor = None
         return (None, None, Response(json.dumps(reply_json), status=404, mimetype='application/json'))
+
+    db.disconnect()
 
     return (pr_processor, anomaly_ref, None)
 
@@ -318,10 +337,9 @@ def create_app(graph_path, cluster_path, iso_path):
 
     # create the db object
     config = SQLiteConfig(DB_NAME)
-    db = Db(config)
-    db.connect_or_create()
-
-    app.config[DB] = db
+    app.config[DB_CONFIG] = config
+    db = get_new_db(config, True)
+    db.disconnect()
 
     return app
 

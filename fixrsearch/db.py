@@ -52,7 +52,7 @@ class Db(object):
     def connect(self):
         self.engine = self.config.create_engine()
         self.connection = self.engine.connect()
-        self.metadata = Metadata()
+        self.metadata = MetaData()
         self.metadata.reflect(bind=self.engine)
 
 

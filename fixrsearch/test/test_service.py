@@ -159,12 +159,12 @@ class TestServices(unittest.TestCase):
     repo_ref = RepoRef(repo_name, user_name)
     commit_ref = CommitRef(repo_ref, commit_hash)
     pr_ref = PullRequestRef(repo_ref, pr_id, commit_ref)
-    db = self.app.config[DB]
-    db.new_pr(pr_ref)
+    # db = self.app.config[DB]
+    # db.new_pr(pr_ref)
 
     pull_request_data = {"user" : user_name,
                          "repo" : repo_name,
-                         "commitHashes" : [],
+                         "commitHashes" : [commit_hash],
                          "modifiedFiles" : [],
                          "pullRequestId" : pr_id}
 
@@ -190,7 +190,7 @@ class TestServices(unittest.TestCase):
                        "id" : str(pr_id)}
     }
 
-    expectedOutput = {
+    expected_output = {
       "editText" : "",
       "fileName" : "RestAPIDbAdapter.java",
       "lineNumber" : 405
@@ -204,7 +204,7 @@ class TestServices(unittest.TestCase):
     json_data = json.loads(response.get_data(as_text=True))
 
     self.assertTrue(json.dumps(json_data, sort_keys=True) ==
-                    json.dumps(expectedOutput, sort_keys=True))
+                    json.dumps(expected_output, sort_keys=True))
 
 
   def test_explain_anomaly(self):
@@ -220,7 +220,7 @@ class TestServices(unittest.TestCase):
                        "id" : str(pr_id)}
     }
 
-    expectedOutput = {
+    expected_output = {
       "patternCode" : "",
       "numberOfExamples" : 1
     }
@@ -233,4 +233,4 @@ class TestServices(unittest.TestCase):
     json_data = json.loads(response.get_data(as_text=True))
 
     self.assertTrue(json.dumps(json_data, sort_keys=True) ==
-                    json.dumps(expectedOutput, sort_keys=True))
+                    json.dumps(expected_output, sort_keys=True))
