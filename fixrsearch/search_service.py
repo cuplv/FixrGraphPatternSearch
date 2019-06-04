@@ -6,6 +6,9 @@ The endpoints are:
 - get_apps: get all the apps (repos) existing in the dataset
 - get_groums: get all the groums in the dataset
 - process_graphs_pull_request: process a pull request and finds the similar pattern
+- inspect_anomaly: provides the suggested fix for the anomaly
+- explain_anomaly: provides the pattern violated by the anomaly
+- view_examples: provides the examples of patterns explaining the anomaly
 
 TODO:
 - add a service that receives an apk + metadata and extract the graph,
@@ -119,8 +122,8 @@ def process_graphs_in_pull_request():
 
     user_name = content["user"]
     repo_name = content["repo"]
-
     pull_request_id = content["pullRequestId"]
+
     commits = content["commitHashes"]
     modifiedFiles = content["modifiedFiles"]
 
@@ -134,15 +137,11 @@ def process_graphs_in_pull_request():
     pr_ref = pr_processor.find_pr_commit(user_name, repo_name,
                                          pull_request_id)
     if pr_ref is None:
-        # Reply with an error
         error_msg = "Cannot find pull request %s for %s/%s" % (str(pull_request_id),
-                                                               repo_ref.user_name,
-                                                               repo_ref.repo_name)
-        reply_json = {"status" : 1,
-                      "error" : error_msg}
-        return Response(json.dumps(reply_json),
-                        status=404,
-                        mimetype='application/json')
+                                                               user_name,
+                                                               repo_name)
+        reply_json = {"status" : 1, "error" : error_msg}
+        return Response(json.dumps(reply_json), status=404, mimetype='application/json')
     
     anomalies = pr_processor.process_graphs_from_pr(pr_ref)
 
@@ -164,11 +163,53 @@ def process_graphs_in_pull_request():
                     status=200,
                     mimetype='application/json')
 
-# def get_patch(self):
+def inspect_anomaly():
+    content = request.get_json(force=True)
+
+    if (content is None): return get_malformed_request()
+    for f in ["anomalyId", "pullRequest"]:
+        if f not in content: return get_malformed_request("%s not in the request" % f)
+    for f in ["user","repo","id"]:
+        if f not in content["pullRequest"]: return get_malformed_request("%s not in the pull request" % f)
+
+    user_name = content["pullRequest"]["user"]
+    repo_name = content["pullRequest"]["repo"]
+    pull_request_id = content["pullRequest"]["id"]
+    anomaly_number = content["anomalyId"]
+
+    pr_processor = PrProcessor(current_app.config[GROUM_INDEX], current_app.config[DB],
+                               Search(current_app.config[CLUSTER_PATH], current_app.config[ISO_PATH],
+                                      current_app.config[CLUSTER_INDEX]))
+
+    pr_ref = pr_processor.find_pr_commit(user_name, repo_name, pull_request_id)
+    if pr_ref is None:
+        error_msg = "Cannot find pull request %s for %s/%s" % (str(pull_request_id),
+                                                               user_name,
+                                                               repo_name)
+        reply_json = {"status" : 1, "error" : error_msg}
+        return Response(json.dumps(reply_json), status=404, mimetype='application/json')
 
 
-# def get_pattern(self):
+    db = current_app.config[DB]
+    anomaly_ref = db.get_anomaly_by_pr_and_number(pr_ref, anomaly_number)
+    if anomaly_ref is None:
+        error_msg = "Cannot find anomaly %s" % (str(anomaly_number))
+        reply_json = {"status" : 1, "error" : error_msg}
+        return Response(json.dumps(reply_json), status=404, mimetype='application/json')
 
+    # TODO: generate more meaningful data for the edit suggestion
+    # This should happen when creating the patch
+    edit_suggestion = {"editText" : anomaly_ref.patch_text,
+                       "fileName" : anomaly_ref.method_ref.source_class_name,
+                       "lineNumber" : anomaly_ref.method_ref.start_line_number}
+
+    return Response(json.dumps(edit_suggestion),
+                    status=200,
+                    mimetype='application/json')
+
+
+def explain_anomaly():
+    pass
 
 
 def flaskrun(default_host="127.0.0.1", default_port="5000"):
@@ -248,6 +289,8 @@ def create_app(graph_path, cluster_path, iso_path):
     app.route('/get_apps', methods=['GET'])(get_apps)
     app.route('/get_groums', methods=['POST'])(get_groums)
     app.route('/process_graphs_in_pull_request', methods=['POST'])(process_graphs_in_pull_request)
+    app.route('/inspect_anomaly', methods=['POST'])(inspect_anomaly)
+    app.route('/explain_anomaly', methods=['POST'])(explain_anomaly)
 
     # create the db object
     config = SQLiteConfig(DB_NAME)
