@@ -158,7 +158,9 @@ class Db(object):
         cluster_ref = self.get_cluster_by_id(res_data.cluster_id)
         return PatternRef(cluster_ref,
                           res_data.pattern_id,
-                          res_data.pattern_type)
+                          res_data.pattern_type,
+                          res_data.frequency,
+                          res_data.cardinality)
 
     def new_cluster(self, cluster_ref, lookup=False):
       return self._new_data(cluster_ref, self._new_cluster,
@@ -175,8 +177,7 @@ class Db(object):
         return None
       else:
         return ClusterRef(res_data.cluster_id,
-                          res_data.frequency)
-
+                          res_data.cluster_methods)
 
     def new_method(self, data, lookup=False):
       return self._new_data(data, self._new_method,
@@ -342,7 +343,9 @@ class Db(object):
       (cluster_id, _) = self.new_cluster(pattern_ref.cluster_ref, True)
       ins = patterns.insert().values(cluster_id=cluster_id,
                                      pattern_id=pattern_ref.pattern_id,
-                                     pattern_type=pattern_ref.pattern_type)
+                                     pattern_type=pattern_ref.pattern_type,
+                                     frequency=pattern_ref.frequency,
+                                     cardinality=pattern_ref.cardinality)
       result = self.connection.execute(ins)
       return (result.inserted_primary_key[0], pattern_ref)
 
@@ -358,7 +361,7 @@ class Db(object):
     def _new_cluster(self, cluster_ref, lookup=False):
       clusters = self.metadata.tables['clusters']
       ins = clusters.insert().values(cluster_id=cluster_ref.cluster_id,
-                                     frequency=cluster_ref.frequency)
+                                     cluster_methods=cluster_ref.methods)
       result = self.connection.execute(ins)
       return (result.inserted_primary_key[0], cluster_ref)
 
@@ -462,13 +465,15 @@ class Db(object):
         clustersTable = Table('clusters', self.metadata,
                               Column('id', Integer, primary_key = True),
                               Column('cluster_id', String(255)),
-                              Column('frequency', Float))
+                              Column('cluster_methods', VARCHAR))
 
         patternsTable = Table('patterns', self.metadata,
                               Column('id', Integer, primary_key = True),
                               Column('cluster_id', Integer, ForeignKey('clusters.id')),
                               Column('pattern_id', String(255)),
-                              Column('pattern_type', String(15)))
+                              Column('pattern_type', String(15)),
+                              Column('frequency', Float),
+                              Column('cardinality', Float))
 
         anomaliesTable = Table('anomalies', self.metadata,
                                Column('id', Integer, primary_key=True),

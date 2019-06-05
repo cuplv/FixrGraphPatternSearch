@@ -12,12 +12,17 @@ import optparse
 import httplib
 
 
-from fixrsearch.search_service import create_app, DB
+from fixrsearch.search_service import create_app, get_new_db, DB_CONFIG
+
+from fixrsearch.anomaly import Anomaly 
 
 from fixrsearch.utils import (
   RepoRef,
   PullRequestRef,
-  CommitRef
+  CommitRef,
+  MethodRef,
+  ClusterRef,
+  PatternRef
 )
 
 try:
@@ -29,6 +34,8 @@ from fixrsearch.index import IndexNode, ClusterIndex
 import fixrsearch
 
 class TestServices(unittest.TestCase):
+  DB_PATH = "/tmp/service_db.db"
+
   def __init__(self, *args, **kwargs):
     super(TestServices, self).__init__(*args, **kwargs)
 
@@ -62,7 +69,8 @@ class TestServices(unittest.TestCase):
 
     self.app = create_app(self.graph_path,
                           self.cluster_path,
-                          self.iso_bin_path)
+                          self.iso_bin_path,
+                          TestServices.DB_PATH)
     self.app.testing = True
     self.test_client = self.app.test_client()
 
@@ -70,6 +78,10 @@ class TestServices(unittest.TestCase):
     index_file = os.path.join(self.graph_path, "graph_index.json")
     if (os.path.exists(index_file)):
       os.remove(index_file)
+
+    if (os.path.exists(TestServices.DB_PATH)):
+      os.remove(TestServices.DB_PATH)
+
 
   def test_search(self):
     key = "%s/%s/%s/%s/%s" % ("dfredriksen",
@@ -177,23 +189,57 @@ class TestServices(unittest.TestCase):
 
     self.assertTrue(len(json_data) > 0)
 
-  def test_inspect_anomaly(self):
+
+  def get_anomaly(self):
     user_name = "mmcguinn"
     repo_name = "iSENSE-Hardware"
     commit_hash = "0700782f9d3aa4cb3d4c86c3ccf9dcab13fa3aad"
     pr_id = 1
     anomaly_id = "1"
 
+    patch_text = ""
+    pattern_anomaly_text = ""
+
+    repo_ref = RepoRef(repo_name, user_name)
+    commit_ref = CommitRef(repo_ref, commit_hash)
+
+    anomaly = Anomaly(anomaly_id,
+                      MethodRef(commit_ref,
+                                "RestAPIDbAdapter",
+                                "edu.uml.cs.droidsense.comm",
+                                "getExperiments",
+                                405,
+                                "RestAPIDbAdapter.java"),
+                      PullRequestRef(repo_ref,
+                                     pr_id,
+                                     commit_ref),
+                      patch_text,
+                      pattern_anomaly_text,
+                      PatternRef(ClusterRef("1", ""), "",
+                                 PatternRef.Type.POPULAR, 1.0, 1.0)
+    )
+
+    db = get_new_db(self.app.config[DB_CONFIG])
+    db.new_anomaly(anomaly)
+    db.disconnect()
+
+    return anomaly
+
+  def test_inspect_anomaly(self):
+    # Prepare the test data
+    anomaly = self.get_anomaly()
+
     service_input = {
-      "anomalyId" : str(anomaly_id),
-      "pullRequest" : {"user" : user_name, "repo" : repo_name,
-                       "id" : str(pr_id)}
+      "anomalyId" : str(anomaly.numeric_id),
+      "pullRequest" : {"user" : anomaly.pull_request.repo_ref.user_name,
+                       "repo" : anomaly.pull_request.repo_ref.repo_name,
+                       "id" : str(anomaly.pull_request.number)}
     }
 
     expected_output = {
       "editText" : "",
-      "fileName" : "RestAPIDbAdapter.java",
-      "lineNumber" : 405
+      "fileName" : anomaly.method_ref.source_class_name,
+      "lineNumber" : anomaly.method_ref.start_line_number
     }
 
     response = self.test_client.post('/inspect_anomaly',
@@ -208,16 +254,14 @@ class TestServices(unittest.TestCase):
 
 
   def test_explain_anomaly(self):
-    user_name = "mmcguinn"
-    repo_name = "iSENSE-Hardware"
-    commit_hash = "0700782f9d3aa4cb3d4c86c3ccf9dcab13fa3aad"
-    pr_id = 1
-    anomaly_id = "1"
+    # Prepare the test data
+    anomaly = self.get_anomaly()
 
     service_input = {
-      "anomalyId" : str(anomaly_id),
-      "pullRequest" : {"user" : user_name, "repo" : repo_name,
-                       "id" : str(pr_id)}
+      "anomalyId" : str(anomaly.numeric_id),
+      "pullRequest" : {"user" : anomaly.pull_request.repo_ref.user_name,
+                       "repo" : anomaly.pull_request.repo_ref.repo_name,
+                       "id" : str(anomaly.pull_request.number)}
     }
 
     expected_output = {

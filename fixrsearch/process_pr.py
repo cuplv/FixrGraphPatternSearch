@@ -45,7 +45,6 @@ class PrProcessor:
 
     Return the list of anomalies created for all the graphs.
     """
-
     anomalies = []
     app_key = GroumIndex.get_app_key(pull_request_ref.repo_ref.user_name,
                                      pull_request_ref.repo_ref.repo_name,
@@ -71,8 +70,12 @@ class PrProcessor:
       # Search for anomalies
       results = self.search.search_from_groum(groum_file)
       for cluster_res in results:
-        # TODO: update clusterRef
-        cluster_ref = ClusterRef("", 0.0)
+        assert "cluster_info" in cluster_res
+        cluster_info = cluster_res["cluster_info"]
+        assert "id" in cluster_info and "methods_list" in cluster_info
+
+        method_list = ClusterRef.build_methods_str(cluster_info["methods_list"])
+        cluster_ref = ClusterRef(cluster_info["id"], method_list)
 
         for search_res in cluster_res["search_results"]:
           # TODO: Test, skip for now
@@ -83,14 +86,18 @@ class PrProcessor:
           # get the pattern
           assert "popular" in search_res
           binRes = search_res["popular"]
-          assert ("type" in binRes and binRes["type"] == "popular" and
-                  "acdfg_mappings" in binRes and "frequency" in binRes)
+
+          binResField = ["type", "acdfg_mappings", "frequency",
+                         "cardinality", "id"]
+          for i in binResField: assert i in binRes
+          assert binRes["type"] == "popular"
 
           # TODO: Generate pattern id (propagate from search)
-          pattern_id = ""
           pattern_ref = PatternRef(cluster_ref,
-                                   pattern_id,
-                                   PatternRef.Type.POPULAR)
+                                   binRes["id"],
+                                   PatternRef.Type.POPULAR,
+                                   binRes["frequency"],
+                                   binRes["cardinality"])
 
           # TODO: Generate patch text
           patch_text = ""

@@ -162,7 +162,7 @@ def process_graphs_in_pull_request():
     # produce the json output for the anomalies
 
     json_data = []
-    
+
     for anomaly in anomalies:
         json_anomaly = {"id" : anomaly.numeric_id,
                         "error" : "",
@@ -194,7 +194,8 @@ def _lookup_anomaly(current_app, content):
 
     db = get_new_db(current_app.config[DB_CONFIG])
     pr_processor = PrProcessor(current_app.config[GROUM_INDEX], db,
-                               Search(current_app.config[CLUSTER_PATH], current_app.config[ISO_PATH],
+                               Search(current_app.config[CLUSTER_PATH],
+                                      current_app.config[ISO_PATH],
                                       current_app.config[CLUSTER_INDEX]))
 
     pr_ref = pr_processor.find_pr_commit(user_name, repo_name, pull_request_id)
@@ -204,16 +205,16 @@ def _lookup_anomaly(current_app, content):
                                                                repo_name)
         reply_json = {"status" : 1, "error" : error_msg}
         pr_processor = None
-        return (None, None, Response(json.dumps(reply_json), status=404, mimetype='application/json'))
-
-
+        return (None, None, Response(json.dumps(reply_json), status=404,
+                                     mimetype='application/json'))
 
     anomaly_ref = db.get_anomaly_by_pr_and_number(pr_ref, anomaly_number)
     if anomaly_ref is None:
         error_msg = "Cannot find anomaly %s" % (str(anomaly_number))
         reply_json = {"status" : 1, "error" : error_msg}
         pr_processor = None
-        return (None, None, Response(json.dumps(reply_json), status=404, mimetype='application/json'))
+        return (None, None, Response(json.dumps(reply_json), status=404,
+                                     mimetype='application/json'))
 
     db.disconnect()
 
@@ -314,7 +315,7 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
     logging.info("Running server...")
 
 
-def create_app(graph_path, cluster_path, iso_path):
+def create_app(graph_path, cluster_path, iso_path, db_path = DB_NAME):
     app = Flask(__name__)
     app.config[CLUSTER_PATH] = cluster_path
     app.config[ISO_PATH] = iso_path
@@ -336,7 +337,7 @@ def create_app(graph_path, cluster_path, iso_path):
     app.route('/explain_anomaly', methods=['POST'])(explain_anomaly)
 
     # create the db object
-    config = SQLiteConfig(DB_NAME)
+    config = SQLiteConfig(db_path)
     app.config[DB_CONFIG] = config
     db = get_new_db(config, True)
     db.disconnect()
