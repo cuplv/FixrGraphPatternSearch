@@ -12,7 +12,7 @@ import optparse
 import httplib
 
 
-from fixrsearch.search_service import create_app, DB
+from fixrsearch.search_service import create_app
 
 from fixrsearch.utils import (
   RepoRef,
