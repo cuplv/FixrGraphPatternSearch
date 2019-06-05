@@ -58,12 +58,21 @@ class ClusterRef(object):
   """ Represent a cluster
   """
 
-  def __init__(self,
-               cluster_id,
-               frequency):
-    # TODO: add popularity
+  SEPARATOR = ","
+
+  def __init__(self, cluster_id, methods):
     self.cluster_id = cluster_id
-    self.frequency = frequency
+    # List of methods, comma separated
+    self.methods = methods
+
+  def get_method_list(self):
+    l = [m in self.methods.split[ClusterRef.SEPARATOR]]
+    return l
+
+  @staticmethod
+  def build_methods_str(method_list):
+    return ClusterRef.SEPARATOR.join(method_list)
+
 
 class PatternRef(object):
   """ Representation of the pattern
