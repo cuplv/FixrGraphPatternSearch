@@ -84,6 +84,11 @@ class Search():
       else:
         logging.debug("Found %d in cluster %d..." % (len(results_cluster),
                                                      cluster_info.id))
+        cluster_info_map = {}
+        cluster_info_map["id"] = cluster_info.id
+        cluster_info_map["methods_list"] = [n for n in
+                                            cluster_info.methods_list]
+        results_cluster["cluster_info"] = cluster_info_map
 
         results.append(results_cluster)
 
@@ -308,7 +313,7 @@ class Search():
     return popularity
 
 
-  def format_bin(self, lattice, id2bin, acdfbBin, isoRes, subsumes):
+  def format_bin(self, lattice, id2bin, acdfgBin, isoRes, subsumes):
     """
     Format one of the result of the search --- i.e. a relation from a
     pattern (either popular/anomalous/isolated) to the groum used in the
@@ -333,21 +338,22 @@ class Search():
     """
     res_bin = {}
 
-    if (acdfbBin.popular):
+    if (acdfgBin.popular):
       res_bin["type"] = "popular"
-    elif (acdfbBin.anomalous):
+    elif (acdfgBin.anomalous):
       res_bin["type"] = "anomalous"
-    elif (acdfbBin.isolated):
+    elif (acdfgBin.isolated):
       res_bin["type"] = "isolated"
 
-    res_bin["frequency"] = self.get_popularity(lattice, id2bin, acdfbBin)
+    res_bin["frequency"] = self.get_popularity(lattice, id2bin, acdfgBin)
+    res_bin["cardinality"] = len(acdfgBin.names_to_iso)
 
     # Creates three lists of lines association between
     # the query acdf and all the other acdfgs in the
     # pattern
     acdfg_mappings = []
     visitedMapping = set()
-    for isoPair in acdfbBin.names_to_iso:
+    for isoPair in acdfgBin.names_to_iso:
       mapping = {}
       source_info = {}
       if (isoPair.iso.acdfg_1.HasField("source_info")):
