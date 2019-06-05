@@ -82,8 +82,14 @@ class PatternRef(object):
     POPULAR = "POPULAR"
     ISOLATED = "ISOLATED"
 
-  def __init__(self, cluster_ref, pattern_id, pattern_type):
+  def __init__(self, cluster_ref,
+               pattern_id,
+               pattern_type,
+               frequency,
+               cardinality):
     # TODO: add list of examples
     self.cluster_ref = cluster_ref
     self.pattern_id = pattern_id
     self.pattern_type = pattern_type
+    self.frequency = frequency
+    self.cardinality = cardinality

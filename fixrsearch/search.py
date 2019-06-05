@@ -345,6 +345,7 @@ class Search():
     elif (acdfgBin.isolated):
       res_bin["type"] = "isolated"
 
+    res_bin["id"] = acdfgBin.id
     res_bin["frequency"] = self.get_popularity(lattice, id2bin, acdfgBin)
     res_bin["cardinality"] = len(acdfgBin.names_to_iso)
 

@@ -158,7 +158,9 @@ class Db(object):
         cluster_ref = self.get_cluster_by_id(res_data.cluster_id)
         return PatternRef(cluster_ref,
                           res_data.pattern_id,
-                          res_data.pattern_type)
+                          res_data.pattern_type,
+                          res_data.frequency,
+                          res_data.cardinality)
 
     def new_cluster(self, cluster_ref, lookup=False):
       return self._new_data(cluster_ref, self._new_cluster,
@@ -341,7 +343,9 @@ class Db(object):
       (cluster_id, _) = self.new_cluster(pattern_ref.cluster_ref, True)
       ins = patterns.insert().values(cluster_id=cluster_id,
                                      pattern_id=pattern_ref.pattern_id,
-                                     pattern_type=pattern_ref.pattern_type)
+                                     pattern_type=pattern_ref.pattern_type,
+                                     frequency=pattern_ref.frequency,
+                                     cardinality=pattern_ref.cardinality)
       result = self.connection.execute(ins)
       return (result.inserted_primary_key[0], pattern_ref)
 
@@ -467,7 +471,9 @@ class Db(object):
                               Column('id', Integer, primary_key = True),
                               Column('cluster_id', Integer, ForeignKey('clusters.id')),
                               Column('pattern_id', String(255)),
-                              Column('pattern_type', String(15)))
+                              Column('pattern_type', String(15)),
+                              Column('frequency', Float),
+                              Column('cardinality', Float))
 
         anomaliesTable = Table('anomalies', self.metadata,
                                Column('id', Integer, primary_key=True),

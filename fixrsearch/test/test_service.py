@@ -216,7 +216,7 @@ class TestServices(unittest.TestCase):
                       patch_text,
                       pattern_anomaly_text,
                       PatternRef(ClusterRef("1", ""), "",
-                                 PatternRef.Type.POPULAR)
+                                 PatternRef.Type.POPULAR, 1.0, 1.0)
     )
 
     db = get_new_db(self.app.config[DB_CONFIG])

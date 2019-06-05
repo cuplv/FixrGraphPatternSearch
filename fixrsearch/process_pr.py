@@ -86,14 +86,18 @@ class PrProcessor:
           # get the pattern
           assert "popular" in search_res
           binRes = search_res["popular"]
-          assert ("type" in binRes and binRes["type"] == "popular" and
-                  "acdfg_mappings" in binRes and "frequency" in binRes)
+
+          binResField = ["type", "acdfg_mappings", "frequency",
+                         "cardinality", "id"]
+          for i in binResField: assert i in binRes
+          assert binRes["type"] == "popular"
 
           # TODO: Generate pattern id (propagate from search)
-          pattern_id = ""
           pattern_ref = PatternRef(cluster_ref,
-                                   pattern_id,
-                                   PatternRef.Type.POPULAR)
+                                   binRes["id"],
+                                   PatternRef.Type.POPULAR,
+                                   binRes["frequency"],
+                                   binRes["cardinality"])
 
           # TODO: Generate patch text
           patch_text = ""

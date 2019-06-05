@@ -102,7 +102,7 @@ class TestDb(unittest.TestCase):
     def testInsertPattern(self):
       cluster_ref = ClusterRef("5/2/1", "")
       pattern = PatternRef(cluster_ref, "5/2/1",
-                           PatternRef.Type.POPULAR)
+                           PatternRef.Type.POPULAR, 1.0, 1.0)
 
       (res_id, old_data) = self.db.new_pattern(pattern)
       self.assertEquals(old_data, pattern)
@@ -121,7 +121,7 @@ class TestDb(unittest.TestCase):
       pr = PullRequestRef(repo_ref, 1, commit_ref)
       cluster_ref = ClusterRef("5/2/1", "")
       pattern = PatternRef(cluster_ref, "5/2/1",
-                           PatternRef.Type.POPULAR)
+                           PatternRef.Type.POPULAR, 1.0, 1.0)
       method = MethodRef(commit_ref,
                          "MyClass",
                          "edu.colorado.plv",
