@@ -136,6 +136,16 @@ class AcdfgRepr(object):
     }
     return style[edge.edge_type]
 
+  def find_control_roots(self):
+    """ Get all the control nodes without incoming edges """
+    roots = set()
+    for n in self._control:
+      roots.add(n)
+
+    for e in self._edges:
+      if e.to_node in roots: roots.remove(e.to_node)
+    return roots
+
   def print_dot(self, out_stream):
     """ Print the dot representation of the acdfg """
 

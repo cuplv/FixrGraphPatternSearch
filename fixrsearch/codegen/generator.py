@@ -2,8 +2,10 @@
 Utilities to transform acdfgs and mappings to to code
 """
 
-from fixrsearch.code_gen.acdfg_repr import (
-  AcdfgRepr, Node, MethodNode, DataNode MiscNode, Edge
+from fixrsearch.codegen.acdfg_repr import (
+  AcdfgRepr,
+  Node, MethodNode, DataNode, MiscNode,
+  Edge
 )
 from enum import Enum
 import StringIO
@@ -24,35 +26,23 @@ class CodeGenerator(object):
     ast = self._get_cfg()
 
   def _get_cfg(self):
-    roots = self.find_control_root()
+    roots = self.acdfg.find_control_root()
 
     # visit the graph from the root generating the AST
     for r in roots:
-      cfg = CFG(self.acdf, r)
+       cfg = CFGAnalyzer(self.acdf, r)
 
 
-  def _find_control_roots(self):
-    """ Get all the control nodes without incoming edges """
-    roots = {}
-    for n in self._control:
-      roots.add(n)
-
-    for e in self._edges:
-      if e.to_node in roots: roots.remove(e)
-    return roots
-
-
-class CFG(object):
+class CFGAnalyzer(object):
   def __init__(self, acdfg, root_node):
-    super(object, self).__init__()
+    super(CFGAnalyzer, self).__init__()
     self.acdfg = acdfg
-    self.root = root
-
-    self._reachable = self._reachable_dfs(root)
-
+    self.root = root_node
     self._fwd = {}
     self._bwd = {}
+    self._dom = None # on demand
 
+    # Fill the forward and backward relation
     for c in self.acdfg._control:
       self._fwd[c] = []
       self._bwd[c] = []
@@ -69,17 +59,31 @@ class CFG(object):
         self._fwd[e.from_node].append(e.to_node)
         self._bwd[e.to_node].append(e.from_node)
 
-    # Domination relations
-    self._dom = None
+    self._reachable = self._reachable_dfs(self.root)
+
+    def shrink_map(map_to_shrink):
+      new_map = {}
+      for node, node_list in self.map_to_shrink.iteritems():
+        if node in self._reachable:
+          new_list = []
+          for c in node_list:
+            if c in self._reachable:
+              new_list.appedn(c)
+          new_map[node] = new_list
+      return new_map
+
+#    self._fwd = shrink_map(self._fwd)
+#    self._bwd = shrink_map(self._bwd)
+
 
   def _build_dominator_relation(self):
     # map from node i to the set of nodes that
     # dominates i
-    self._dom = {}
+    dom = {}
 
     # Init the domination relation
     # only root dominates itself
-    self.dom[self.root] = {self.root}
+    dom[self.root] = {self.root}
     # suppose that each node dominates each other node
     for node in self._reachable:
       if node == self.root: continue
@@ -117,9 +121,14 @@ class CFG(object):
           change = True
           dom[node] = dom_pred_set
 
-  def _find_loops(self):
+    return dom
+
+  def get_loops(self):
     # Loops store (head_node, back_node, body_nodes)
-    loops = {}
+    loops = set()
+
+    if self._dom is None:
+      self._dom = self._build_dominator_relation()
 
     for node in self._reachable:
       for dominator in self._dom[node]:
@@ -130,13 +139,13 @@ class CFG(object):
     return loops
 
   def _reachable_dfs(self, node, bwd=False):
-    reachable = {}
+    reachable = set()
     to_visit = [node]
 
     rel = self._bwd if bwd else self._fwd
 
     while len(to_visit) > 0:
-      current = to_visit[0]
+      current = to_visit.pop()
       if current in reachable: continue
 
       reachable.add(current)
@@ -146,7 +155,7 @@ class CFG(object):
 
     return reachable
 
-  def _reachable_from(self, node, bwd=False, target):
+  def _reachable_from(self, node, bwd, target):
     reachable_dir1 = self._reachable_dfs(node, bwd)
     reachable_dir2 = self._reachable_dfs(target, not bwd)
 
@@ -191,7 +200,7 @@ class PatternAst(object):
               "method_name" : {NodeType.METHOD}}
 
   def __init__(self, ast_type):
-    super(object, self).__init__()
+    super(PatternAst, self).__init__()
     self.ast_type = ast_type
     self.data = {}
     self.children = []
