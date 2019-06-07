@@ -7,6 +7,10 @@ class Node(object):
     super(Node, self).__init__()
     self.id = node_id
 
+    def __eq__(self, other):
+      return (type(self) == type(other) and
+              self.id == other.id)
+
 class MethodNode(Node):
   def __init__(self, node_id,
                assignee, invokee,
@@ -19,6 +23,22 @@ class MethodNode(Node):
     self.name = name
     self.arguments = [l for l in arguments]
 
+  def __eq__(self, other):
+    eq = (type(self) == type(other) and
+          self.id == other. id and
+          self.assignee == other.assignee and
+          self.invokee == other.invokee and
+          self.name == other.name)
+    if not eq:
+      return False
+    elif len(self.arguments) != len(other.arguments):
+      return False
+    else:
+      for a,b in zip(self.arguments, other.arguments):
+        if not (a == b):
+          return False
+    return True
+
 class DataNode(Node):
   class DataType(Enum):
     VAR = 0
@@ -29,6 +49,14 @@ class DataNode(Node):
     self.name = name
     self.node_type = node_type
     self.data_type = data_type
+
+  def __eq__(self, other):
+    return (type(self) == type(other) and
+            self.id == other.id and
+            self.name == other.name and
+            self.node_type == other.node_type and
+            self.data_type == other.data_type)
+
 
 class MiscNode(Node):
   def __init__(self, node_id):
@@ -49,6 +77,13 @@ class Edge(object):
     self.to_node = to_node
     self.edge_type = edge_type
 
+  def __eq__(self, other):
+    return (type(self) == type(other) and
+            self.id == other.id and
+            self.edge_type == other.edge_type and
+            self.from_node == other.from_node and
+            self.to_node == other.to_node)
+
 
 class AcdfgRepr(object):
   def _add_node(self, node):
@@ -57,9 +92,7 @@ class AcdfgRepr(object):
       self._control.append(node)
     else:
       self._data.append(node)
-
     self._id2node[node.id] = node
-
 
   def __init__(self, acdfgProto):
     self._nodes = []
@@ -143,10 +176,13 @@ class AcdfgRepr(object):
       roots.add(n)
 
     for e in self._edges:
-      if e.to_node in roots: roots.remove(e.to_node)
+      # must be a control node
+      if e.to_node in roots and e.from_node in self._control:
+        roots.remove(e.to_node)
     return roots
 
-  def print_dot(self, out_stream):
+  def print_dot(self, out_stream, filter_set = {Edge.Type.TRANS,
+                                                Edge.Type.EXCEPTIONAL}):
     """ Print the dot representation of the acdfg """
 
     out_stream.write("digraph isoX {\n")
@@ -160,7 +196,7 @@ class AcdfgRepr(object):
       out_stream.write(out_node)
 
     for edge in self._edges:
-      if edge.edge_type == Edge.Type.TRANS:
+      if edge.edge_type in filter_set:
         continue
 
       edge_dot_style = self._get_dot_edge_style(edge)
@@ -170,3 +206,65 @@ class AcdfgRepr(object):
       out_stream.write(out_edge)
 
     out_stream.write(" }\n")
+
+
+  def get_slice_edges(self, nodes_to_keep):
+    """ Finds the control (and not transitive) edges that
+    be part of the slice.
+
+    These are the edges that we want to show.
+    """
+
+    fwd = {}
+    bwd = {}
+    for n in self._nodes:
+      fwd[n] = set()
+      bwd[n] = set()
+    for e in self._edges:
+      if e.edge_type == Edge.Type.CONTROL:
+        fwd[e.from_node].add(e.to_node)
+        bwd[e.to_node].add(e.from_node)
+
+    to_proc = []
+    for n in self._nodes:
+      found = False # different nodes, no hash, use eq
+      for n2 in nodes_to_keep:
+        if n == n2:
+          found = True
+          break
+      if not found:
+        to_proc.append(n)
+
+    while len(to_proc) > 0:
+      node = to_proc.pop()
+
+      # remove self loops on nodes that we
+      # do not want
+      if node in fwd[node]:
+        fwd[node].remove(node)
+      if node in bwd[node]:
+        bwd[node].remove(node)
+
+      # Add edge to skip node
+      for other1 in bwd[node]:
+        if not other1 == node:
+          for other2 in fwd[node]:
+            if not other2 == node:
+              fwd[other1].add(other2)
+              bwd[other2].add(other1)
+        if node in fwd[other1]:
+          fwd[other1].remove(node)
+
+      for other2 in fwd[node]:
+        if node in bwd[other2]:
+          bwd[other2].remove(node)
+
+      del fwd[node]
+      del bwd[node]
+
+    edges = set()
+    for node1, successors in fwd.iteritems():
+      for s in successors:
+        edges.add((node1.id, s.id))
+
+    return edges

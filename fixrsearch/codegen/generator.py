@@ -47,7 +47,7 @@ class CFGAnalyzer(object):
       self._fwd[c] = []
       self._bwd[c] = []
 
-    edge_types = {Edge.Type.CONTROL}
+    edge_types = {Edge.Type.CONTROL, Edge.Type.TRANS}
     for e in self.acdfg._edges:
       if (e.from_node in self.acdfg._control and
           e.to_node in self.acdfg._control and
@@ -123,6 +123,11 @@ class CFGAnalyzer(object):
 
     return dom
 
+  def _print_map(self, dom):
+    for key, values in dom.iteritems():
+      print("%s : [%s]" % (str(key.id),
+                           ",".join([str(m.id) for m in values])))
+
   def get_loops(self):
     # Loops store (head_node, back_node, body_nodes)
     loops = set()
@@ -135,7 +140,7 @@ class CFGAnalyzer(object):
         if dominator in self._fwd[node]:
           # we have a back edge from node to dominator
           body_nodes = self._reachable_from(node, True, dominator)
-          loops.add( (dominator, node, body_nodes) )
+          loops.add( (dominator, node, frozenset(body_nodes)) )
     return loops
 
   def _reachable_dfs(self, node, bwd=False):
