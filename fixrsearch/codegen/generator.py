@@ -3,7 +3,7 @@ Utilities to transform acdfgs and mappings to to code
 """
 
 # TODO:
-# Add data node as declaration
+# generate the method declaration for the pattern
 # 
 
 from fixrsearch.codegen.acdfg_repr import (
@@ -59,6 +59,8 @@ class CodeGenerator(object):
   def _get_node_ast(self, acdfg, root, loops):
     """ get the ast for the root node """
     helper = CodeGenerator.Helper(acdfg, loops)
+
+    # get the body of the pattern
     control_ast = self._get_node_ast_rec(acdfg, root,
                                          helper, [])
 
@@ -84,6 +86,7 @@ class CodeGenerator(object):
 
       ast = seq_ast
 
+    # TODO: generate the method declaration for the pattern
 
     return ast
 
