@@ -3,10 +3,8 @@ Utilities to transform acdfgs and mappings to to code
 """
 
 # TODO:
-# rec function to build ast from graph
-#   dump 
-# rec function to dump ast
-#
+# Add data node as declaration
+# 
 
 from fixrsearch.codegen.acdfg_repr import (
   AcdfgRepr,
@@ -256,13 +254,37 @@ class CodeGenerator(object):
     self.sliced_acdfg._edges = new_edges
 
   class Helper():
+    """ Helper class storing transition functions for the
+    CFG, the loop information, and simple accessors to node and
+    their successors.
+
+    """
+
     def __init__(self, acdfg, loops):
+      # node -> list_of_successors edges (with a control edge)
       self._fwd = {}
+      # node -> list_of_predecessors edges (with a control edge)
       self._bwd = {}
 
+      # node -> list of use *nodes*
+      self._used_node = {}
+      # node -> list of defined *nodes* (it should one)
+      self._def_nodes = {}
+
+      # set of loops (head, tail)
+      self._loops = set()
+      # node -> count of loops s.t. node is a head
+      self._loop_heads = {}
+      # node -> count of loops s.t. node is a back edge
+      self._loop_back_edges = {}
+
+      # Fill the transition relation, use and def edges
       for node in acdfg._control:
         self._fwd[node] = set()
         self._bwd[node] = set()
+        self._used_node[node] = set()
+        self._def_nodes[node] = set()
+
 
       for e in acdfg._edges:
         if (e.edge_type == Edge.Type.CONTROL):
@@ -272,21 +294,29 @@ class CodeGenerator(object):
           self._fwd[e.from_node].add(e)
           self._bwd[e.to_node].add(e)
 
-      self.loops = set()
-      self.loop_heads = {}
-      self.loop_back_edges = {}
+        elif (e.edge_type == Edge.Type.USE):
+          assert e.from_node in acdfg._data
+          assert e.to_node in acdfg._control
+          self._used_node[e.to_node].add(e.from_node)
 
+        elif (e.edge_type == Edge.Type.DEF_EDGE):
+          assert e.from_node in acdfg._control
+          assert e.to_node in acdfg._data
+
+          self._def_nodes[e.from_node].add(e.to_node)
+
+      # Fill the loop information
       for (head, back_edge, body_nodes) in loops:
-        self.loops.add( (head, back_edge) )
+        self._loops.add( (head, back_edge) )
 
-        count = self.loop_heads[head] if head in self.loop_heads else 0
-        self.loop_heads[head] = count + 1
+        count = self._loop_heads[head] if head in self._loop_heads else 0
+        self._loop_heads[head] = count + 1
 
-        if back_edge in self.loop_back_edges:
-          count = self.loop_back_edges[back_edge]
+        if back_edge in self._loop_back_edges:
+          count = self._loop_back_edges[back_edge]
         else:
           count = 0
-        self.loop_back_edges[back_edge] = count + 1
+        self._loop_back_edges[back_edge] = count + 1
 
     def is_tail(self, node):
       return len(self._fwd[node]) == 0
@@ -295,16 +325,16 @@ class CodeGenerator(object):
       """ join (for an if) if has at least 2 incoming
       edges that are not a loop head
       """
-      if node in self.loop_heads:
-        count_loops = self.loop_heads[node]
+      if node in self._loop_heads:
+        count_loops = self._loop_heads[node]
       else:
         count_loops = 0
       incoming = len(self._bwd[node]) - count_loops
       return incoming == 2
 
     def _count_outgoing(self, node):
-      if node in self.loop_back_edges:
-        count_be = self.loop_back_edges[node]
+      if node in self._loop_back_edges:
+        count_be = self._loop_back_edges[node]
       else:
         count_be = 0
       outgoing = len(self._fwd[node]) - count_be
@@ -317,32 +347,32 @@ class CodeGenerator(object):
       return self._count_outgoing(node) == 1
 
     def is_head(self, node):
-      if node in self.loop_heads:
-        return self.loop_heads[node] > 0
+      if node in self._loop_heads:
+        return self._loop_heads[node] > 0
       else:
         return False
 
     def is_back_edge(self, node):
-      if node in self.loop_back_edges:
-        return self.loop_back_edges[node] > 0
+      if node in self._loop_back_edges:
+        return self._loop_back_edges[node] > 0
       else:
         return False
 
     def is_loop(self, head, back_edge):
-      return (head in self.loop_heads and 
-              back_edge in self.loop_back_edges and
-              self.loop_heads[head] > 0 and
-              self.loop_back_edges[back_edge] > 0 and
-              (head, back_edge) in self.loops and
+      return (head in self._loop_heads and 
+              back_edge in self._loop_back_edges and
+              self._loop_heads[head] > 0 and
+              self._loop_back_edges[back_edge] > 0 and
+              (head, back_edge) in self._loops and
               back_edge in self._fwd and
               head in self._bwd)
 
     def remove_loop(self, head, back_edge):
       # loop should already be here...
-      self.loops.remove( (head, back_edge) )
+      self._loops.remove( (head, back_edge) )
 
-      self.loop_heads[head] = self.loop_heads[head] - 1
-      self.loop_back_edges[back_edge] = self.loop_back_edges[back_edge] - 1
+      self._loop_heads[head] = self._loop_heads[head] - 1
+      self._loop_back_edges[back_edge] = self._loop_back_edges[back_edge] - 1
 
       found = None
       for e in self._fwd[back_edge]:
@@ -361,7 +391,7 @@ class CodeGenerator(object):
     def get_next(self, node):
       branches = []
       for e in self._fwd[node]:
-        if not (node, e.from_node) in self.loops:
+        if not (node, e.from_node) in self._loops:
           branches.append(e.to_node)
       assert len(branches) == 1
       return branches[0]
@@ -369,7 +399,7 @@ class CodeGenerator(object):
     def get_if_branches(self, node):
       branches = []
       for e in self._fwd[node]:
-        if not (node, e.from_node) in self.loops:
+        if not (node, e.from_node) in self._loops:
           branches.append(e.to_node)
       assert len(branches) == 2
       return (branches[0], branches[1])
