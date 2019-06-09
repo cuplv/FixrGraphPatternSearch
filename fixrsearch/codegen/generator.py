@@ -101,7 +101,7 @@ class CodeGenerator(object):
     # must stop
     if helper.is_tail(node):
       expr_ast = self._get_expression_ast(node)
-      return (expr_ast, stack)
+      return expr_ast
     elif helper.is_join(node):
       stack.append(node)
       # Nothing to append to the previous nodes
@@ -708,9 +708,11 @@ class PatternAST(object):
       for c in self.children:
         if not first:
           c._print(out_stream, ", ")
-        c._print(out_stream, "")
+        else:
+          c._print(out_stream, "")
         first = False
       out_stream.write(");\n")
+
     elif (self.ast_type in {PatternAST.NodeType.DECL}):
       out_stream.write("%s" % (indent))
       self.children[1]._print(out_stream, "")

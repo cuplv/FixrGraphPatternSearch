@@ -19,6 +19,10 @@ from fixrgraph.annotator.protobuf.proto_acdfg_pb2 import Acdfg
 from fixrgraph.annotator.protobuf.proto_search_pb2 import SearchResults
 from fixrgraph.solr.import_patterns import _get_pattern_key
 
+from fixrsearch.codegen.acdfg_repr import AcdfgRepr
+from fixrsearch.codegen.generator import CodeGenerator, CFGAnalyzer
+
+
 JSON_OUTPUT = True
 
 MIN_METHODS_IN_COMMON = 2
@@ -37,10 +41,13 @@ def get_cluster_file(cluster_path):
   return os.path.join(cluster_path, "clusters.txt")
 
 class Search():
-  def __init__(self, cluster_path, iso_path, index = None, timeout=10):
+  def __init__(self, cluster_path, iso_path,
+               index = None, groum_index = None,
+               timeout=10):
     self.cluster_path = cluster_path
     self.iso_path = iso_path
     self.timeout = timeout
+    self.groum_index = groum_index
 
     # 1. Build the index
     if (index is None):
@@ -149,7 +156,7 @@ class Search():
       logging.info("Execution timed out executing %s" % (cmd))
       p.kill()
 
-    # proc = subprocess.Popen(args, stdout=out, stderr=err, cwd=None)
+    # DEBUG
     proc = Popen(args, cwd=None, stdout=PIPE,  stderr=PIPE)
     timer = Timer(self.timeout, kill_function, [proc, "".join(args)])
     try:
@@ -159,6 +166,8 @@ class Search():
       logging.error(e.message)
     finally:
       timer.cancel() # Cancel the timer, no matter what
+    # proc = Popen(args, cwd=None, stdout=PIPE,  stderr=PIPE)
+    # (stdout, stderr) = proc.communicate() # execute the process
 
     result = None
     return_code = proc.returncode
@@ -249,9 +258,6 @@ class Search():
       (res_type, subsumes_ref, subsume_anom) = self.get_res_type(proto_search.type)
       search_res["type"] = res_type
       logging.debug("Search res: " + search_res["type"])
-
-      # print("Lines iso to reference %d" %
-      #       len(proto_search.isoToReference.acdfg_1.node_lines))
 
       # Process the reference pattern, and set it as
       # popular key in the result
@@ -349,6 +355,13 @@ class Search():
     res_bin["frequency"] = self.get_popularity(lattice, id2bin, acdfgBin)
     res_bin["cardinality"] = len(acdfgBin.names_to_iso)
 
+    if (acdfgBin.popular):
+      # get the text only for the popular stuff...
+      res_bin["pattern_code"] = self.get_pattern_code(lattice,
+                                                      id2bin,
+                                                      acdfgBin)
+
+
     # Creates three lists of lines association between
     # the query acdf and all the other acdfgs in the
     # pattern
@@ -356,62 +369,29 @@ class Search():
     visitedMapping = set()
     for isoPair in acdfgBin.names_to_iso:
       mapping = {}
-      source_info = {}
-      if (isoPair.iso.acdfg_1.HasField("source_info")):
-        protoSource = isoPair.iso.acdfg_1.source_info
-        if (protoSource.HasField("package_name")):
-          source_info["package_name"] = protoSource.package_name
-        if (protoSource.HasField("class_name")):
-          source_info["class_name"] = protoSource.class_name
-        if (protoSource.HasField("method_name")):
-          source_info["method_name"] = protoSource.method_name
-        if (protoSource.HasField("class_line_number")):
-          source_info["class_line_number"] = protoSource.class_line_number
-        if (protoSource.HasField("method_line_number")):
-          source_info["method_line_number"] = protoSource.method_line_number
-        if (protoSource.HasField("source_class_name")):
-          source_info["source_class_name"] = protoSource.source_class_name
-        if (protoSource.HasField("abs_source_class_name")):
-          source_info["abs_source_class_name"] = protoSource.abs_source_class_name
-          mapping["source_info"] = source_info
+      source_info = self._fill_source_info(isoPair)
+      mapping["source_info"] = source_info
+      repo_tag = self._fill_repo_tag(isoPair)
+      mapping["repo_tag"] = repo_tag
 
-      repo_tag = {}
-      if (isoPair.iso.acdfg_1.HasField("repo_tag")):
-        proto_tag = isoPair.iso.acdfg_1.repo_tag
-        if proto_tag.HasField("repo_name"):
-          repo_tag["repo_name"] = proto_tag.repo_name
-        if proto_tag.HasField("user_name"):
-          repo_tag["user_name"] = proto_tag.user_name
-        if proto_tag.HasField("url"):
-          repo_tag["url"] = proto_tag.url
-        if proto_tag.HasField("commit_hash"):
-          repo_tag["commit_hash"] = proto_tag.commit_hash
-        if proto_tag.HasField("commit_date"):
-          repo_tag["commit_date"] = proto_tag.commit_date
-        mapping["repo_tag"] = repo_tag
-
-      # remove duplicates
-      key = "%s/%s/%s/%s/%s/%s" % (repo_tag["user_name"],
+      # remove duplicates from the visit
+      key = "%s/%s/%s/%s.%s/%s" % (repo_tag["user_name"],
                                    repo_tag["repo_name"],
                                    repo_tag["commit_hash"],
                                    source_info["class_name"],
                                    source_info["method_name"],
                                    source_info["method_line_number"])
-
-      if key in visitedMapping:
-        continue
+      if key in visitedMapping: continue
       visitedMapping.add(key)
 
       # Computes the mapping from the acdfg used in the
       # query and the acdfg in the bin
-      # logging.debug("Computing mapping...")
-      # logging.debug("%d" % len(isoRes.nodesMap))
-      # logging.debug("%d" % len(isoPair.iso.nodesMap))
       (nodes_res, edges_res) = Search.get_mapping(isoRes.acdfg_1,
                                                   isoPair.iso.acdfg_1,
                                                   isoRes,
                                                   isoPair.iso,
-                                                  # Never reverse, the data is already ok
+                                                  # Never reverse, the data is
+                                                  # already ok
                                                   False)
       mapping["nodes"] = {"iso" : nodes_res[0],
                           "add" : nodes_res[1],
@@ -425,6 +405,47 @@ class Search():
 
     return res_bin
 
+
+  def _fill_source_info(self, isoPair):
+    assert isoPair.iso.acdfg_1.HasField("source_info")
+
+    source_info = {}
+    protoSource = isoPair.iso.acdfg_1.source_info
+    if (protoSource.HasField("package_name")):
+      source_info["package_name"] = protoSource.package_name
+    if (protoSource.HasField("class_name")):
+      source_info["class_name"] = protoSource.class_name
+    if (protoSource.HasField("method_name")):
+      source_info["method_name"] = protoSource.method_name
+    if (protoSource.HasField("class_line_number")):
+      source_info["class_line_number"] = protoSource.class_line_number
+    if (protoSource.HasField("method_line_number")):
+      source_info["method_line_number"] = protoSource.method_line_number
+    if (protoSource.HasField("source_class_name")):
+      source_info["source_class_name"] = protoSource.source_class_name
+    if (protoSource.HasField("abs_source_class_name")):
+      source_info["abs_source_class_name"] = protoSource.abs_source_class_name
+
+    return source_info
+
+  def _fill_repo_tag(self, isoPair):
+    assert (isoPair.iso.acdfg_1.HasField("repo_tag"))
+
+    repo_tag = {}
+
+    proto_tag = isoPair.iso.acdfg_1.repo_tag
+    if proto_tag.HasField("repo_name"):
+      repo_tag["repo_name"] = proto_tag.repo_name
+    if proto_tag.HasField("user_name"):
+      repo_tag["user_name"] = proto_tag.user_name
+    if proto_tag.HasField("url"):
+      repo_tag["url"] = proto_tag.url
+    if proto_tag.HasField("commit_hash"):
+      repo_tag["commit_hash"] = proto_tag.commit_hash
+    if proto_tag.HasField("commit_date"):
+      repo_tag["commit_date"] = proto_tag.commit_date
+
+    return repo_tag
 
   @staticmethod
   def get_mapping(acdfg_1, acdfg_2,
@@ -544,6 +565,46 @@ class Search():
           res[idx_to_remove].append(e1_line)
 
     return (nodes_res, edges_res)
+
+  def get_pattern_code(self, lattice, id2bin, acdfgBin):
+    if self.groum_index is None:
+      return ""
+
+    found_orig = False;
+    for isoPair in acdfgBin.names_to_iso:
+      acdfg_reduced = AcdfgRepr(isoPair.iso.acdfg_1)
+
+      source_info = self._fill_source_info(isoPair)
+      repo_tag = self._fill_repo_tag(isoPair)
+
+      key = u"%s/%s/%s/%s.%s/%s" % (repo_tag["user_name"],
+                                    repo_tag["repo_name"],
+                                    repo_tag["commit_hash"],
+                                    source_info["class_name"],
+                                    source_info["method_name"],
+                                    source_info["method_line_number"])
+
+      acdfg_orig_path = self.groum_index.get_groum_path(key)
+      if not acdfg_orig_path is None:
+        if os.path.exists(acdfg_orig_path):
+          found_orig = True
+          break
+
+    if not found_orig:
+      return ""
+
+    acdfg_proto = Acdfg()
+    with open(acdfg_orig_path, "rb") as f1:
+      acdfg_proto.ParseFromString(f1.read())
+      f1.close()
+    acdfg_original = AcdfgRepr(acdfg_proto)
+    code_gen = CodeGenerator(acdfg_reduced, acdfg_original)
+    code = code_gen.get_code_text()
+
+    print code
+
+    return code
+
 
 
 def main():

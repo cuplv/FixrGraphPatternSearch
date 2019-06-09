@@ -131,3 +131,8 @@ class PrProcessor:
     return anomaly_out
 
 
+
+  def get_pattern_text(self, ):
+    code_gen = CodeGenerator(acdfg_reduced, acdfg_original)
+    text = code_gen.get_code_text()
+

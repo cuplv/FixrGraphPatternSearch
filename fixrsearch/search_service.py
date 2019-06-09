@@ -23,6 +23,7 @@ import optparse
 import logging
 import os
 import sys
+import copy
 
 CLUSTER_PATH = "cluster_path"
 ISO_PATH = "iso_path"
@@ -30,6 +31,7 @@ CLUSTER_INDEX = "cluster_index"
 GROUM_INDEX = "groum_index"
 DB_NAME = "service_db"
 DB_CONFIG="db_config"
+TIMEOUT = 10
 
 from search import (
     Search,
@@ -102,7 +104,9 @@ def search_pattern():
         else:
             search = Search(current_app.config[CLUSTER_PATH],
                             current_app.config[ISO_PATH],
-                            current_app.config[CLUSTER_INDEX])
+                            current_app.config[CLUSTER_INDEX],
+                            current_app.config[GROUM_INDEX],
+                            current_app.config[TIMEOUT])
 
             results = search.search_from_groum(groum_file)
 
@@ -142,7 +146,9 @@ def process_graphs_in_pull_request():
                                db,
                                Search(current_app.config[CLUSTER_PATH],
                                       current_app.config[ISO_PATH],
-                                      current_app.config[CLUSTER_INDEX]))
+                                      current_app.config[CLUSTER_INDEX],
+                                      current_app.config[GROUM_INDEX],
+                                      current_app.config[TIMEOUT]))
 
     pr_ref = PullRequestRef(RepoRef(repo_name, user_name), pull_request_id,
                             CommitRef(RepoRef(repo_name, user_name),
@@ -196,7 +202,9 @@ def _lookup_anomaly(current_app, content):
     pr_processor = PrProcessor(current_app.config[GROUM_INDEX], db,
                                Search(current_app.config[CLUSTER_PATH],
                                       current_app.config[ISO_PATH],
-                                      current_app.config[CLUSTER_INDEX]))
+                                      current_app.config[CLUSTER_INDEX],
+                                      current_app.config[GROUM_INDEX],
+                                      current_app.config[TIMEOUT]))
 
     pr_ref = pr_processor.find_pr_commit(user_name, repo_name, pull_request_id)
     if pr_ref is None:
@@ -317,6 +325,7 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
 
 def create_app(graph_path, cluster_path, iso_path, db_path = DB_NAME):
     app = Flask(__name__)
+    app.config[TIMEOUT] = 10
     app.config[CLUSTER_PATH] = cluster_path
     app.config[ISO_PATH] = iso_path
 

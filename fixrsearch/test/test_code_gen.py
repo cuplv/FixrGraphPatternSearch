@@ -105,4 +105,3 @@ class TestGen(unittest.TestCase):
     code_gen = CodeGenerator(acdfg_reduced, acdfg_original)
     text = code_gen.get_code_text()
 
-    
