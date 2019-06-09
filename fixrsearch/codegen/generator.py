@@ -59,7 +59,33 @@ class CodeGenerator(object):
   def _get_node_ast(self, acdfg, root, loops):
     """ get the ast for the root node """
     helper = CodeGenerator.Helper(acdfg, loops)
-    return self._get_node_ast_rec(acdfg, root, helper, [])
+    control_ast = self._get_node_ast_rec(acdfg, root,
+                                         helper, [])
+
+    # add definition of variables
+    ast = control_ast
+    to_declare = set()
+    for control_node, data_node_set in helper._def_nodes.iteritems():
+      for data_node in data_node_set:
+        if data_node.data_type == DataNode.DataType.VAR:
+          to_declare.add(data_node)
+
+    for data_node in to_declare:
+      type_ast = PatternAST(PatternAST.NodeType.CONST)
+      type_ast._set_data("name", data_node.node_type)
+
+      data_ast = self._get_expression_ast(data_node)
+
+      decl_ast = PatternAST(PatternAST.NodeType.DECL)
+      decl_ast.set_children([type_ast,data_ast])
+
+      seq_ast = PatternAST(PatternAST.NodeType.SEQ)
+      seq_ast.set_children([decl_ast, ast])
+
+      ast = seq_ast
+
+
+    return ast
 
   def _get_node_ast_rec(self,
                         acdfg,
@@ -284,7 +310,6 @@ class CodeGenerator(object):
         self._bwd[node] = set()
         self._used_node[node] = set()
         self._def_nodes[node] = set()
-
 
       for e in acdfg._edges:
         if (e.edge_type == Edge.Type.CONTROL):
@@ -548,6 +573,7 @@ class PatternAST(object):
   expr := var | const
   cmd := method(expr, ..., expr)
          | var := method(expr, ..., expr)
+         | type var;
          | cmd ; cmd
          | if * then cmd else cmd
          | while * do cmd
@@ -566,11 +592,14 @@ class PatternAST(object):
     SEQ = 4
     IF = 5
     WHILE = 6
+    DECL = 7
 
   INDENT = "  "
+  HAVOC_COND = "true"
+  HAVOC_VAR = ""
 
   CMD_TYPES = {NodeType.METHOD, NodeType.ASSIGN, NodeType.SEQ,
-               NodeType.IF, NodeType.WHILE}
+               NodeType.IF, NodeType.WHILE, NodeType.DECL}
   EXPR_TYPES = {NodeType.VAR, NodeType.CONST}
 
   DATA_MAP = {"name" : {NodeType.VAR, NodeType.CONST},
@@ -592,14 +621,16 @@ class PatternAST(object):
   def _val_children(self, children):
     len_c = len(children)
 
-    if self.ast_type in {PatternAST.NodeType.SEQ, PatternAST.NodeType.IF,
+    if self.ast_type in {PatternAST.NodeType.SEQ,
+                         PatternAST.NodeType.IF,
                          PatternAST.NodeType.WHILE}:
       for c in children:
         if c is None:
           raise PatternAST.MalformedASTException("None children!")
 
         if not c.is_cmd():
-          raise PatternAST.MalformedASTException("%s must be a command!" % str(c))
+          raise PatternAST.MalformedASTException("%s must be a " \
+                                                 "command!" % str(c))
 
       if self.ast_type in {PatternAST.NodeType.SEQ, PatternAST.NodeType.IF}:
         if len_c != 2:
@@ -626,6 +657,17 @@ class PatternAST(object):
         if (not c is None) and (not c.is_expr()):
           err = "Node %s must be an expression!" % str(c)
           raise PatternAST.MalformedASTException(err)
+
+    elif self.ast_type in {PatternAST.NodeType.DECL}:
+      if len_c != 2:
+        err = "Node must have 2 children, %d given!" % len_c
+        raise PatternAST.MalformedASTException(err)
+      elif children[0].ast_type != PatternAST.NodeType.CONST:
+        err = "Node %s must be a const!" % str(c)
+        raise PatternAST.MalformedASTException(err)
+      elif children[1].ast_type != PatternAST.NodeType.VAR:
+        err = "Node %s must be a var!" % str(c)
+        raise PatternAST.MalformedASTException(err)
 
     elif self.is_expr():
       if len_c != 0:
@@ -658,6 +700,7 @@ class PatternAST(object):
   def _print(self, out_stream, indent):
     if (self.ast_type in {PatternAST.NodeType.VAR, PatternAST.NodeType.CONST}):
       out_stream.write("%s%s" % (indent, self._get_data("name")))
+
     elif (self.ast_type == PatternAST.NodeType.METHOD):
       out_stream.write("%s%s(" % (indent, self._get_data("method_name")))
 
@@ -667,26 +710,31 @@ class PatternAST(object):
           c._print(out_stream, ", ")
         c._print(out_stream, "")
         first = False
-      out_stream.write(")")
-
+      out_stream.write(");\n")
+    elif (self.ast_type in {PatternAST.NodeType.DECL}):
+      out_stream.write("%s" % (indent))
+      self.children[1]._print(out_stream, "")
+      out_stream.write(" : ")
+      self.children[0]._print(out_stream, "")
+      out_stream.write(";\n")
     elif (self.ast_type == PatternAST.NodeType.ASSIGN):
       self.children[0]._print(out_stream, indent)
       out_stream.write(" = ")
       self.children[1]._print(out_stream, "")
+
     elif (self.ast_type == PatternAST.NodeType.SEQ):
       self.children[0]._print(out_stream, indent)
-      out_stream.write(";\n")
       self.children[1]._print(out_stream, indent)
     elif (self.ast_type == PatternAST.NodeType.IF):
-      out_stream.write("%sif (*) {\n" % indent)
+      out_stream.write("%sif (%s) {\n" % (indent, PatternAST.HAVOC_COND))
       self.children[0]._print(out_stream, indent + PatternAST.INDENT)
-      out_stream.write("\n%selse (*) {" % indent)
+      out_stream.write("%selse (%s) {" % (indent, PatternAST.HAVOC_COND))
       self.children[1]._print(out_stream, indent + PatternAST.INDENT)
-      out_stream.write("\n%s}\n" % indent)
+      out_stream.write("%s}\n" % indent)
     elif (self.ast_type == PatternAST.NodeType.WHILE):
-      out_stream.write("%swhile(*) {\n" % indent)
+      out_stream.write("%swhile (%s) {\n" % (indent, PatternAST.HAVOC_COND))
       self.children[0]._print(out_stream, indent + PatternAST.INDENT)
-      out_stream.write("\n%s}\n" % indent)
+      out_stream.write("%s}\n" % indent)
     else:
       assert False
 

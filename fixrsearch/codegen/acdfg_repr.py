@@ -103,14 +103,14 @@ class AcdfgRepr(object):
 
     for node_prot in acdfgProto.data_node:
       if node_prot.data_type == AcdfgProto.DataNode.DATA_VAR:
-        node_type = DataNode.DataType.VAR
+        data_type = DataNode.DataType.VAR
       else:
-        node_type = DataNode.DataType.CONST
+        data_type = DataNode.DataType.CONST
 
       node_repr = DataNode(node_prot.id,
                            node_prot.name,
                            node_prot.type,
-                           node_type)
+                           data_type)
       self._add_node(node_repr)
 
     for node_prot in acdfgProto.misc_node:
@@ -151,7 +151,7 @@ class AcdfgRepr(object):
   def get_node_label(self, node):
       if isinstance(node, DataNode):
         return "  shape=ellipse,color=red,style=dashed,label=\"DataNode #" \
-          "%s: %s  %s\"" % (str(node.id), node.data_type, self.escape(node.name))
+          "%s: %s  %s\"" % (str(node.id), node.node_type, self.escape(node.name))
       elif isinstance(node, MethodNode):
         label = "  shape=box, style=filled, color=lightgray, label=\"%s[" % node.name ;
 
