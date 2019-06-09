@@ -101,8 +101,9 @@ class PrProcessor:
 
           # TODO: Generate patch text
           patch_text = ""
-          # TODO: Generate anomaly text
-          pattern_anomaly_text = ""
+
+          # Get the anomaly text
+          pattern_anomaly_text = binRes["pattern_code"]
           # TODO: Generate an error text for the anomaly
 
           # Create the anomaly
@@ -129,10 +130,4 @@ class PrProcessor:
         anomaly_out.append(anomaly)
 
     return anomaly_out
-
-
-
-  def get_pattern_text(self, ):
-    code_gen = CodeGenerator(acdfg_reduced, acdfg_original)
-    text = code_gen.get_code_text()
 
