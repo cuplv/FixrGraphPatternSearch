@@ -103,9 +103,9 @@ class AcdfgRepr(object):
 
     for node_prot in acdfgProto.data_node:
       if node_prot.data_type == AcdfgProto.DataNode.DATA_VAR:
-        node_type = AcdfgProto.DataNode.DATA_VAR
+        node_type = DataNode.DataType.VAR
       else:
-        node_type = AcdfgProto.DataNode.DATA_CONST
+        node_type = DataNode.DataType.CONST
 
       node_repr = DataNode(node_prot.id,
                            node_prot.name,
@@ -123,8 +123,15 @@ class AcdfgRepr(object):
         assignee = self._id2node[node_prot.assignee]
       if node_prot.HasField("invokee"):
         invokee = self._id2node[node_prot.invokee]
-      node_repr = MethodNode(node_prot.id, assignee, invokee, node_prot.name,
-                             [self._id2node[n] for n in node_prot.argument])
+
+      children = []
+      for n in node_prot.argument:
+        child = self._id2node[n]
+        assert not child is None
+        children.append(child)
+
+      node_repr = MethodNode(node_prot.id, assignee, invokee,
+                             node_prot.name, children)
       self._add_node(node_repr)
 
     for (l,t) in [(acdfgProto.control_edge, Edge.Type.CONTROL),

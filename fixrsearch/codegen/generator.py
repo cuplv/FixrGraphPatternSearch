@@ -2,6 +2,12 @@
 Utilities to transform acdfgs and mappings to to code
 """
 
+# TODO:
+# rec function to build ast from graph
+#   dump 
+# rec function to dump ast
+#
+
 from fixrsearch.codegen.acdfg_repr import (
   AcdfgRepr,
   Node, MethodNode, DataNode, MiscNode,
@@ -12,26 +18,361 @@ import StringIO
 
 class CodeGenerator(object):
   """ Generate mock source code from a pattern
+
+  Print the sliced_acdfg.
+  Uses the original one to get back the real control
+  edges (the miner just hides them with the trans
+  control edges)
   """
 
-  def __init__(self, acdfg):
-    self.acdfg = acdfg
+  def __init__(self, sliced_acdfg, original_acdfg):
+    self.sliced_acdfg = sliced_acdfg
+    self.original_acdfg = original_acdfg
 
   def get_code_text(self):
     ast = self._get_ast()
     return str(ast)
 
-  # 1. Construct an AST representing the graph control flow
-  def _get_ast(self):
-    ast = self._get_cfg()
 
-  def _get_cfg(self):
-    roots = self.acdfg.find_control_root()
+  def _get_ast(self):
+    """ Construct an AST representing the graph control flow """
+    roots = self.sliced_acdfg.find_control_roots()
+
+    # Show only the original control edges
+    self._fix_control_edges()
+
+    main_ast = None
 
     # visit the graph from the root generating the AST
-    for r in roots:
-       cfg = CFGAnalyzer(self.acdf, r)
+    for root in roots:
+       cfg_analyzer = CFGAnalyzer(self.sliced_acdfg, root)
+       loops = cfg_analyzer.get_loops()
 
+       root_ast = self._get_node_ast(self.sliced_acdfg, root, loops)
+       if main_ast is None:
+         main_ast = root_ast
+       else:
+         app_ast = PatternAST(PatternAST.NodeType.IF)
+         app_ast.set_children([main_ast, root_ast])
+         main_ast = app_ast
+
+    return main_ast
+
+  def _get_node_ast(self, acdfg, root, loops):
+    """ get the ast for the root node """
+    helper = CodeGenerator.Helper(acdfg, loops)
+    return self._get_node_ast_rec(acdfg, root, helper, [])
+
+  def _get_node_ast_rec(self,
+                        acdfg,
+                        node,
+                        helper,
+                        stack):
+    """ Returns the ast node for the the
+    cfg node and the next cfg node to process
+    in sequence.
+    """
+
+    # Process "base cases", when the recursion
+    # must stop
+    if helper.is_tail(node):
+      expr_ast = self._get_expression_ast(node)
+      return (expr_ast, stack)
+    elif helper.is_join(node):
+      stack.append(node)
+      # Nothing to append to the previous nodes
+      # join node processed once
+      return None
+    elif helper.is_back_edge(node):
+      expr_ast = self._get_expression_ast(node)
+      stack.append(node)
+      return expr_ast
+
+    # Get the base expression for the node
+    expr_ast = self._get_expression_ast(node)
+
+    is_loop = helper.is_head(node)
+    is_if = helper.is_if(node)
+    is_seq = helper.is_seq(node)
+
+    assert ((not is_seq) or not is_if)
+    assert ((not is_if) or not is_seq)
+
+    if is_if:
+      (if_ast, rest_ast) = self._process_if(acdfg,
+                                            node,
+                                            helper,
+                                            stack)
+    elif is_seq:
+      rest_ast = self._process_seq(acdfg,
+                                   node,
+                                   helper,
+                                   stack)
+
+    if not is_loop:
+      # Done, concatenate the rest with the node
+      if is_if:
+        app_ast = PatternAST(PatternAST.NodeType.SEQ)
+        app_ast.set_children([if_ast, rest_ast])
+        seq_ast = PatternAST(PatternAST.NodeType.SEQ)
+        seq_ast.set_children([expr_ast, app_ast])
+      elif is_seq:
+        seq_ast = PatternAST(PatternAST.NodeType.SEQ)
+        seq_ast.set_children([expr_ast, rest_ast])
+      expr_ast = seq_ast
+    else:
+      # build the loop body
+      assert len(stack) > 0
+      loop_tail_node = stack.pop()
+
+      # build the loop node
+      app_body = PatternAST(PatternAST.NodeType.SEQ)
+      if is_if:
+        app_body.set_children([if_ast, rest_ast])
+      else:
+        app_body = rest_ast
+      loop_body = PatternAST(PatternAST.NodeType.SEQ)
+      loop_body.set_children([expr_ast, app_body])
+      loop_ast = PatternAST(PatternAST.NodeType.WHILE)
+      loop_ast.set_children([loop_body])
+
+      # remove the current loop
+      assert helper.is_loop(node, loop_tail_node)
+      helper.remove_loop(node, loop_tail_node)
+
+      if helper.is_head(loop_tail_node):
+        rest_ast = self._get_node_ast_rec(acdfg,
+                                          loop_tail_node,
+                                          helper,
+                                          stack)
+        assert not rest_ast is None
+      elif helper.is_if(loop_tail_node):
+        (if_ast, rest_ast) = self._process_if(acdfg,
+                                              loop_tail_node,
+                                              helper,
+                                              stack)
+        assert not rest_ast is None
+      elif helper.is_seq(loop_tail_node):
+        rest_ast = self._process_seq(acdfg,
+                                     loop_tail_node,
+                                     helper,
+                                     stack)
+        assert not rest_ast is None
+      else:
+        # Tail
+        rest_ast = None
+
+      if rest_ast is None:
+        expr_ast = loop_ast
+      else:
+        expr_ast = PatternAST(PatternAST.NodeType.SEQ)
+        expr_ast.set_children([loop_ast, rest_ast])
+
+    return expr_ast
+
+  def _get_expression_ast(self, node):
+    if isinstance(node, DataNode):
+      if node.data_type == DataNode.DataType.VAR:
+        ast = PatternAST(PatternAST.NodeType.VAR)
+      else:
+        ast = PatternAST(PatternAST.NodeType.CONST)
+      ast._set_data("name", node.name)
+
+      return ast
+    elif isinstance(node, MethodNode):
+      ast = PatternAST(PatternAST.NodeType.METHOD)
+
+      children = []
+      if not node.invokee is None:
+        invokee_ast = self._get_expression_ast(node.invokee)
+        children.append(invokee_ast)
+      for c in node.arguments:
+        p_ast = self._get_expression_ast(c)
+        children.append(p_ast)
+      ast._set_data("method_name", node.name)
+      ast.set_children(children)
+
+      if (not node.assignee is None):
+        assignee_ast = self._get_expression_ast(node.assignee)
+        assign_ast = PatternAST(PatternAST.NodeType.ASSIGN)
+        assign_ast.set_children([assignee_ast, ast])
+        ast = assign_ast
+
+      return ast
+    else:
+      assert False
+
+  def _process_seq(self, acdfg, node, helper, stack):
+    next_node = helper.get_next(node)
+    rest_ast = self._get_node_ast_rec(acdfg,
+                                      next_node,
+                                      helper,
+                                      stack)
+    return rest_ast
+
+
+  def _process_if(self, acdfg, node, helper, stack):
+    # Creates the AST for the two branches
+    (left_node, right_node) = helper.get_if_branches(node)
+    left_ast = self._get_node_ast_rec(acdfg,
+                                      left_node,
+                                      helper,
+                                      stack)
+    assert len(stack) > 0
+    join_node_left = stack.pop()
+
+    left_ast = self._get_node_ast_rec(acdfg,
+                                      rigt_node,
+                                      helper,
+                                      stack)
+    assert len(stack) > 0
+    join_node_left = stack.pop()
+
+    # The join must be the same
+    assert (not join_node_left is None and
+            join_node_left == join_node_right)
+
+    if_ast = PatternAST(PatternAST.NodeType.IF)
+    if_ast.set_children([left_ast, right_ast])
+
+    rest_ast = self._get_node_ast_rec(acdfg,
+                                      join_node_left,
+                                      helper,
+                                      stack)
+    return (if_ast, rest_ast)
+
+  def _fix_control_edges(self):
+    nodes_to_keep = [n for n in self.sliced_acdfg._nodes]
+    control_edges = self.original_acdfg.get_slice_edges(nodes_to_keep)
+
+    new_edges = []
+    for e in self.sliced_acdfg._edges:
+      if (e.edge_type in {Edge.Type.TRANS}):
+        if (e.from_node.id, e.to_node.id) in control_edges:
+          e.edge_type = Edge.Type.CONTROL
+          new_edges.append(e)
+      else:
+        new_edges.append(e)
+    self.sliced_acdfg._edges = new_edges
+
+  class Helper():
+    def __init__(self, acdfg, loops):
+      self._fwd = {}
+      self._bwd = {}
+
+      for node in acdfg._control:
+        self._fwd[node] = set()
+        self._bwd[node] = set()
+
+      for e in acdfg._edges:
+        if (e.edge_type == Edge.Type.CONTROL):
+          assert e.from_node in acdfg._control
+          assert e.to_node in acdfg._control
+
+          self._fwd[e.from_node].add(e)
+          self._bwd[e.to_node].add(e)
+
+      self.loops = set()
+      self.loop_heads = {}
+      self.loop_back_edges = {}
+
+      for (head, back_edge, body_nodes) in loops:
+        self.loops.add( (head, back_edge) )
+
+        count = self.loop_heads[head] if head in self.loop_heads else 0
+        self.loop_heads[head] = count + 1
+
+        if back_edge in self.loop_back_edges:
+          count = self.loop_back_edges[back_edge]
+        else:
+          count = 0
+        self.loop_back_edges[back_edge] = count + 1
+
+    def is_tail(self, node):
+      return len(self._fwd[node]) == 0
+
+    def is_join(self, node):
+      """ join (for an if) if has at least 2 incoming
+      edges that are not a loop head
+      """
+      if node in self.loop_heads:
+        count_loops = self.loop_heads[node]
+      else:
+        count_loops = 0
+      incoming = len(self._bwd[node]) - count_loops
+      return incoming == 2
+
+    def _count_outgoing(self, node):
+      if node in self.loop_back_edges:
+        count_be = self.loop_back_edges[node]
+      else:
+        count_be = 0
+      outgoing = len(self._fwd[node]) - count_be
+      return outgoing
+
+    def is_if(self, node):
+      return self._count_outgoing(node) == 2
+
+    def is_seq(self, node):
+      return self._count_outgoing(node) == 1
+
+    def is_head(self, node):
+      if node in self.loop_heads:
+        return self.loop_heads[node] > 0
+      else:
+        return False
+
+    def is_back_edge(self, node):
+      if node in self.loop_back_edges:
+        return self.loop_back_edges[node] > 0
+      else:
+        return False
+
+    def is_loop(self, head, back_edge):
+      return (head in self.loop_heads and 
+              back_edge in self.loop_back_edges and
+              self.loop_heads[head] > 0 and
+              self.loop_back_edges[back_edge] > 0 and
+              (head, back_edge) in self.loops and
+              back_edge in self._fwd and
+              head in self._bwd)
+
+    def remove_loop(self, head, back_edge):
+      # loop should already be here...
+      self.loops.remove( (head, back_edge) )
+
+      self.loop_heads[head] = self.loop_heads[head] - 1
+      self.loop_back_edges[back_edge] = self.loop_back_edges[back_edge] - 1
+
+      found = None
+      for e in self._fwd[back_edge]:
+        if (e.from_node == back_edge and e.to_node == head):
+          found = e
+      assert not found is None
+      self._fwd[back_edge].remove(found)
+
+      found = None
+      for e in self._bwd[head]:
+        if (e.from_node == back_edge and e.to_node == head):
+          found = e
+      assert not found is None
+      self._bwd[head].remove(found)
+
+    def get_next(self, node):
+      branches = []
+      for e in self._fwd[node]:
+        if not (node, e.from_node) in self.loops:
+          branches.append(e.to_node)
+      assert len(branches) == 1
+      return branches[0]
+
+    def get_if_branches(self, node):
+      branches = []
+      for e in self._fwd[node]:
+        if not (node, e.from_node) in self.loops:
+          branches.append(e.to_node)
+      assert len(branches) == 2
+      return (branches[0], branches[1])
 
 class CFGAnalyzer(object):
   def __init__(self, acdfg, root_node):
@@ -62,18 +403,19 @@ class CFGAnalyzer(object):
     self._reachable = self._reachable_dfs(self.root)
 
     def shrink_map(map_to_shrink):
+      """ Reduce the map to the reachable states """
       new_map = {}
-      for node, node_list in self.map_to_shrink.iteritems():
+      for node, node_list in map_to_shrink.iteritems():
         if node in self._reachable:
           new_list = []
           for c in node_list:
             if c in self._reachable:
-              new_list.appedn(c)
+              new_list.append(c)
           new_map[node] = new_list
       return new_map
 
-#    self._fwd = shrink_map(self._fwd)
-#    self._bwd = shrink_map(self._bwd)
+    self._fwd = shrink_map(self._fwd)
+    self._bwd = shrink_map(self._bwd)
 
 
   def _build_dominator_relation(self):
@@ -169,7 +511,7 @@ class CFGAnalyzer(object):
     return reachable_dir1
 
 
-class PatternAst(object):
+class PatternAST(object):
   """ Ast of the mini-language representing the pattern.
 
   The grammar of the language is:
@@ -182,22 +524,22 @@ class PatternAst(object):
   """
 
   class MalformedASTException(Exception):
-    def __init__(self, message, errors):
-        super(MalformedASTException, self).__init__(message)
-        self.errors = errors
+    def __init__(self, message):
+        super(PatternAST.MalformedASTException, self).__init__(message)
+        # self.errors = errors
 
   class NodeType(Enum):
     VAR = 0
     CONST = 1
     METHOD = 2
-    DECL = 3
+    ASSIGN = 3
     SEQ = 4
     IF = 5
     WHILE = 6
 
   INDENT = "  "
 
-  CMD_TYPES = {NodeType.METHOD, NodeType.DECL, NodeType.SEQ,
+  CMD_TYPES = {NodeType.METHOD, NodeType.ASSIGN, NodeType.SEQ,
                NodeType.IF, NodeType.WHILE}
   EXPR_TYPES = {NodeType.VAR, NodeType.CONST}
 
@@ -205,67 +547,71 @@ class PatternAst(object):
               "method_name" : {NodeType.METHOD}}
 
   def __init__(self, ast_type):
-    super(PatternAst, self).__init__()
+    super(PatternAST, self).__init__()
     self.ast_type = ast_type
     self.data = {}
     self.children = []
 
   def _val_data(self, field_name):
-    if field_name in DATA_MAP:
-      return self.ast_type in DATA_MAP[field_name]
+    if field_name in PatternAST.DATA_MAP:
+      return self.ast_type in PatternAST.DATA_MAP[field_name]
     else:
       err = "Unkonwn %s field" % field_name
-      raise MalformedASTException(err)
+      raise PatternAST.MalformedASTException(err)
 
   def _val_children(self, children):
     len_c = len(children)
 
-    if self.ast_type in {NodeType.SEQ, NodeType.IF, NodeType.WHILE}:
+    if self.ast_type in {PatternAST.NodeType.SEQ, PatternAST.NodeType.IF,
+                         PatternAST.NodeType.WHILE}:
       for c in children:
-        if not c.is_cmd():
-          raise MalformedASTException("%s must be a command!" % str(c))
+        if c is None:
+          raise PatternAST.MalformedASTException("None children!")
 
-      if self.ast_type in {NodeType.SEQ, NodeType.IF}:
+        if not c.is_cmd():
+          raise PatternAST.MalformedASTException("%s must be a command!" % str(c))
+
+      if self.ast_type in {PatternAST.NodeType.SEQ, PatternAST.NodeType.IF}:
         if len_c != 2:
           err = "Node must have 2 children, %d given!" % len_c
-          raise MalformedASTException(err)
-      elif self.ast_type == NodeType.WHILE:
+          raise PatternAST.MalformedASTException(err)
+      elif self.ast_type == PatternAST.NodeType.WHILE:
         if len_c != 1:
           err = "Node must have 1 children, %d given!" % len_c
-          raise MalformedASTException(err)
+          raise PatternAST.MalformedASTException(err)
 
-    elif self.ast_type in {NodeType.DECL}:
+    elif self.ast_type in {PatternAST.NodeType.ASSIGN}:
       if len_c != 2:
           err = "Node must have 2 children, %d given!" % len_c
-          raise MalformedASTException(err)
-      elif children[0].ast_type != NodeType.VAR:
+          raise PatternAST.MalformedASTException(err)
+      elif children[0].ast_type != PatternAST.NodeType.VAR:
         err = "Node %s must be a var!" % str(c)
-        raise MalformedASTException(err)
-      elif children[1].ast_type != NodeType.METHOD:
+        raise PatternAST.MalformedASTException(err)
+      elif children[1].ast_type != PatternAST.NodeType.METHOD:
         err = "Node %s must be a method!" % str(c)
-        raise MalformedASTException(err)
+        raise PatternAST.MalformedASTException(err)
 
-    elif self.ast_type in {NodeType.METHOD}:
+    elif self.ast_type in {PatternAST.NodeType.METHOD}:
       for c in children:
-        if not c.is_expr():
+        if (not c is None) and (not c.is_expr()):
           err = "Node %s must be an expression!" % str(c)
-          raise MalformedASTException(err)
+          raise PatternAST.MalformedASTException(err)
 
     elif self.is_expr():
       if len_c != 0:
         err = "Node must have 0 children, %d given!" % len_c
-        raise MalformedASTException(err)
+        raise PatternAST.MalformedASTException(err)
 
     else:
       # Unknonw type
       err = "Unkonwn node type!"
-      raise MalformedASTException(err)
+      raise PatternAST.MalformedASTException(err)
 
   def _set_data(self, field_name, value):
     assert self._val_data(field_name)
     self.data[field_name] = value
 
-  def _get_data(self, field_name, value):
+  def _get_data(self, field_name):
     self._val_data(field_name)
     return self.data[field_name]
 
@@ -274,15 +620,15 @@ class PatternAst(object):
     self.children = [c for c in children]
 
   def is_cmd(self):
-    return self.ast_type in CMD_TYPES
+    return self.ast_type in PatternAST.CMD_TYPES
 
   def is_expr(self):
-    return self.ast_type in EXPR_TYPES
+    return self.ast_type in PatternAST.EXPR_TYPES
 
   def _print(self, out_stream, indent):
-    if (self.ast_type in {NodeType.VAR, NodeType.CONST}):
+    if (self.ast_type in {PatternAST.NodeType.VAR, PatternAST.NodeType.CONST}):
       out_stream.write("%s%s" % (indent, self._get_data("name")))
-    elif (self.ast_type == NodeType.METHOD):
+    elif (self.ast_type == PatternAST.NodeType.METHOD):
       out_stream.write("%s%s(" % (indent, self._get_data("method_name")))
 
       first = True
@@ -293,29 +639,29 @@ class PatternAst(object):
         first = False
       out_stream.write(")")
 
-    elif (self.ast_type == NodeType.DECL):
+    elif (self.ast_type == PatternAST.NodeType.ASSIGN):
       self.children[0]._print(out_stream, indent)
       out_stream.write(" = ")
       self.children[1]._print(out_stream, "")
-    elif (self.ast_type == NodeType.SEQ):
+    elif (self.ast_type == PatternAST.NodeType.SEQ):
       self.children[0]._print(out_stream, indent)
       out_stream.write(";\n")
       self.children[1]._print(out_stream, indent)
-    elif (self.ast_type == NodeType.IF):
+    elif (self.ast_type == PatternAST.NodeType.IF):
       out_stream.write("%sif (*) {\n" % indent)
-      self.children[0]._print(out_stream, indent + INDENT)
+      self.children[0]._print(out_stream, indent + PatternAST.INDENT)
       out_stream.write("\n%selse (*) {" % indent)
-      self.children[1]._print(out_stream, indent + INDENT)
+      self.children[1]._print(out_stream, indent + PatternAST.INDENT)
       out_stream.write("\n%s}\n" % indent)
-    elif (self.ast_type == NodeType.WHILE):
+    elif (self.ast_type == PatternAST.NodeType.WHILE):
       out_stream.write("%swhile(*) {\n" % indent)
-      self.children[0]._print(out_stream, indent + INDENT)
+      self.children[0]._print(out_stream, indent + PatternAST.INDENT)
       out_stream.write("\n%s}\n" % indent)
     else:
       assert False
 
   def __repr__(self):
     output = StringIO.StringIO()
-    self._print(output)
+    self._print(output, "")
     return output.getvalue()
 
