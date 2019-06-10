@@ -60,13 +60,17 @@ class AcdfgPatch(object):
       if current in visited: continue
       visited.add(current)
 
+      visited_next = set()
       for edge in helper.get_all_successors(current):
+        if (edge.to_node) in visited_next: continue
+
         if (not is_iso_f(edge.to_node)):
           diff = self._process_frontier(helper, current, [edge.to_node],
                                         diff_type, is_iso_f)
           diffs.append(diff)
         else:
           stack.append(edge.to_node)
+        visited_next.add(edge.to_node)
 
     return diffs
 
@@ -87,7 +91,7 @@ class AcdfgPatch(object):
           stack.append(edge.to_node)
           has_next = True
         else:
-          diff.add_exit(current)
+          diff.add_exit(edge.to_node)
           pass
 
     return diff
@@ -132,6 +136,7 @@ class AcdfgPatch(object):
       self._roots = set(roots)
       self._nodes = set(self._roots)
       self._edges = set()
+      assert (not entry_node in self._roots)
       self._entry_node = entry_node
       self._exit_nodes = set()
 
@@ -142,8 +147,8 @@ class AcdfgPatch(object):
       self._nodes.add(to_node)
       self._edges.add((from_node, to_node))
 
-
     def add_exit(self, exit_node):
+      assert (not exit_node in self._nodes)
       self._exit_nodes.add(exit_node)
 
     def _print(self, stream): 
