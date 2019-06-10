@@ -374,7 +374,8 @@ class Search():
     patchGenerator = AcdfgPatch(acdfg_query,
                                 acdfg_repr,
                                 search_to_ref_mapping)
-    patchGenerator.get_diffs()
+    for diff in patchGenerator.get_diffs():
+      print diff
 
 
 

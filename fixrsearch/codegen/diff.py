@@ -19,6 +19,7 @@ or  would be reached by a node in the GRAPH ("exit")
 """
 
 from enum import Enum
+import StringIO
 
 from fixrsearch.codegen.acdfg_repr import AcdfgRepr
 from fixrsearch.codegen.generator import CodeGenerator
@@ -109,6 +110,8 @@ class AcdfgPatch(object):
                          self._is_iso_devel,
                          diffs)
 
+    return diffs
+
   class AcdfgDiff(object):
     class DiffType(Enum):
       ADD = 0
@@ -142,4 +145,41 @@ class AcdfgPatch(object):
 
     def add_exit(self, exit_node):
       self._exit_nodes.add(exit_node)
+
+    def _print(self, stream): 
+      # <after> entry node
+      # Calls/Misses to call
+      # {set of method call in the diff}
+      # <before> exit_nodes
+
+      stream.write("After the method ")
+      if self._entry_node is None:
+        stream.write("entry ")
+      else:
+        ast = CodeGenerator.get_expression_ast(self._entry_node)
+        ast._print(stream, "")
+
+      if len(self._exit_nodes) == 0:
+        stream.write("and before the method end ")
+      else:
+        stream.write("and before the methods:\n")
+        for n in self._exit_nodes:
+          ast = CodeGenerator.get_expression_ast(n)
+          ast._print(stream, "  ")
+
+      if self._diff_type == AcdfgPatch.AcdfgDiff.DiffType.ADD:
+        stream.write("you should call")
+      else:
+        stream.write("you should not call")
+      stream.write(" the methods:\n")
+
+      # first approx
+      for n in self._nodes:
+        ast = CodeGenerator.get_expression_ast(n)
+        ast._print(stream, "  ")
+
+    def __repr__(self):
+      output = StringIO.StringIO()
+      self._print(output)
+      return output.getvalue()
 

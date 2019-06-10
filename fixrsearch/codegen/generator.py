@@ -76,7 +76,7 @@ class CodeGenerator(object):
       type_ast = PatternAST(PatternAST.NodeType.CONST)
       type_ast._set_data("name", data_node.node_type)
 
-      data_ast = self._get_expression_ast(data_node)
+      data_ast = CodeGenerator.get_expression_ast(data_node)
 
       decl_ast = PatternAST(PatternAST.NodeType.DECL)
       decl_ast.set_children([type_ast,data_ast])
@@ -103,7 +103,7 @@ class CodeGenerator(object):
     # Process "base cases", when the recursion
     # must stop
     if helper.is_tail(node):
-      expr_ast = self._get_expression_ast(node)
+      expr_ast = CodeGenerator.get_expression_ast(node)
       return expr_ast
     elif helper.is_join(node):
       stack.append(node)
@@ -111,12 +111,12 @@ class CodeGenerator(object):
       # join node processed once
       return None
     elif helper.is_back_edge(node):
-      expr_ast = self._get_expression_ast(node)
+      expr_ast = CodeGenerator.get_expression_ast(node)
       stack.append(node)
       return expr_ast
 
     # Get the base expression for the node
-    expr_ast = self._get_expression_ast(node)
+    expr_ast = CodeGenerator.get_expression_ast(node)
 
     is_loop = helper.is_head(node)
     is_if = helper.is_if(node)
@@ -197,7 +197,8 @@ class CodeGenerator(object):
 
     return expr_ast
 
-  def _get_expression_ast(self, node):
+  @staticmethod
+  def get_expression_ast(node):
     if isinstance(node, DataNode):
       if node.data_type == DataNode.DataType.VAR:
         ast = PatternAST(PatternAST.NodeType.VAR)
@@ -211,16 +212,16 @@ class CodeGenerator(object):
 
       children = []
       if not node.invokee is None:
-        invokee_ast = self._get_expression_ast(node.invokee)
+        invokee_ast = CodeGenerator.get_expression_ast(node.invokee)
         children.append(invokee_ast)
       for c in node.arguments:
-        p_ast = self._get_expression_ast(c)
+        p_ast = CodeGenerator.get_expression_ast(c)
         children.append(p_ast)
       ast._set_data("method_name", node.name)
       ast.set_children(children)
 
       if (not node.assignee is None):
-        assignee_ast = self._get_expression_ast(node.assignee)
+        assignee_ast = CodeGenerator.get_expression_ast(node.assignee)
         assign_ast = PatternAST(PatternAST.NodeType.ASSIGN)
         assign_ast.set_children([assignee_ast, ast])
         ast = assign_ast
