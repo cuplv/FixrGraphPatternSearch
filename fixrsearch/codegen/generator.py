@@ -289,7 +289,7 @@ class CodeGenerator(object):
 
     """
 
-    def __init__(self, acdfg, loops):
+    def __init__(self, acdfg, loops, just_control = False):
       # node -> list_of_successors edges (with a control edge)
       self._fwd = {}
       # node -> list_of_predecessors edges (with a control edge)
@@ -321,6 +321,12 @@ class CodeGenerator(object):
 
           self._fwd[e.from_node].add(e)
           self._bwd[e.to_node].add(e)
+
+        if (not just_control):
+          if (e.edge_type in {Edge.Type.TRANS,
+                              Edge.Type.EXCEPTIONAL}):
+            self._fwd[e.from_node].add(e)
+            self._bwd[e.to_node].add(e)
 
         elif (e.edge_type == Edge.Type.USE):
           assert e.from_node in acdfg._data
@@ -432,6 +438,8 @@ class CodeGenerator(object):
       assert len(branches) == 2
       return (branches[0], branches[1])
 
+    def get_all_successors(self, node):
+      return list(self._fwd[node])
 class CFGAnalyzer(object):
   def __init__(self, acdfg, root_node):
     super(CFGAnalyzer, self).__init__()

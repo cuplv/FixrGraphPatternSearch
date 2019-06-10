@@ -22,6 +22,7 @@ from fixrgraph.solr.import_patterns import _get_pattern_key
 
 from fixrsearch.codegen.acdfg_repr import AcdfgRepr
 from fixrsearch.codegen.mappings import Mappings
+from fixrsearch.codegen.diff import AcdfgPatch
 from fixrsearch.codegen.generator import CodeGenerator, CFGAnalyzer
 
 
@@ -363,9 +364,19 @@ class Search():
                                                         acdfgBin)
     res_bin["pattern_code"] = source_code
 
+
     acdfg_repr = AcdfgRepr(acdfgBin.acdfg_repr)
     acdfg_query = AcdfgRepr(isoRes.acdfg_1)
     search_to_ref_mapping = Mappings(acdfg_query, acdfg_repr, isoRes)
+
+    # DEBUG
+    # Get the patch
+    patchGenerator = AcdfgPatch(acdfg_query,
+                                acdfg_repr,
+                                search_to_ref_mapping)
+    patchGenerator.get_diffs()
+
+
 
     # Creates three lists of lines association between
     # the query acdf and all the other acdfgs in the

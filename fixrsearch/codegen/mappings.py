@@ -18,6 +18,9 @@ class Mappings():
     self._just_a = []
     self._just_b = []
 
+    self._is_iso_a = None
+    self._is_iso_b = None
+
     if (acdfg_a is None or acdfg_b is None or iso_from_a_to_b is None):
       return
 
@@ -74,7 +77,6 @@ class Mappings():
         c_elem = b_to_c[Mappings.NODES][b_elem.id]
       else:
         c_elem = b_to_c[Mappings.EDGES][b_elem.id]
-
       self._isos.append( (a_elem, c_elem) )
 
     # set just b
@@ -208,6 +210,7 @@ class Mappings():
             elem_b = self._id_maps[Mappings.IN_B][what][id_b]
 
             self._isos.append((elem_a, elem_b))
+
           else:
             logging.debug("mappings: cannot find %s " \
                           "with id %d in acdfg a" % (what, id_b))
@@ -217,6 +220,23 @@ class Mappings():
 
     self._just_a = self._all_obj(acdfg_a, common_ids_a)
     self._just_b = self._all_obj(acdfg_b, common_ids_b)
+
+
+  def is_iso_a(self, elem):
+    if self._is_iso_a is None:
+      self._is_iso_a = set()
+      for (a,b) in self._isos:
+        self._is_iso_a.add(a)
+
+    return elem in self._is_iso_a
+
+  def is_iso_b(self, elem):
+    if self._is_iso_b is None:
+      self._is_iso_b = set()
+      for (a,b) in self._isos:
+        self._is_iso_b.add(b)
+
+    return elem in self._is_iso_b
 
 class LineNum():
   def __init__(self, acdfg):
