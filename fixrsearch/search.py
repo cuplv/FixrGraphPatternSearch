@@ -21,6 +21,7 @@ from fixrgraph.annotator.protobuf.proto_search_pb2 import SearchResults
 from fixrgraph.solr.import_patterns import _get_pattern_key
 
 from fixrsearch.codegen.acdfg_repr import AcdfgRepr
+from fixrsearch.codegen.mappings import Mappings
 from fixrsearch.codegen.generator import CodeGenerator, CFGAnalyzer
 
 
@@ -356,14 +357,15 @@ class Search():
     res_bin["frequency"] = self.get_popularity(lattice, id2bin, acdfgBin)
     res_bin["cardinality"] = len(acdfgBin.names_to_iso)
 
-    if (acdfgBin.popular):
-      # get the text only for the popular stuff...
-      res_bin["pattern_code"] = self.get_pattern_code(lattice,
-                                                      id2bin,
-                                                      acdfgBin)
 
+    (source_code, acdf_reduced) = self.get_pattern_code(lattice,
+                                                        id2bin,
+                                                        acdfgBin)
+    res_bin["pattern_code"] = source_code
 
-    search_to_ref_mapping = Mappings(isoRes)
+    acdfg_repr = AcdfgRepr(acdfgBin.acdfg_repr)
+    acdfg_query = AcdfgRepr(isoRes.acdfg_1)
+    search_to_ref_mapping = Mappings(acdfg_query, acdfg_repr, isoRes)
 
     # Creates three lists of lines association between
     # the query acdf and all the other acdfgs in the
@@ -387,11 +389,14 @@ class Search():
       if key in visitedMapping: continue
       visitedMapping.add(key)
 
-      other_to_ref_mapping = Mappings(isoPair.iso)
+      acdfg_other = AcdfgRepr(isoPair.iso.acdfg_1)
+      other_to_ref_mapping = Mappings(acdfg_other, acdfg_repr, isoPair.iso)
 
       search_to_other_mapping = Mappings()
       search_to_other_mapping.init_from_others(search_to_ref_mapping,
                                                other_to_ref_mapping)
+
+      (nodes_res, edges_res) = search_to_other_mapping.get_lines(isoRes.acdfg_1, isoPair.iso.acdfg_1)
 
       # Computes the mapping from the acdfg used in the
       # query and the acdfg in the bin
@@ -576,7 +581,7 @@ class Search():
 
   def get_pattern_code(self, lattice, id2bin, acdfgBin):
     if self.groum_index is None:
-      return ""
+      return ("", None)
 
     found_orig = False;
     for isoPair in acdfgBin.names_to_iso:
@@ -599,7 +604,7 @@ class Search():
           break
 
     if not found_orig:
-      return ""
+      return ("", None)
 
     acdfg_proto = Acdfg()
     with open(acdfg_orig_path, "rb") as f1:
@@ -609,160 +614,8 @@ class Search():
     code_gen = CodeGenerator(acdfg_reduced, acdfg_original)
     code = code_gen.get_code_text()
 
-    print code
+    return (code, acdfg_reduced)
 
-    return code
-
-
-
-class Mappings():
-
-  IN_A = "A"
-  IN_B = "B"
-  NODES = "nodes"
-  EDGES = "edges"
-
-  def __init__(self, iso_from_a_to_b = None):
-    self._id_maps = {}
-    self._isos = []
-    self._just_a = []
-    self._just_b = []
-
-    if iso_from_a_to_b is None:
-      return
-
-    for (acdfg, in_something) in zip([iso_from_a_to_b.acdfg_1,
-                                      iso_from_a_to_b.acdfg_2],
-                                     [Mappings.IN_A, Mappings.IN_B]):
-      self._id_maps[in_something] = {}
-      self._id_maps[in_something][Mappings.NODES] = {}
-      self._id_maps[in_something][Mappings.EDGES] = {}
-      self._fill_map(acdfg, in_something)
-
-    self._compute_assocs(iso_from_a_to_b)
-
-  def init_from_others(self, a_to_b_mapping, c_iso_to_b_mapping):
-    """ specific constructor, requires that c is isomorphic
-    to b (i.e., no unmapped nodes or edges)
-
-    Build a mapping from a to c.
-    """
-    assert c_iso_to_b_mapping.is_iso()
-
-    # copy the _id_maps
-    self._id_maps = {}
-    for (mapping, in_something) in zip([a_to_b_mapping._id_maps[Mappings.IN_A],
-                                        c_iso_to_b_mapping._id_maps[Mappings.IN_A]],
-                                       [Mappings.IN_A, Mappings.IN_B]):
-
-      self._id_maps[in_something] = {}
-      self._id_maps[in_something][Mappings.NODES] = mapping[Mappings.NODES].copy()
-      self._id_maps[in_something][Mappings.EDGES] = mapping[Mappings.EDGES].copy()
-
-    # map from b elem to c
-    b_to_c = {}
-    b_to_c[Mappings.NODES] = {}
-    b_to_c[Mappings.EDGES] = {}
-    for (c_elem, b_elem) in c_iso_to_b_mapping._isos:
-      if self._is_node(c_elem):
-        assert self._is_node(b_elem)
-        b_to_c[Mappings.NODES][b_elem.id] = c_elem
-      else:
-        assert not self._is_node(b_elem)
-        b_to_c[Mappings.EDGES][b_elem.id] = c_elem
-
-    # set just a - copy a
-    self._just_a = list(a_to_b_mapping._just_a)
-
-    # set isos
-    self._isos = []
-    for (a_elem, b_elem) in a_to_b_mapping._isos:
-      if self._is_node(b_elem):
-        c_elem = b_to_c[Mappings.NODES][b_elem.id]
-      else:
-        c_elem = b_to_c[Mappings.EDGES][b_elem.id]
-
-      self._isos.append( (a_elem, c_elem) )
-
-    # set just b
-    self._just_b = []
-    for b_elem in a_to_b_mapping._just_b:
-      if self._is_node(b_elem):
-        c_elem = b_to_c[Mappings.NODES][b_elem.id]
-      else:
-        c_elem = b_to_c[Mappings.EDGES][b_elem.id]
-
-      self._just_b.append( c_elem )
-
-  def _is_node(self, elem):
-    return (isinstance(elem, Acdfg.DataNode) or
-            isinstance(elem, Acdfg.MiscNode) or
-            isinstance(elem, Acdfg.MethodNode))
-
-  def is_iso(self):
-    return len(self._just_a) == 0 and len(self._just_b) == 0
-
-  def _fill_map(self, acdfg, in_something):
-    nodes_map = self._id_maps[in_something][Mappings.NODES]
-    for node_list in [acdfg.data_node,
-                      acdfg.misc_node,
-                      acdfg.method_node]:
-      for node in node_list:
-        nodes_map[node.id] = node
-
-    edges_map = self._id_maps[in_something][Mappings.EDGES]
-    for edge_list in [acdfg.def_edge,
-                      acdfg.use_edge,
-                      acdfg.trans_edge]:
-      for edge in edge_list:
-        edges_map[edge.id] = edge
-
-  def _all_obj(self, acdfg, common_ids):
-    all_obj = []
-
-    for node_list in [acdfg.data_node,
-                      acdfg.misc_node,
-                      acdfg.method_node]:
-      for node in node_list:
-        if not node.id in common_ids[Mappings.NODES]:
-          all_obj.append(node)
-
-    for edge_list in [acdfg.def_edge,
-                      acdfg.use_edge,
-                      acdfg.trans_edge]:
-      for edge in edge_list:
-        if not edge.id in common_ids[Mappings.EDGES]:
-          all_obj.append(node)
-
-    return all_obj
-
-  def _compute_assocs(self, iso_from_a_to_b):
-    self._isos = []
-
-    common_ids_a = {}
-    common_ids_b = {}
-
-    for (id_pairs_list, what) in zip([iso_from_a_to_b.nodesMap,
-                                      iso_from_a_to_b.edgesMap],
-                                     [Mappings.NODES,
-                                      Mappings.EDGES]):
-      common_ids_a[what] = set()
-      common_ids_b[what] = set()
-
-      for id_pairs in id_pairs_list:
-        id_a = id_pairs.id_1
-        id_b = id_pairs.id_2
-
-        common_ids_a[what].add(id_a)
-        common_ids_b[what].add(id_b)
-
-        elem_a = self._id_maps[Mappings.IN_A][what][id_a]
-        elem_b = self._id_maps[Mappings.IN_B][what][id_b]
-
-        self._isos.append((elem_a, elem_b))
-
-    self._just_a = self._all_obj(iso_from_a_to_b.acdfg_1, common_ids_a)
-    self._just_b = self._all_obj(iso_from_a_to_b.acdfg_2, common_ids_b)
 
 
 
@@ -845,3 +698,4 @@ def main():
 if __name__ == '__main__':
   main()
 
+  
