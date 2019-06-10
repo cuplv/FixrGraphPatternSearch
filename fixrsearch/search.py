@@ -21,8 +21,8 @@ from fixrgraph.annotator.protobuf.proto_search_pb2 import SearchResults
 from fixrgraph.solr.import_patterns import _get_pattern_key
 
 from fixrsearch.codegen.acdfg_repr import AcdfgRepr
-from fixrsearch.codegen.mappings import Mappings
-from fixrsearch.codegen.diff import AcdfgPatch
+from fixrsearch.codegen.mappings import Mappings, LineNum
+from fixrsearch.codegen.diff import AcdfgPatch, AcdfgDiff
 from fixrsearch.codegen.generator import CodeGenerator, CFGAnalyzer
 
 
@@ -359,24 +359,26 @@ class Search():
     res_bin["cardinality"] = len(acdfgBin.names_to_iso)
 
 
+    # Get the source code of the pattern
     (source_code, acdf_reduced) = self.get_pattern_code(lattice,
                                                         id2bin,
                                                         acdfgBin)
     res_bin["pattern_code"] = source_code
 
-
+    # Compute the patch from the acdfgs
     acdfg_repr = AcdfgRepr(acdfgBin.acdfg_repr)
     acdfg_query = AcdfgRepr(isoRes.acdfg_1)
-    search_to_ref_mapping = Mappings(acdfg_query, acdfg_repr, isoRes)
-
-    # DEBUG
-    # Get the patch
+    query_to_ref_mapping = Mappings(acdfg_query, acdfg_repr, isoRes)
     patchGenerator = AcdfgPatch(acdfg_query,
                                 acdfg_repr,
-                                search_to_ref_mapping)
-    for diff in patchGenerator.get_diffs():
-      print diff
-
+                                query_to_ref_mapping)
+    diffs = patchGenerator.get_diffs()
+    # get the code patch, calling the source code service
+    lineNum = LineNum(isoRes.acdfg_1.node_lines)
+    patches = self.format_patches(diffs,
+                                  query_to_ref_mapping,
+                                  lineNum)
+    res_bin["diffs"] = patches
 
 
     # Creates three lists of lines association between
@@ -404,11 +406,15 @@ class Search():
       acdfg_other = AcdfgRepr(isoPair.iso.acdfg_1)
       other_to_ref_mapping = Mappings(acdfg_other, acdfg_repr, isoPair.iso)
 
-      search_to_other_mapping = Mappings()
-      search_to_other_mapping.init_from_others(search_to_ref_mapping,
-                                               other_to_ref_mapping)
+      query_to_other_mapping = Mappings()
+      query_to_other_mapping.init_from_others(query_to_ref_mapping,
+                                              other_to_ref_mapping)
 
-      (nodes_res, edges_res) = search_to_other_mapping.get_lines(isoRes.acdfg_1, isoPair.iso.acdfg_1)
+      (nodes_res, edges_res) = query_to_other_mapping.get_lines(
+        acdfg_query,
+        isoRes.acdfg_1.node_lines,
+        acdfg_other,
+        isoPair.iso.acdfg_1.node_lines)
 
       # Computes the mapping from the acdfg used in the
       # query and the acdfg in the bin
@@ -472,6 +478,71 @@ class Search():
       repo_tag["commit_date"] = proto_tag.commit_date
 
     return repo_tag
+
+  def format_patches(self, diffs, query_to_ref_mapping, lineNum):
+    """ Returns a readable representatio nof the the patches.
+
+    TODO: we can try the code generation out of the subgraph.
+
+    Out format:
+    [ { "type" :  string, (either "+" or "-")
+        "entry" : {
+           line : integer,
+           after : string, (entry method)
+           what : string, (describe the patch, code or list of methods)
+        },
+        "exit" : {
+          line : integer,
+          before : string, (exit method)
+       }
+     }
+    ]
+    """
+
+    diffs_json = []
+    for diff in diffs:
+      diff_json = {}
+
+      diff_type = "+" if AcdfgDiff.DiffType.ADD else "-"
+
+      entry = {}
+      if diff._entry_node is None:
+        entry_line = 0
+      elif diff._diff_type == AcdfgDiff.DiffType.REMOVE:
+        entry_line = lineNum.get_line(diff._entry_node)
+      elif diff._diff_type == AcdfgDiff.DiffType.ADD:
+        other_entry_line = lineNum.get_line(diff._entry_node)
+        # TODO --- FIX, use iso
+        entry_line = None
+      after = diff.get_entry_string()
+      what = diff.get_what_string()
+
+      entry = {"line" : entry_line,
+               "after" : after,
+               "what" : what}
+
+      exits = []
+      if len(diff._exit_nodes) == 0:
+        exits.append( {"line" : 0, "before" : "exit"} )
+      else:
+        for exit_node in diff._exit_nodes:
+          exit_line = None
+          if diff._diff_type == AcdfgDiff.DiffType.REMOVE:
+            exit_line = lineNum.get_line(exit_node)
+          elif diff._diff_type == AcdfgDiff.DiffType.ADD:
+            other_exit_line = lineNum.get_line(exit_node)
+            # TODO --- FIX, use iso
+            exit_line = None
+          before = diff.get_exit_string(exit_node)
+        exits.append( {"line" : exit_line, "before" : before} )
+
+      diff_json["type"] = diff_type
+      diff_json["entry"] = entry
+      diff_json["exists"] = exits
+
+      diffs_json.append(diff_json)
+
+    return diffs_json
 
   @staticmethod
   def get_mapping(acdfg_1, acdfg_2,

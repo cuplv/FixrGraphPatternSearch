@@ -100,6 +100,7 @@ class PrProcessor:
                                    binRes["cardinality"])
 
           # TODO: Generate patch text
+          diffs_json = binRes["diffs"]
           patch_text = ""
 
           # Get the anomaly text

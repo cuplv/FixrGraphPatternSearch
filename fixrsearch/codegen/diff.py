@@ -75,7 +75,7 @@ class AcdfgPatch(object):
     return diffs
 
   def _process_frontier(self, helper, entry, roots, diff_type, is_iso_f):
-    diff = AcdfgPatch.AcdfgDiff(entry, roots, diff_type)
+    diff = AcdfgDiff(entry, roots, diff_type)
     visited = set()
     stack = list(roots)
 
@@ -93,98 +93,116 @@ class AcdfgPatch(object):
         else:
           diff.add_exit(edge.to_node)
           pass
-
     return diff
-
 
   def get_diffs(self):
     diffs = []
 
+    # Stuff to add --- here all the nodes are from
+    # the pattern
     helper = CodeGenerator.Helper(self._pattern_acdfg, [])
     self._discover_diffs(helper,
                          self._pattern_acdfg,
-                         AcdfgPatch.AcdfgDiff.DiffType.ADD,
+                         AcdfgDiff.DiffType.ADD,
                          self._is_iso_pattern,
                          diffs)
 
+    # Stuff to remove --- here all the nodes are from
+    # devel_acdfg
     helper = CodeGenerator.Helper(self._devel_acdfg, [])
     self._discover_diffs(helper,
                          self._devel_acdfg,
-                         AcdfgPatch.AcdfgDiff.DiffType.REMOVE,
+                         AcdfgDiff.DiffType.REMOVE,
                          self._is_iso_devel,
                          diffs)
-
     return diffs
 
-  class AcdfgDiff(object):
-    class DiffType(Enum):
-      ADD = 0
-      REMOVE = 0
+class AcdfgDiff(object):
+  class DiffType(Enum):
+    ADD = 0
+    REMOVE = 0
 
-    def __init__(self, entry_node, roots, diff_type):
-      """
-      graph: the set of nodes reachable from the entry node to the exit node
+  def __init__(self, entry_node, roots, diff_type):
+    """
+    graph: the set of nodes reachable from the entry node to the exit node
 
-      The graph can be empty in the degenerate case
-      entry node: entry node of the graph (None means the graph is a root node)
+    The graph can be empty in the degenerate case
+    entry node: entry node of the graph (None means the graph is a root node)
 
-      exit node: exit node of the graph (None means that the last graph's node
-      is a tail node)
-      """
-      super(AcdfgPatch.AcdfgDiff, self).__init__()
+    exit node: exit node of the graph (None means that the last graph's node
+    is a tail node)
+    """
+    super(AcdfgDiff, self).__init__()
 
-      self._roots = set(roots)
-      self._nodes = set(self._roots)
-      self._edges = set()
-      assert (not entry_node in self._roots)
-      self._entry_node = entry_node
-      self._exit_nodes = set()
+    self._roots = set(roots)
+    self._nodes = set(self._roots)
+    self._edges = set()
+    assert (not entry_node in self._roots)
+    self._entry_node = entry_node
+    self._exit_nodes = set()
+    self._diff_type = diff_type
 
-      self._diff_type = diff_type
+  def add_edge(self, from_node, to_node):
+    self._nodes.add(from_node)
+    self._nodes.add(to_node)
+    self._edges.add((from_node, to_node))
 
-    def add_edge(self, from_node, to_node):
-      self._nodes.add(from_node)
-      self._nodes.add(to_node)
-      self._edges.add((from_node, to_node))
+  def add_exit(self, exit_node):
+    assert (not exit_node in self._nodes)
+    self._exit_nodes.add(exit_node)
 
-    def add_exit(self, exit_node):
-      assert (not exit_node in self._nodes)
-      self._exit_nodes.add(exit_node)
+  def _print(self, stream):
+    # <after> entry node
+    # Calls/Misses to call
+    # {set of method call in the diff}
+    # <before> exit_nodes
 
-    def _print(self, stream): 
-      # <after> entry node
-      # Calls/Misses to call
-      # {set of method call in the diff}
-      # <before> exit_nodes
+    stream.write("After the method ")
+    stream.write("%s " % self._get_entry_string())
 
-      stream.write("After the method ")
-      if self._entry_node is None:
-        stream.write("entry ")
-      else:
-        ast = CodeGenerator.get_expression_ast(self._entry_node)
-        ast._print(stream, "")
-
-      if len(self._exit_nodes) == 0:
-        stream.write("and before the method end ")
-      else:
-        stream.write("and before the methods:\n")
-        for n in self._exit_nodes:
-          ast = CodeGenerator.get_expression_ast(n)
-          ast._print(stream, "  ")
-
-      if self._diff_type == AcdfgPatch.AcdfgDiff.DiffType.ADD:
-        stream.write("you should call")
-      else:
-        stream.write("you should not call")
-      stream.write(" the methods:\n")
-
-      # first approx
-      for n in self._nodes:
+    if len(self._exit_nodes) == 0:
+      stream.write("and before the method end ")
+    else:
+      stream.write("and before the methods:\n")
+      for n in self._exit_nodes:
         ast = CodeGenerator.get_expression_ast(n)
         ast._print(stream, "  ")
 
-    def __repr__(self):
+    if self._diff_type == AcdfgDiff.DiffType.ADD:
+      stream.write("you should call")
+    else:
+      stream.write("you should not call")
+    stream.write(" the methods:\n")
+
+    self.get_what_stream(stream)
+
+  def get_what_stream(self, stream):
+    for n in self._nodes:
+      ast = CodeGenerator.get_expression_ast(n)
+      ast._print(stream, "  ")
+
+  def get_what_string(self):
+    output = StringIO.StringIO()
+    self.get_what_stream(output)
+    return output.getvalue()
+
+  def get_entry_string(self):
+    if self._entry_node is None:
+      return "entry"
+    else:
+      ast = CodeGenerator.get_expression_ast(self._entry_node)
       output = StringIO.StringIO()
-      self._print(output)
+      ast._print(output, "")
       return output.getvalue()
 
+  def get_exit_string(self, exit_node):
+    ast = CodeGenerator.get_expression_ast(exit_node)
+    output = StringIO.StringIO()
+    ast._print(output, "")
+    return output.getvalue()
+
+
+  def __repr__(self):
+    output = StringIO.StringIO()
+    self._print(output)
+    return output.getvalue()

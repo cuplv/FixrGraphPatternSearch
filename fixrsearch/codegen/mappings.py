@@ -98,7 +98,8 @@ class Mappings():
   def is_iso(self):
     return len(self._just_a) == 0 and len(self._just_b) == 0
 
-  def get_lines(self, acdfg_a, acdfg_b):
+  def get_lines(self, acdfg_a, node_lines_a,
+                acdfg_b, node_lines_b):
     def get_node_lines(lines_a, lines_b, elem_a, elem_b):
       line_a = lines_a.get_line(elem_a)
       line_b = lines_b.get_line(elem_b)
@@ -116,8 +117,11 @@ class Mappings():
       else:
         (line_a, line_b)
 
-    lines_a = LineNum(acdfg_a)
-    lines_b = LineNum(acdfg_b)
+    assert isinstance(acdfg_a, AcdfgRepr)
+    assert isinstance(acdfg_b, AcdfgRepr)
+
+    lines_a = LineNum(node_lines_a)
+    lines_b = LineNum(node_lines_b)
 
     # eq, missing in 1, to be removed in 1
     nodes_res = ([],[],[])
@@ -239,9 +243,9 @@ class Mappings():
     return elem in self._is_iso_b
 
 class LineNum():
-  def __init__(self, acdfg):
+  def __init__(self, node_lines):
     self._id2line = {}
-    for line_num in acdfg.node_lines:
+    for line_num in node_lines:
       self._id2line[line_num.id] = line_num.line
 
   def get_line(self, elem):
@@ -260,4 +264,7 @@ class LineNum():
         return None
       else:
         return (line_from, line_to)
+
+  def get_copy(self):
+    return self._id2line.copy();
 

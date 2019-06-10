@@ -6,6 +6,7 @@ class Node(object):
   def __init__(self, node_id):
     super(Node, self).__init__()
     self.id = node_id
+    self.line_no = 0
 
     def __eq__(self, other):
       return (type(self) == type(other) and
@@ -76,6 +77,7 @@ class Edge(object):
     self.from_node = from_node
     self.to_node = to_node
     self.edge_type = edge_type
+    self.line_no = 0
 
   def __eq__(self, other):
     return (type(self) == type(other) and
