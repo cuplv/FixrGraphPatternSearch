@@ -21,7 +21,7 @@ class SrcMethodReq:
     self._method_line = method_line
     self._method_name = method_name
 
-  def get_json_pyhton_repr(self):
+  def get_json_repr(self):
     my_map = {
       "githubUrl" : self._github_url,
       "commitId" :     self._commit_id,
@@ -75,30 +75,36 @@ class SrcClientService(SrcClient):
     self._port = port
 
   def _get_service_address(self):
-    address = "%s:%s" % (self._address, self._port)
+    address = "http://%s:%s/patch" % (self._address, self._port)
     return address
 
   def getPatch(self, method_req, diffs_req):
     patch_res = None
-    request = {method_req.get_json_python_repr,
-               diffs_req}
+    request = {"methodRef" : method_req.get_json_repr(),
+               "diffsToApply" : diffs_req}
     try:
-      service_address = self.get_service_address()
+      service_address = self._get_service_address()
       request_result = requests.post(service_address, json = request)
 
       if (request_result.status_code == 200):
         result_data = request_result.json()
         res_value = result_data["res"]
         res_status = res_value[0]
-        res_patch = res_value[1]
 
-        if (res_value != 0):
-          patch_res = PatchResult(None, result_data["error"], True)
+        if (res_status == 0):
+          res_patch = res_value[1]
+          if (len(res_patch) > 0):
+            res_patch_text = res_patch[0]
+            patch_res = PatchResult(res_patch_text, "", False)
+          else:
+            patch_res = PatchResult(None, "No patch text in the reply", True)
         else:
-          patch_res = PatchResult(res_patch, "", False)
+          patch_res = PatchResult(None, result_data["error"], True)
+          logging.error(result_data["error"])
 
       else:
         err_msg = "Error code: %s" % (str(request_result.status_code))
+        logging.error(err_msg)
         patch_res = PatchResult(None, err_msg, True)
     except Exception as e:
       err_msg = str(e)

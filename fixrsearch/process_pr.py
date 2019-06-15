@@ -114,10 +114,13 @@ class PrProcessor:
                                     groum_record["method_name"])
 
           diffs_json = binRes["diffs"]
+
           res_patch = self.src_client.getPatch(src_method, diffs_json)
           if (res_patch.is_error()):
-            logging.info("Cannot compute the patch (%s)" %
-                         res_patch.get_error_msg())
+            # TODO Remove assertion
+            logging.debug("Cannot compute the patch (%s)" %
+                          res_patch.get_error_msg())
+            assert False
             patch_text = ""
           else:
             patch_text = res_patch.get_patch()

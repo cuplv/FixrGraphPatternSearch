@@ -71,8 +71,8 @@ class TestServices(unittest.TestCase):
                           self.cluster_path,
                           self.iso_bin_path,
                           TestServices.DB_PATH,
-                          None,
-                          None)
+                          "localhost",
+                          "8080")
     self.app.testing = True
     self.test_client = self.app.test_client()
 
