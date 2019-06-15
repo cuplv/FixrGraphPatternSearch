@@ -537,7 +537,7 @@ class Search():
 
       diff_json["type"] = diff_type
       diff_json["entry"] = entry
-      diff_json["exists"] = exits
+      diff_json["exits"] = exits
 
       diffs_json.append(diff_json)
 
