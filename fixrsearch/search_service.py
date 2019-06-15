@@ -25,13 +25,7 @@ import os
 import sys
 import copy
 
-CLUSTER_PATH = "cluster_path"
-ISO_PATH = "iso_path"
-CLUSTER_INDEX = "cluster_index"
-GROUM_INDEX = "groum_index"
-DB_NAME = "service_db"
-DB_CONFIG="db_config"
-TIMEOUT = 10
+
 
 from search import (
     Search,
@@ -40,9 +34,18 @@ from search import (
 from index import ClusterIndex
 from groum_index import GroumIndex
 from db import SQLiteConfig, Db
-
+from src_service_client import SrcClient, SrcClientMock, SrcClientService
 from process_pr import PrProcessor
 from utils import PullRequestRef, RepoRef, CommitRef
+
+CLUSTER_PATH = "cluster_path"
+ISO_PATH = "iso_path"
+CLUSTER_INDEX = "cluster_index"
+GROUM_INDEX = "groum_index"
+DB_NAME = "service_db"
+DB_CONFIG="db_config"
+SRC_CLIENT ="src_client"
+TIMEOUT = 10
 
 def get_new_db(config, create=False):
     db = Db(config)
@@ -148,21 +151,13 @@ def process_graphs_in_pull_request():
                                       current_app.config[ISO_PATH],
                                       current_app.config[CLUSTER_INDEX],
                                       current_app.config[GROUM_INDEX],
-                                      current_app.config[TIMEOUT]))
+                                      current_app.config[TIMEOUT]),
+                               current_app.config[SRC_CLIENT])
 
     pr_ref = PullRequestRef(RepoRef(repo_name, user_name), pull_request_id,
                             CommitRef(RepoRef(repo_name, user_name),
                                       commit_hash))
 
-    # # Find the pr to access the commit id used in the merge
-    # pr_ref = pr_processor.find_pr_commit(user_name, repo_name, pull_request_id)
-    # if pr_ref is None:
-    #     error_msg = "Cannot find pull request %s for %s/%s" % (str(pull_request_id),
-    #                                                            user_name,
-    #                                                            repo_name)
-    #     reply_json = {"status" : 1, "error" : error_msg}
-    #     return Response(json.dumps(reply_json), status=404, mimetype='application/json')
-    
     anomalies = pr_processor.process_graphs_from_pr(pr_ref)
 
     # produce the json output for the anomalies
@@ -204,7 +199,8 @@ def _lookup_anomaly(current_app, content):
                                       current_app.config[ISO_PATH],
                                       current_app.config[CLUSTER_INDEX],
                                       current_app.config[GROUM_INDEX],
-                                      current_app.config[TIMEOUT]))
+                                      current_app.config[TIMEOUT]),
+                               current_app.config[SRC_CLIENT])
 
     pr_ref = pr_processor.find_pr_commit(user_name, repo_name, pull_request_id)
     if pr_ref is None:
@@ -313,7 +309,10 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
     else:
         logging.basicConfig(level=logging.INFO)
 
-    app = create_app(opts.graph_path, opts.cluster_path, opts.iso_path)
+    app = create_app(opts.graph_path, opts.cluster_path,
+                     opts.iso_path,
+                     DB_NAME,
+                     None, None)
 
     app.run(
         debug=opts.debug,
@@ -323,7 +322,10 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
     logging.info("Running server...")
 
 
-def create_app(graph_path, cluster_path, iso_path, db_path = DB_NAME):
+def create_app(graph_path, cluster_path, iso_path,
+               db_path = DB_NAME,
+               src_client_address = None,
+               src_client_port = None):
     app = Flask(__name__)
     app.config[TIMEOUT] = 10
     app.config[CLUSTER_PATH] = cluster_path
@@ -337,6 +339,20 @@ def create_app(graph_path, cluster_path, iso_path, db_path = DB_NAME):
     logging.info("Creating graph index...")
     app.config[GROUM_INDEX] = GroumIndex(graph_path)
 
+    # create the db object
+    config = SQLiteConfig(db_path)
+    app.config[DB_CONFIG] = config
+    db = get_new_db(config, True)
+    db.disconnect()
+
+    # set up the src_client
+    if (src_client_address is None):
+        src_client = SrcClientMock()
+    else:
+        src_client = SrcClientService(src_client_address,
+                                      src_client_port)
+    app.config[SRC_CLIENT] = src_client
+
     logging.info("Set up routes...")
     app.route('/search', methods=['POST'])(search_pattern)
     app.route('/get_apps', methods=['GET'])(get_apps)
@@ -345,11 +361,6 @@ def create_app(graph_path, cluster_path, iso_path, db_path = DB_NAME):
     app.route('/inspect_anomaly', methods=['POST'])(inspect_anomaly)
     app.route('/explain_anomaly', methods=['POST'])(explain_anomaly)
 
-    # create the db object
-    config = SQLiteConfig(db_path)
-    app.config[DB_CONFIG] = config
-    db = get_new_db(config, True)
-    db.disconnect()
 
     return app
 

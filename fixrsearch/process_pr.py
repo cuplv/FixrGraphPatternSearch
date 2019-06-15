@@ -16,11 +16,16 @@ from fixrsearch.utils import (
   PatternRef
 )
 
+from src_service_client import (
+  PatchResult, SrcMethodReq
+)
+
 class PrProcessor:
-  def __init__(self, groum_index, db, search):
+  def __init__(self, groum_index, db, search, src_client):
     self.groum_index = groum_index
     self.db = db
     self.search = search
+    self.src_client = src_client
 
   def find_pr_commit(self, repo_user, repo_name, pull_request_id):
     """
@@ -99,9 +104,23 @@ class PrProcessor:
                                    binRes["frequency"],
                                    binRes["cardinality"])
 
-          # TODO: Generate patch text
+          github_url = "https://github.com/%s/%s" % (
+            pull_request_ref.commit_ref.repo_ref.user_name,
+            pull_request_ref.commit_ref.repo_ref.repo_name)
+          src_method = SrcMethodReq(github_url,
+                                    pull_request_ref.commit_ref.commit_hash,
+                                    groum_record["source_class_name"],
+                                    groum_record["method_line_number"],
+                                    groum_record["method_name"])
+
           diffs_json = binRes["diffs"]
-          patch_text = ""
+          res_patch = self.src_client.getPatch(src_method, diffs_json)
+          if (res_patch.is_error()):
+            logging.info("Cannot compute the patch (%s)" %
+                         res_patch.get_error_msg())
+            patch_text = ""
+          else:
+            patch_text = res_patch.get_patch()
 
           # Get the anomaly text
           pattern_anomaly_text = binRes["pattern_code"]

@@ -35,7 +35,6 @@ ERROR_MESSAGE="error_messages"
 PATTERN_KEY = "pattern_key"
 ISO_DOT = "iso_dot"
 RESULTS_LIST = "patterns"
-OBJ_VAL = "obj_val"
 SEARCH_SUCCEEDED_RESULT = 0
 ERROR_RESULT = 1
 

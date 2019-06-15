@@ -70,7 +70,9 @@ class TestServices(unittest.TestCase):
     self.app = create_app(self.graph_path,
                           self.cluster_path,
                           self.iso_bin_path,
-                          TestServices.DB_PATH)
+                          TestServices.DB_PATH,
+                          None,
+                          None)
     self.app.testing = True
     self.test_client = self.app.test_client()
 
