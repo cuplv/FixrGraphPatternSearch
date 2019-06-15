@@ -17,7 +17,8 @@ from fixrsearch.utils import (
 )
 
 from src_service_client import (
-  PatchResult, SrcMethodReq
+  PatchResult, SrcMethodReq,
+  DiffEntry, SourceDiff
 )
 
 class PrProcessor:
@@ -97,7 +98,6 @@ class PrProcessor:
           for i in binResField: assert i in binRes
           assert binRes["type"] == "popular"
 
-          # TODO: Generate pattern id (propagate from search)
           pattern_ref = PatternRef(cluster_ref,
                                    binRes["id"],
                                    PatternRef.Type.POPULAR,
@@ -114,8 +114,9 @@ class PrProcessor:
                                     groum_record["method_name"])
 
           diffs_json = binRes["diffs"]
+          source_diff = self._get_source_diff(diffs_json)
 
-          res_patch = self.src_client.getPatch(src_method, diffs_json)
+          res_patch = self.src_client.getPatch(src_method, source_diff)
           if (res_patch.is_error()):
             # TODO Remove assertion
             logging.debug("Cannot compute the patch (%s)" %
@@ -124,6 +125,8 @@ class PrProcessor:
             patch_text = ""
           else:
             patch_text = res_patch.get_patch()
+
+          # print patch_text
 
           # Get the anomaly text
           pattern_anomaly_text = binRes["pattern_code"]
@@ -154,3 +157,26 @@ class PrProcessor:
 
     return anomaly_out
 
+  def _get_source_diff(self, diffs_json):
+    def _get_entry(entry_json, is_exit=False):
+      name = "before" if is_exit else "after"
+      what = "" if is_exit else entry_json["what"]
+
+      return DiffEntry(entry_json["line"],
+                       entry_json[name],
+                       what)
+
+    source_diffs = []
+    for diff_json in diffs_json:
+      exits = []
+
+      for diff_exit in diff_json["exits"]:
+        entry = _get_entry(diff_exit, True)
+        exits.append(entry)
+
+      source_diff = SourceDiff(diff_json["type"],
+                               _get_entry(diff_json["entry"]),
+                               exits)
+      source_diffs.append(source_diff)
+
+    return source_diffs

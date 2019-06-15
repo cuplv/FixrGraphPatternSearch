@@ -512,9 +512,14 @@ class Search():
       elif diff._diff_type == AcdfgDiff.DiffType.ADD:
         other_entry_line = lineNum.get_line(diff._entry_node)
         # TODO --- FIX, use iso
-        entry_line = None
+        entry_line = 0
+
       after = diff.get_entry_string()
       what = diff.get_what_string()
+
+      # TODO -- FIX
+      if entry_line is None:
+        entry_line = 0
 
       entry = {"line" : entry_line,
                "after" : after,
@@ -525,14 +530,18 @@ class Search():
         exits.append( {"line" : 0, "before" : "exit"} )
       else:
         for exit_node in diff._exit_nodes:
-          exit_line = None
+          exit_line = 0
           if diff._diff_type == AcdfgDiff.DiffType.REMOVE:
+            # TODO: fix
             exit_line = lineNum.get_line(exit_node)
+            if exit_line is None:
+              exit_line = 0
           elif diff._diff_type == AcdfgDiff.DiffType.ADD:
             other_exit_line = lineNum.get_line(exit_node)
             # TODO --- FIX, use iso
-            exit_line = None
+            exit_line = 0
           before = diff.get_exit_string(exit_node)
+
         exits.append( {"line" : exit_line, "before" : before} )
 
       diff_json["type"] = diff_type
