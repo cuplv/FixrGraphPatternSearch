@@ -491,10 +491,10 @@ class Search():
            after : string, (entry method)
            what : string, (describe the patch, code or list of methods)
         },
-        "exit" : {
+        "exits" : [{
           line : integer,
           before : string, (exit method)
-       }
+       }]
      }
     ]
     """
