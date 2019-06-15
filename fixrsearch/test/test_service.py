@@ -124,7 +124,7 @@ class TestServices(unittest.TestCase):
     json_data = json.loads(response.get_data(as_text=True))
 
     # Number of apps in the dataset
-    self.assertTrue(3 == len(json_data))
+    self.assertTrue(4 == len(json_data))
 
     found = False
     for repo in json_data:

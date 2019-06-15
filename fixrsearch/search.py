@@ -16,8 +16,15 @@ import tempfile
 from fixrsearch.index import ClusterIndex
 from fixrsearch.groum_index import GroumIndex
 from fixrgraph.annotator.protobuf.proto_acdfg_pb2 import Acdfg
+
 from fixrgraph.annotator.protobuf.proto_search_pb2 import SearchResults
 from fixrgraph.solr.import_patterns import _get_pattern_key
+
+from fixrsearch.codegen.acdfg_repr import AcdfgRepr
+from fixrsearch.codegen.mappings import Mappings, LineNum
+from fixrsearch.codegen.diff import AcdfgPatch, AcdfgDiff
+from fixrsearch.codegen.generator import CodeGenerator, CFGAnalyzer
+
 
 JSON_OUTPUT = True
 
@@ -37,10 +44,13 @@ def get_cluster_file(cluster_path):
   return os.path.join(cluster_path, "clusters.txt")
 
 class Search():
-  def __init__(self, cluster_path, iso_path, index = None, timeout=10):
+  def __init__(self, cluster_path, iso_path,
+               index = None, groum_index = None,
+               timeout=10):
     self.cluster_path = cluster_path
     self.iso_path = iso_path
     self.timeout = timeout
+    self.groum_index = groum_index
 
     # 1. Build the index
     if (index is None):
@@ -149,7 +159,7 @@ class Search():
       logging.info("Execution timed out executing %s" % (cmd))
       p.kill()
 
-    # proc = subprocess.Popen(args, stdout=out, stderr=err, cwd=None)
+    # DEBUG
     proc = Popen(args, cwd=None, stdout=PIPE,  stderr=PIPE)
     timer = Timer(self.timeout, kill_function, [proc, "".join(args)])
     try:
@@ -159,6 +169,8 @@ class Search():
       logging.error(e.message)
     finally:
       timer.cancel() # Cancel the timer, no matter what
+    # proc = Popen(args, cwd=None, stdout=PIPE,  stderr=PIPE)
+    # (stdout, stderr) = proc.communicate() # execute the process
 
     result = None
     return_code = proc.returncode
@@ -249,9 +261,6 @@ class Search():
       (res_type, subsumes_ref, subsume_anom) = self.get_res_type(proto_search.type)
       search_res["type"] = res_type
       logging.debug("Search res: " + search_res["type"])
-
-      # print("Lines iso to reference %d" %
-      #       len(proto_search.isoToReference.acdfg_1.node_lines))
 
       # Process the reference pattern, and set it as
       # popular key in the result
@@ -349,6 +358,29 @@ class Search():
     res_bin["frequency"] = self.get_popularity(lattice, id2bin, acdfgBin)
     res_bin["cardinality"] = len(acdfgBin.names_to_iso)
 
+
+    # Get the source code of the pattern
+    (source_code, acdf_reduced) = self.get_pattern_code(lattice,
+                                                        id2bin,
+                                                        acdfgBin)
+    res_bin["pattern_code"] = source_code
+
+    # Compute the patch from the acdfgs
+    acdfg_repr = AcdfgRepr(acdfgBin.acdfg_repr)
+    acdfg_query = AcdfgRepr(isoRes.acdfg_1)
+    query_to_ref_mapping = Mappings(acdfg_query, acdfg_repr, isoRes)
+    patchGenerator = AcdfgPatch(acdfg_query,
+                                acdfg_repr,
+                                query_to_ref_mapping)
+    diffs = patchGenerator.get_diffs()
+    # get the code patch, calling the source code service
+    lineNum = LineNum(isoRes.acdfg_1.node_lines)
+    patches = self.format_patches(diffs,
+                                  query_to_ref_mapping,
+                                  lineNum)
+    res_bin["diffs"] = patches
+
+
     # Creates three lists of lines association between
     # the query acdf and all the other acdfgs in the
     # pattern
@@ -356,62 +388,42 @@ class Search():
     visitedMapping = set()
     for isoPair in acdfgBin.names_to_iso:
       mapping = {}
-      source_info = {}
-      if (isoPair.iso.acdfg_1.HasField("source_info")):
-        protoSource = isoPair.iso.acdfg_1.source_info
-        if (protoSource.HasField("package_name")):
-          source_info["package_name"] = protoSource.package_name
-        if (protoSource.HasField("class_name")):
-          source_info["class_name"] = protoSource.class_name
-        if (protoSource.HasField("method_name")):
-          source_info["method_name"] = protoSource.method_name
-        if (protoSource.HasField("class_line_number")):
-          source_info["class_line_number"] = protoSource.class_line_number
-        if (protoSource.HasField("method_line_number")):
-          source_info["method_line_number"] = protoSource.method_line_number
-        if (protoSource.HasField("source_class_name")):
-          source_info["source_class_name"] = protoSource.source_class_name
-        if (protoSource.HasField("abs_source_class_name")):
-          source_info["abs_source_class_name"] = protoSource.abs_source_class_name
-          mapping["source_info"] = source_info
+      source_info = self._fill_source_info(isoPair)
+      mapping["source_info"] = source_info
+      repo_tag = self._fill_repo_tag(isoPair)
+      mapping["repo_tag"] = repo_tag
 
-      repo_tag = {}
-      if (isoPair.iso.acdfg_1.HasField("repo_tag")):
-        proto_tag = isoPair.iso.acdfg_1.repo_tag
-        if proto_tag.HasField("repo_name"):
-          repo_tag["repo_name"] = proto_tag.repo_name
-        if proto_tag.HasField("user_name"):
-          repo_tag["user_name"] = proto_tag.user_name
-        if proto_tag.HasField("url"):
-          repo_tag["url"] = proto_tag.url
-        if proto_tag.HasField("commit_hash"):
-          repo_tag["commit_hash"] = proto_tag.commit_hash
-        if proto_tag.HasField("commit_date"):
-          repo_tag["commit_date"] = proto_tag.commit_date
-        mapping["repo_tag"] = repo_tag
-
-      # remove duplicates
-      key = "%s/%s/%s/%s/%s/%s" % (repo_tag["user_name"],
+      # remove duplicates from the visit
+      key = "%s/%s/%s/%s.%s/%s" % (repo_tag["user_name"],
                                    repo_tag["repo_name"],
                                    repo_tag["commit_hash"],
                                    source_info["class_name"],
                                    source_info["method_name"],
                                    source_info["method_line_number"])
-
-      if key in visitedMapping:
-        continue
+      if key in visitedMapping: continue
       visitedMapping.add(key)
+
+      acdfg_other = AcdfgRepr(isoPair.iso.acdfg_1)
+      other_to_ref_mapping = Mappings(acdfg_other, acdfg_repr, isoPair.iso)
+
+      query_to_other_mapping = Mappings()
+      query_to_other_mapping.init_from_others(query_to_ref_mapping,
+                                              other_to_ref_mapping)
+
+      (nodes_res, edges_res) = query_to_other_mapping.get_lines(
+        acdfg_query,
+        isoRes.acdfg_1.node_lines,
+        acdfg_other,
+        isoPair.iso.acdfg_1.node_lines)
 
       # Computes the mapping from the acdfg used in the
       # query and the acdfg in the bin
-      # logging.debug("Computing mapping...")
-      # logging.debug("%d" % len(isoRes.nodesMap))
-      # logging.debug("%d" % len(isoPair.iso.nodesMap))
       (nodes_res, edges_res) = Search.get_mapping(isoRes.acdfg_1,
                                                   isoPair.iso.acdfg_1,
                                                   isoRes,
                                                   isoPair.iso,
-                                                  # Never reverse, the data is already ok
+                                                  # Never reverse, the data is
+                                                  # already ok
                                                   False)
       mapping["nodes"] = {"iso" : nodes_res[0],
                           "add" : nodes_res[1],
@@ -425,6 +437,112 @@ class Search():
 
     return res_bin
 
+
+  def _fill_source_info(self, isoPair):
+    assert isoPair.iso.acdfg_1.HasField("source_info")
+
+    source_info = {}
+    protoSource = isoPair.iso.acdfg_1.source_info
+    if (protoSource.HasField("package_name")):
+      source_info["package_name"] = protoSource.package_name
+    if (protoSource.HasField("class_name")):
+      source_info["class_name"] = protoSource.class_name
+    if (protoSource.HasField("method_name")):
+      source_info["method_name"] = protoSource.method_name
+    if (protoSource.HasField("class_line_number")):
+      source_info["class_line_number"] = protoSource.class_line_number
+    if (protoSource.HasField("method_line_number")):
+      source_info["method_line_number"] = protoSource.method_line_number
+    if (protoSource.HasField("source_class_name")):
+      source_info["source_class_name"] = protoSource.source_class_name
+    if (protoSource.HasField("abs_source_class_name")):
+      source_info["abs_source_class_name"] = protoSource.abs_source_class_name
+
+    return source_info
+
+  def _fill_repo_tag(self, isoPair):
+    assert (isoPair.iso.acdfg_1.HasField("repo_tag"))
+
+    repo_tag = {}
+
+    proto_tag = isoPair.iso.acdfg_1.repo_tag
+    if proto_tag.HasField("repo_name"):
+      repo_tag["repo_name"] = proto_tag.repo_name
+    if proto_tag.HasField("user_name"):
+      repo_tag["user_name"] = proto_tag.user_name
+    if proto_tag.HasField("url"):
+      repo_tag["url"] = proto_tag.url
+    if proto_tag.HasField("commit_hash"):
+      repo_tag["commit_hash"] = proto_tag.commit_hash
+    if proto_tag.HasField("commit_date"):
+      repo_tag["commit_date"] = proto_tag.commit_date
+
+    return repo_tag
+
+  def format_patches(self, diffs, query_to_ref_mapping, lineNum):
+    """ Returns a readable representatio nof the the patches.
+
+    TODO: we can try the code generation out of the subgraph.
+
+    Out format:
+    [ { "type" :  string, (either "+" or "-")
+        "entry" : {
+           line : integer,
+           after : string, (entry method)
+           what : string, (describe the patch, code or list of methods)
+        },
+        "exits" : [{
+          line : integer,
+          before : string, (exit method)
+       }]
+     }
+    ]
+    """
+
+    diffs_json = []
+    for diff in diffs:
+      diff_json = {}
+
+      diff_type = "+" if AcdfgDiff.DiffType.ADD else "-"
+
+      entry = {}
+      if diff._entry_node is None:
+        entry_line = 0
+      elif diff._diff_type == AcdfgDiff.DiffType.REMOVE:
+        entry_line = lineNum.get_line(diff._entry_node)
+      elif diff._diff_type == AcdfgDiff.DiffType.ADD:
+        other_entry_line = lineNum.get_line(diff._entry_node)
+        # TODO --- FIX, use iso
+        entry_line = None
+      after = diff.get_entry_string()
+      what = diff.get_what_string()
+
+      entry = {"line" : entry_line,
+               "after" : after,
+               "what" : what}
+
+      exits = []
+      if len(diff._exit_nodes) == 0:
+        exits.append( {"line" : 0, "before" : "exit"} )
+      else:
+        for exit_node in diff._exit_nodes:
+          exit_line = None
+          if diff._diff_type == AcdfgDiff.DiffType.REMOVE:
+            exit_line = lineNum.get_line(exit_node)
+          elif diff._diff_type == AcdfgDiff.DiffType.ADD:
+            other_exit_line = lineNum.get_line(exit_node)
+            # TODO --- FIX, use iso
+            exit_line = None
+          before = diff.get_exit_string(exit_node)
+        exits.append( {"line" : exit_line, "before" : before} )
+
+      diff_json["type"] = diff_type
+      diff_json["entry"] = entry
+      diff_json["exists"] = exits
+
+      diffs_json.append(diff_json)
+
+    return diffs_json
 
   @staticmethod
   def get_mapping(acdfg_1, acdfg_2,
@@ -447,7 +565,7 @@ class Search():
         for elem in l:
           elem_id = elem.id
           if elem_id in id2num:
-            line_no =id2num[elem_id]
+            line_no = id2num[elem_id]
             res.append((elem_id, line_no))
       return res
 
@@ -464,6 +582,8 @@ class Search():
                       acdfg.method_node])
 
     def get_edges(acdfg):
+      # TODO: why is the initial map empty here?
+      # id2num empty means that there is no
       return get_all({},
                      [acdfg.def_edge, acdfg.use_edge,
                       acdfg.trans_edge])
@@ -515,9 +635,6 @@ class Search():
     nodes_lists = (get_nodes(acdfg_1), get_nodes(acdfg_2))
     # edges_lists = (get_edges(acdfg_1), get_edges(acdfg_2))
 
-    # logging.debug("Nodes acdfg1 " + str(nodes_lists[0]))
-    # logging.debug("Nodes acdfg2 " + str(nodes_lists[1]))
-
     # for (res, elem_1_to_2, elem_lists) in zip([nodes_res, edges_res],
     #                                           [nodes_1_to_2, edges_1_to_2],
     #                                           [nodes_lists, edges_lists]):
@@ -544,6 +661,45 @@ class Search():
           res[idx_to_remove].append(e1_line)
 
     return (nodes_res, edges_res)
+
+  def get_pattern_code(self, lattice, id2bin, acdfgBin):
+    if self.groum_index is None:
+      return ("", None)
+
+    found_orig = False;
+    for isoPair in acdfgBin.names_to_iso:
+      acdfg_reduced = AcdfgRepr(isoPair.iso.acdfg_1)
+
+      source_info = self._fill_source_info(isoPair)
+      repo_tag = self._fill_repo_tag(isoPair)
+
+      key = u"%s/%s/%s/%s.%s/%s" % (repo_tag["user_name"],
+                                    repo_tag["repo_name"],
+                                    repo_tag["commit_hash"],
+                                    source_info["class_name"],
+                                    source_info["method_name"],
+                                    source_info["method_line_number"])
+
+      acdfg_orig_path = self.groum_index.get_groum_path(key)
+      if not acdfg_orig_path is None:
+        if os.path.exists(acdfg_orig_path):
+          found_orig = True
+          break
+
+    if not found_orig:
+      return ("", None)
+
+    acdfg_proto = Acdfg()
+    with open(acdfg_orig_path, "rb") as f1:
+      acdfg_proto.ParseFromString(f1.read())
+      f1.close()
+    acdfg_original = AcdfgRepr(acdfg_proto)
+    code_gen = CodeGenerator(acdfg_reduced, acdfg_original)
+    code = code_gen.get_code_text()
+
+    return (code, acdfg_reduced)
+
+
 
 
 def main():
@@ -625,3 +781,4 @@ def main():
 if __name__ == '__main__':
   main()
 
+  

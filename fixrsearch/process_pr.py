@@ -100,9 +100,11 @@ class PrProcessor:
                                    binRes["cardinality"])
 
           # TODO: Generate patch text
+          diffs_json = binRes["diffs"]
           patch_text = ""
-          # TODO: Generate anomaly text
-          pattern_anomaly_text = ""
+
+          # Get the anomaly text
+          pattern_anomaly_text = binRes["pattern_code"]
           # TODO: Generate an error text for the anomaly
 
           # Create the anomaly
@@ -129,5 +131,4 @@ class PrProcessor:
         anomaly_out.append(anomaly)
 
     return anomaly_out
-
 
