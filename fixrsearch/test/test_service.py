@@ -126,7 +126,7 @@ class TestServices(unittest.TestCase):
     json_data = json.loads(response.get_data(as_text=True))
 
     # Number of apps in the dataset
-    self.assertTrue(4 == len(json_data))
+    self.assertTrue(5 <= len(json_data))
 
     found = False
     for repo in json_data:
@@ -163,18 +163,13 @@ class TestServices(unittest.TestCase):
 
 
   def test_process_graphs_in_pull_request(self):
-    # pre-populate the db with the pull request data
-    # temporary
     user_name = "mmcguinn"
     repo_name = "iSENSE-Hardware"
     commit_hash = "0700782f9d3aa4cb3d4c86c3ccf9dcab13fa3aad"
     pr_id = 1
-
     repo_ref = RepoRef(repo_name, user_name)
     commit_ref = CommitRef(repo_ref, commit_hash)
     pr_ref = PullRequestRef(repo_ref, pr_id, commit_ref)
-    # db = self.app.config[DB]
-    # db.new_pr(pr_ref)
 
     pull_request_data = {"user" : user_name,
                          "repo" : repo_name,
@@ -190,6 +185,34 @@ class TestServices(unittest.TestCase):
     json_data = json.loads(response.get_data(as_text=True))
 
     self.assertTrue(len(json_data) > 0)
+
+  def test_process_graphs_in_pull_request_2(self):
+    # pre-populate the db with the pull request data
+    # temporary
+    user_name = "DevelopFreedom"
+    repo_name = "logmein-android"
+    commit_hash = "418b37ffbafac3502b661d0918d1bc190e3c2dd1"
+    pr_id = 1
+
+    repo_ref = RepoRef(repo_name, user_name)
+    commit_ref = CommitRef(repo_ref, commit_hash)
+    pr_ref = PullRequestRef(repo_ref, pr_id, commit_ref)
+
+    pull_request_data = {"user" : user_name,
+                         "repo" : repo_name,
+                         "commitHashes" : [commit_hash],
+                         "modifiedFiles" : [],
+                         "pullRequestId" : pr_id}
+
+    response = self.test_client.post('/process_graphs_in_pull_request',
+                                     data=json.dumps(pull_request_data),
+                                     content_type='application/json')
+    self.assertTrue(200 == response.status_code)
+
+    json_data = json.loads(response.get_data(as_text=True))
+
+    self.assertTrue(len(json_data) > 0)
+
 
 
   def get_anomaly(self):

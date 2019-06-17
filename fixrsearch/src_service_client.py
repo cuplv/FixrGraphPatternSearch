@@ -62,13 +62,12 @@ class SourceDiff():
 
     return my_map
 
-
-
 class PatchResult:
-  def __init__(self, patch_text, error_msg, is_error):
+  def __init__(self, patch_text, error_msg, is_error, git_path):
     self._patch_text = patch_text
     self._error_msg = error_msg
     self._is_error = is_error
+    self._git_path = git_path
 
   def is_error(self):
     return self._is_error
@@ -79,6 +78,8 @@ class PatchResult:
   def get_patch(self):
     return self._patch_text
 
+  def get_git_path(self):
+    return self._git_path
 
 class SrcClient(object):
   """ Base class for the src client """
@@ -96,7 +97,8 @@ class SrcClientMock(SrcClient):
   def getPatch(self, method_req, diffs_req):
     patch_res = PatchResult(None,
                             "Mock implementation",
-                            True)
+                            True,
+                            "")
     return patch_res
 
 class SrcClientService(SrcClient):
@@ -127,22 +129,38 @@ class SrcClientService(SrcClient):
 
         if (res_status == 0):
           res_patch = res_value[1]
-          if (len(res_patch) > 0):
-            res_patch_text = res_patch[0]
-            patch_res = PatchResult(res_patch_text, "", False)
+          if (len(res_patch) == 2):
+
+            def is_extension(text):
+              return (text.endswith(".java") or
+                      text.endswith(".scala") or
+                      text.endswith(".kt") or
+                      text.endswith(".kts"))
+            # Hack
+            zero_is_fn = is_extension(res_patch[0])
+            one_is_fn = is_extension(res_patch[1])
+
+            if (zero_is_fn and one_is_fn):
+              patch_res = PatchResult(None, "No patch text in the reply", True,
+                                      "")
+            else:
+              patch_file = res_patch[0] if zero_is_fn else res_patch[1]
+              patch_text = res_patch[0] if one_is_fn else res_patch[1]
+
+              patch_res = PatchResult(patch_text, "", False, patch_file)
           else:
-            patch_res = PatchResult(None, "No patch text in the reply", True)
+            patch_res = PatchResult(None, "No patch text in the reply", True, "")
         else:
-          patch_res = PatchResult(None, result_data["error"], True)
+          patch_res = PatchResult(None, result_data["error"], True, "")
           logging.error(result_data["error"])
 
       else:
         err_msg = "Error code: %s" % (str(request_result.status_code))
         logging.error(err_msg)
-        patch_res = PatchResult(None, err_msg, True)
+        patch_res = PatchResult(None, err_msg, True, "")
     except Exception as e:
       err_msg = str(e)
       logging.error(err_msg)
-      patch_res = PatchResult(None, err_msg, True)
+      patch_res = PatchResult(None, err_msg, True, "")
 
     return patch_res

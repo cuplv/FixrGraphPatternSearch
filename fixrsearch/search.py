@@ -75,7 +75,7 @@ class Search():
 
     return clusters
 
-  def search_from_groum(self, groum_path):
+  def search_from_groum(self, groum_path, filter_for_bugs = False):
     logging.info("Search for groum %s" % groum_path)
 
     # 1. Search the clusters
@@ -87,7 +87,8 @@ class Search():
       logging.debug("Searching in cluster %d (%s)..." % (cluster_info.id,
                                                          ",".join(cluster_info.methods_list)))
 
-      results_cluster = self.search_cluster(groum_path, cluster_info)
+      results_cluster = self.search_cluster(groum_path, cluster_info,
+                                            filter_for_bugs)
       if results_cluster is None:
         logging.debug("Found 0 in cluster %d..." % cluster_info.id)
       else:
@@ -118,7 +119,8 @@ class Search():
     return results
 
 
-  def search_cluster(self, groum_path, cluster_info):
+  def search_cluster(self, groum_path, cluster_info,
+                     filter_for_bugs = False):
     """
     Search for similarities and anomalies inside a single lattice
     """
@@ -130,7 +132,8 @@ class Search():
 
     if (os.path.exists(lattice_path)):
       logging.debug("Searching lattice %s..." % lattice_path)
-      result = self.call_iso(groum_path, lattice_path)
+      result = self.call_iso(groum_path, lattice_path,
+                             filter_for_bugs)
     else:
       logging.debug("Lattice file %s not found" % lattice_path)
       result = None
@@ -138,7 +141,8 @@ class Search():
     return result
 
 
-  def call_iso(self, groum_path, lattice_path):
+  def call_iso(self, groum_path, lattice_path,
+               filter_for_bugs = False):
     """
     Search the element in the lattice that are similar to the groum
     """
@@ -158,7 +162,6 @@ class Search():
       logging.info("Execution timed out executing %s" % (cmd))
       p.kill()
 
-    # DEBUG
     proc = Popen(args, cwd=None, stdout=PIPE,  stderr=PIPE)
     timer = Timer(self.timeout, kill_function, [proc, "".join(args)])
     try:
@@ -168,8 +171,6 @@ class Search():
       logging.error(e.message)
     finally:
       timer.cancel() # Cancel the timer, no matter what
-    # proc = Popen(args, cwd=None, stdout=PIPE,  stderr=PIPE)
-    # (stdout, stderr) = proc.communicate() # execute the process
 
     result = None
     return_code = proc.returncode
@@ -183,7 +184,7 @@ class Search():
     else:
       logging.info("Search finished...")
 
-      result = self.formatOutput(search_path)
+      result = self.formatOutput(search_path, filter_for_bugs)
 
     if os.path.isfile(search_path):
       os.remove(search_path)
@@ -223,7 +224,7 @@ class Search():
     return (res_type, subsumes_ref, subsumes_anom)
 
 
-  def formatOutput(self, search_path):
+  def formatOutput(self, search_path, filter_for_bugs=False):
     """
     Read the results from the search and produce the json output
     """
@@ -260,6 +261,12 @@ class Search():
       (res_type, subsumes_ref, subsume_anom) = self.get_res_type(proto_search.type)
       search_res["type"] = res_type
       logging.debug("Search res: " + search_res["type"])
+
+
+      if (filter_for_bugs and 
+          (not res_type in ["ANOMALOUS_SUBSUMED",
+                            "CORRECT_SUBSUMED"])):
+        continue
 
       # Process the reference pattern, and set it as
       # popular key in the result
@@ -697,13 +704,22 @@ class Search():
     if not found_orig:
       return ("", None)
 
-    acdfg_proto = Acdfg()
-    with open(acdfg_orig_path, "rb") as f1:
-      acdfg_proto.ParseFromString(f1.read())
-      f1.close()
-    acdfg_original = AcdfgRepr(acdfg_proto)
-    code_gen = CodeGenerator(acdfg_reduced, acdfg_original)
-    code = code_gen.get_code_text()
+    try:
+      acdfg_proto = Acdfg()
+      with open(acdfg_orig_path, "rb") as f1:
+        acdfg_proto.ParseFromString(f1.read())
+        f1.close()
+      acdfg_original = AcdfgRepr(acdfg_proto)
+      code_gen = CodeGenerator(acdfg_reduced, acdfg_original)
+      code = code_gen.get_code_text()
+    except Exception as e:
+      logging.debug("Error generating source code for:\n" \
+                    "acdfg_reduced (bin id): %s\n" \
+                    "acdfg_orig_path: %s\n"
+                    % (acdfgBin.id,
+                       acdfg_orig_path))
+
+      code = ""
 
     return (code, acdfg_reduced)
 

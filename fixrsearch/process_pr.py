@@ -74,7 +74,7 @@ class PrProcessor:
                              groum_record["source_class_name"])
 
       # Search for anomalies
-      results = self.search.search_from_groum(groum_file)
+      results = self.search.search_from_groum(groum_file, True)
       for cluster_res in results:
         assert "cluster_info" in cluster_res
         cluster_info = cluster_res["cluster_info"]
@@ -89,59 +89,20 @@ class PrProcessor:
               search_res["type"] != "CORRECT_SUBSUMED"):
             continue
 
-          # get the pattern
-          assert "popular" in search_res
-          binRes = search_res["popular"]
-
-          binResField = ["type", "acdfg_mappings", "frequency",
+          # 0. Get the popular bin
+          bin_res = search_res["popular"]
+          bin_res_field = ["type", "acdfg_mappings", "frequency",
                          "cardinality", "id"]
-          for i in binResField: assert i in binRes
-          assert binRes["type"] == "popular"
+          for i in bin_res_field: assert i in bin_res
+          assert bin_res["type"] == "popular"
 
-          pattern_ref = PatternRef(cluster_ref,
-                                   binRes["id"],
-                                   PatternRef.Type.POPULAR,
-                                   binRes["frequency"],
-                                   binRes["cardinality"])
-
-          github_url = "https://github.com/%s/%s" % (
-            pull_request_ref.commit_ref.repo_ref.user_name,
-            pull_request_ref.commit_ref.repo_ref.repo_name)
-          src_method = SrcMethodReq(github_url,
-                                    pull_request_ref.commit_ref.commit_hash,
-                                    groum_record["source_class_name"],
-                                    groum_record["method_line_number"],
-                                    groum_record["method_name"])
-
-          diffs_json = binRes["diffs"]
-          source_diff = self._get_source_diff(diffs_json)
-
-          res_patch = self.src_client.getPatch(src_method, source_diff)
-          if (res_patch.is_error()):
-            # TODO Remove assertion
-            logging.debug("Cannot compute the patch (%s)" %
-                          res_patch.get_error_msg())
-            assert False
-            patch_text = ""
-          else:
-            patch_text = res_patch.get_patch()
-
-          # print patch_text
-
-          # Get the anomaly text
-          pattern_anomaly_text = binRes["pattern_code"]
-          # TODO: Generate an error text for the anomaly
-
-          # Create the anomaly
-          anomaly = Anomaly(0, # tmp id, to be set with the sorting
-                            method_ref,
-                            pull_request_ref,
-                            patch_text,
-                            pattern_anomaly_text,
-                            pattern_ref)
-
+          anomaly = PrProcessor._process_search_res(self.src_client,
+                                                    pull_request_ref,
+                                                    method_ref,
+                                                    cluster_ref,
+                                                    bin_res)
           # insert the frequency to sort the anomalies
-          anomalies.append((binRes["frequency"], anomaly))
+          anomalies.append((bin_res["frequency"], anomaly))
 
 
     # sort the anomalies
@@ -157,7 +118,78 @@ class PrProcessor:
 
     return anomaly_out
 
-  def _get_source_diff(self, diffs_json):
+
+  @staticmethod
+  def _process_search_res(src_client,
+                          pull_request_ref,
+                          method_ref,
+                          cluster_ref,
+                          bin_res):
+    """ Process a single search for a single anomaly.
+    """
+
+    logging.info("Processing bin %d..." % bin_res["id"])
+
+    # 1. Construct the reference to the pattern object
+    pattern_ref = PatternRef(cluster_ref,
+                             bin_res["id"],
+                             PatternRef.Type.POPULAR,
+                             bin_res["frequency"],
+                             bin_res["cardinality"])
+
+    # 2. Get the patch text
+    diffs_json = bin_res["diffs"]
+    (patch_text, git_path) = PrProcessor._get_patch_text(src_client,
+                                                         pull_request_ref.commit_ref,
+                                                         method_ref,
+                                                         diffs_json)
+
+    # 3. Get the anomaly text
+    pattern_anomaly_text = bin_res["pattern_code"]
+
+    # 4. Generate the error text for the anomaly
+    # TODO
+
+    # Create the anomaly
+    anomaly = Anomaly(0, # tmp id, to be set with the sorting
+                      method_ref,
+                      pull_request_ref,
+                      patch_text,
+                      pattern_anomaly_text,
+                      pattern_ref)
+    return anomaly
+
+
+  @staticmethod
+  def _get_patch_text(src_client, commit_ref, method_ref, diffs_json):
+    """
+    Call the service that composes the patch text
+    """
+    github_url = "https://github.com/%s/%s" % (
+      commit_ref.repo_ref.user_name,
+      commit_ref.repo_ref.repo_name)
+    src_method = SrcMethodReq(github_url,
+                              commit_ref.commit_hash,
+                              method_ref.source_class_name,
+                              method_ref.start_line_number,
+                              method_ref.method_name)
+    source_diff = PrProcessor._get_source_diff(diffs_json)
+    res_patch = src_client.getPatch(src_method, source_diff)
+    if (res_patch.is_error()):
+      logging.debug("Cannot compute the patch (%s)" %
+                    res_patch.get_error_msg())
+      patch_text = ""
+      git_path = ""
+    else:
+      patch_text = res_patch.get_patch()
+      git_path = res_patch.get_git_path()
+    return (patch_text, git_path)
+
+  @staticmethod
+  def _get_source_diff(diffs_json):
+    """ Format the input for the service that gets the
+    patch text
+    """
     def _get_entry(entry_json, is_exit=False):
       name = "before" if is_exit else "after"
       what = "" if is_exit else entry_json["what"]

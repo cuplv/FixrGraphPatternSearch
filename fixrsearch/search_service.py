@@ -62,7 +62,7 @@ def get_malformed_request(error = None):
        error = "Malformed request (%s)" % error
     reply_json = {"status": 1, "error" : "Malformed requests"}
     return Response(json.dumps(reply_json),
-                    status=404,
+                    status=400,
                     mimetype='application/json')
 
 def get_apps():
@@ -125,7 +125,9 @@ def search_pattern():
 
 
 def process_graphs_in_pull_request():
-    # get pr data
+    """
+    Process a pull request and finds the anomalies
+    """
     content = request.get_json(force=True)
     if (content is None):
         return get_malformed_request()
@@ -144,41 +146,50 @@ def process_graphs_in_pull_request():
     commit_hash = commits[0]
     modifiedFiles = content["modifiedFiles"]
 
-    db = get_new_db(current_app.config[DB_CONFIG])
-    pr_processor = PrProcessor(current_app.config[GROUM_INDEX],
-                               db,
-                               Search(current_app.config[CLUSTER_PATH],
-                                      current_app.config[ISO_PATH],
-                                      current_app.config[CLUSTER_INDEX],
-                                      current_app.config[GROUM_INDEX],
-                                      current_app.config[TIMEOUT]),
-                               current_app.config[SRC_CLIENT])
+    try:
+        db = get_new_db(current_app.config[DB_CONFIG])
+        pr_processor = PrProcessor(current_app.config[GROUM_INDEX],
+                                   db,
+                                   Search(current_app.config[CLUSTER_PATH],
+                                          current_app.config[ISO_PATH],
+                                          current_app.config[CLUSTER_INDEX],
+                                          current_app.config[GROUM_INDEX],
+                                          current_app.config[TIMEOUT]),
+                                   current_app.config[SRC_CLIENT])
 
-    pr_ref = PullRequestRef(RepoRef(repo_name, user_name), pull_request_id,
-                            CommitRef(RepoRef(repo_name, user_name),
-                                      commit_hash))
+        pr_ref = PullRequestRef(RepoRef(repo_name, user_name), pull_request_id,
+                                CommitRef(RepoRef(repo_name, user_name),
+                                          commit_hash))
 
-    anomalies = pr_processor.process_graphs_from_pr(pr_ref)
+        anomalies = pr_processor.process_graphs_from_pr(pr_ref)
 
-    # produce the json output for the anomalies
+        # produce the json output for the anomalies
 
-    json_data = []
+        json_data = []
 
-    for anomaly in anomalies:
-        json_anomaly = {"id" : anomaly.numeric_id,
-                        "error" : "",
-                        "packageName" : anomaly.method_ref.package_name,
-                        "className" : anomaly.method_ref.class_name,
-                        "methodName" : anomaly.method_ref.method_name,
-                        "fileName" : anomaly.method_ref.source_class_name,
-                        "line" : anomaly.method_ref.start_line_number}
-        json_data.append(json_anomaly)
+        for anomaly in anomalies:
+            json_anomaly = {"id" : anomaly.numeric_id,
+                            "error" : "",
+                            "packageName" : anomaly.method_ref.package_name,
+                            "className" : anomaly.method_ref.class_name,
+                            "methodName" : anomaly.method_ref.method_name,
+                            "fileName" : anomaly.method_ref.source_class_name,
+                            "line" : anomaly.method_ref.start_line_number}
+            json_data.append(json_anomaly)
 
-    db.disconnect()
+        db.disconnect()
+        response = Response(json.dumps(json_data),
+                            status=200,
+                            mimetype='application/json')
+    except Exception as e:
+        logging.error(str(e))
 
-    return Response(json.dumps(json_data),
-                    status=200,
-                    mimetype='application/json')
+        response = Response(reply_json = {"status": 1,
+                                          "error" : "Generic error"},
+                            status=500,
+                            mimetype='application/json')
+
+    return response
 
 
 def _lookup_anomaly(current_app, content):
