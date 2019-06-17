@@ -237,6 +237,7 @@ class Db(object):
         anomaly = Anomaly(numeric_id,
                           method,
                           pull_request,
+                          res.description,
                           res.patch_text,
                           res.pattern_text,
                           pattern)
@@ -409,6 +410,7 @@ class Db(object):
                                       pull_request_id = pull_request_id,
                                       pattern_id = pattern_id,
                                       numeric_id = anomaly.numeric_id,
+                                      description = anomaly.description,
                                       patch_text = anomaly.patch_text,
                                       pattern_text = anomaly.pattern_text,
                                       status = anomaly.status)
@@ -428,6 +430,7 @@ class Db(object):
                anomalies.c.pull_request_id == stmt_pr.c.id and
                anomalies.c.pattern_id == stmt_pattern.c.id and
                anomalies.c.numeric_id == data.anomaly.numeric_id and
+               anomalies.c.description == data.anomaly.description and
                anomalies.c.patch_text == data.anomaly.patch_text and
                anomalies.c.pattern_text == data.anomaly.pattern_text and
                anomalies.c.status == data.anomaly.status).limit(1)
@@ -483,6 +486,7 @@ class Db(object):
                                       ForeignKey('pull_requests.id')),
                                Column('pattern_id', Integer,
                                       ForeignKey('patterns.id')),
+                               Column('description', VARCHAR),
                                Column('patch_text', VARCHAR),
                                Column('pattern_text', VARCHAR),
                                Column('status', VARCHAR))

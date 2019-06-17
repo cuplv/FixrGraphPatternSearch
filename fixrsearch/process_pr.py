@@ -149,11 +149,13 @@ class PrProcessor:
 
     # 4. Generate the error text for the anomaly
     # TODO
+    description = ""
 
     # Create the anomaly
-    anomaly = Anomaly(0, # tmp id, to be set with the sorting
+    anomaly = Anomaly(0, # tmp id --- it is set with the sorting
                       method_ref,
                       pull_request_ref,
+                      description,
                       patch_text,
                       pattern_anomaly_text,
                       pattern_ref)

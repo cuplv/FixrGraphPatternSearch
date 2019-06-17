@@ -10,8 +10,10 @@ anomaly_format = """
 Anomaly id: ${ID}
 Repo: ${USER_NAME}/${REPO_NAME}/${COMMIT_ID}
 Method: ${METHODNAME} in ${METHODFILE} at line ${METHODLINE}
-Patch:
 --------------------------------------------------------------------------------
+Description:
+${DESCRIPTION}
+Patch:
 ${PATCH}
 --------------------------------------------------------------------------------
 Pattern:
@@ -30,6 +32,7 @@ class Anomaly(object):
                numeric_id,
                method_ref,
                pull_request,
+               description,
                patch_text,
                pattern_text,
                pattern):
@@ -39,6 +42,8 @@ class Anomaly(object):
     self.method_ref = method_ref
     # ref to the pull request that generated the anomaly
     self.pull_request = pull_request
+    # textual description of the anomaly 
+    self.description = description
     # patch to apply to fix the anomaly
     self.patch_text = patch_text
     # pattern violated shown in the program vars
@@ -59,6 +64,7 @@ class Anomaly(object):
       "METHODNAME" : self.method_ref.method_name,
       "METHODLINE" : str(self.method_ref.start_line_number),
       "METHODFILE" : self.method_ref.source_class_name,
+      "DESCRIPTION" : self.description,
       "PATCH" : self.patch_text,
       "PATTERN_TEXT" : self.pattern_text,
     }

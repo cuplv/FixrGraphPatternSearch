@@ -75,7 +75,9 @@ class Search():
 
     return clusters
 
-  def search_from_groum(self, groum_path, filter_for_bugs = False):
+  def search_from_groum(self, groum_path,
+                        filter_for_bugs = False,
+                        filter_cluster = None):
     logging.info("Search for groum %s" % groum_path)
 
     # 1. Search the clusters
@@ -86,6 +88,11 @@ class Search():
     for cluster_info in clusters:
       logging.debug("Searching in cluster %d (%s)..." % (cluster_info.id,
                                                          ",".join(cluster_info.methods_list)))
+
+      if ((not filter_cluster is None) and
+          (not cluster_info.id in filter_cluster)):
+        logging.debug("Filtered out cluster %s", cluster_info.id)
+        continue
 
       results_cluster = self.search_cluster(groum_path, cluster_info,
                                             filter_for_bugs)

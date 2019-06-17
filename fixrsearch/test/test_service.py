@@ -221,7 +221,7 @@ class TestServices(unittest.TestCase):
     commit_hash = "0700782f9d3aa4cb3d4c86c3ccf9dcab13fa3aad"
     pr_id = 1
     anomaly_id = "1"
-
+    description = ""
     patch_text = ""
     pattern_anomaly_text = ""
 
@@ -238,6 +238,7 @@ class TestServices(unittest.TestCase):
                       PullRequestRef(repo_ref,
                                      pr_id,
                                      commit_ref),
+                      description,
                       patch_text,
                       pattern_anomaly_text,
                       PatternRef(ClusterRef("1", ""), "",
