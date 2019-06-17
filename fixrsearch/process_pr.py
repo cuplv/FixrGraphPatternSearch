@@ -3,6 +3,8 @@ Implement the logic that process a pull request
 """
 
 import logging
+import StringIO
+
 from fixrsearch.groum_index import GroumIndex
 import fixrsearch.db
 from fixrsearch.anomaly import Anomaly
@@ -148,8 +150,7 @@ class PrProcessor:
     pattern_anomaly_text = bin_res["pattern_code"]
 
     # 4. Generate the error text for the anomaly
-    # TODO
-    description = ""
+    description = PrProcessor._get_description(diffs_json)
 
     # Create the anomaly
     anomaly = Anomaly(0, # tmp id --- it is set with the sorting
@@ -214,3 +215,38 @@ class PrProcessor:
       source_diffs.append(source_diff)
 
     return source_diffs
+
+  @staticmethod
+  def _get_description(diffs_json):
+    """
+    Construct a description of the anomaly
+    """
+    output = StringIO.StringIO()
+
+    i = 0
+    for diff_json in diffs_json:
+      i += 1
+
+      if diff_json["type"] == "+":
+        change = "may need to invoke"
+      else:
+        change = "may not invoke"
+
+      diff_entry = diff_json["entry"]
+      entry_text = "[%d] After method %s at line %s " \
+                   "you %s the following " \
+                   "methods:\n%s\n" % (i,
+                                       diff_entry["after"],
+                                       diff_entry["line"],
+                                       change,
+                                       diff_entry["what"])
+
+      output.write(entry_text)
+
+      for diff_exit in diff_json["exits"]:
+        exit_text = "[%d] change ends before method %s at " \
+                    "line %s." % (i, diff_exit["before"],
+                                  diff_exit["line"])
+        output.write(exit_text)
+
+    return output.getvalue()
