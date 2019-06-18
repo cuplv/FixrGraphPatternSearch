@@ -74,18 +74,22 @@ class Mappings():
     self._isos = []
     for (a_elem, b_elem) in a_to_b_mapping._isos:
       if self._is_node(b_elem):
-        c_elem = b_to_c[Mappings.NODES][b_elem.id]
+        if (b_elem.id in b_to_c[Mappings.NODES]):
+          c_elem = b_to_c[Mappings.NODES][b_elem.id]
       else:
-        c_elem = b_to_c[Mappings.EDGES][b_elem.id]
+        if b_elem.id in b_to_c[Mappings.EDGES]:
+          c_elem = b_to_c[Mappings.EDGES][b_elem.id]
       self._isos.append( (a_elem, c_elem) )
 
     # set just b
     self._just_b = []
     for b_elem in a_to_b_mapping._just_b:
       if self._is_node(b_elem):
-        c_elem = b_to_c[Mappings.NODES][b_elem.id]
+        if b_elem.id in b_to_c[Mappings.NODES]:
+          c_elem = b_to_c[Mappings.NODES][b_elem.id]
       else:
-        c_elem = b_to_c[Mappings.EDGES][b_elem.id]
+        if b_elem.id in b_to_c[Mappings.EDGES]:
+          c_elem = b_to_c[Mappings.EDGES][b_elem.id]
 
       self._just_b.append( c_elem )
 

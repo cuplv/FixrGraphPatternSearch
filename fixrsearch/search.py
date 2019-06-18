@@ -28,7 +28,7 @@ from fixrsearch.codegen.generator import CodeGenerator, CFGAnalyzer
 
 JSON_OUTPUT = True
 
-MIN_METHODS_IN_COMMON = 2
+MIN_METHODS_IN_COMMON = 1
 
 RESULT_CODE="result_code"
 ERROR_MESSAGE="error_messages"
@@ -66,12 +66,24 @@ class Search():
       method_list = []
       for method_node in acdfg.method_node:
         std_str = str(method_node.name)
-
-        method_list.append(std_str)
+        if not std_str in {"is_true",
+                           "is_false",
+                           "EQ",
+                           "NEQ",
+                           "GE",
+                           "GT",
+                           "LE",
+                           "LT",
+                           "NOT",
+                           "AND",
+                           "OR",
+                           "XOR"}:
+          method_list.append(std_str)
       fgroum.close()
 
     # 2. Search the clusters
-    clusters = self.index.get_clusters(method_list, MIN_METHODS_IN_COMMON)
+    min_in_common = MIN_METHODS_IN_COMMON
+    clusters = self.index.get_clusters(method_list, min_in_common)
 
     return clusters
 
@@ -163,6 +175,8 @@ class Search():
             "-l", lattice_path,
             "-o", search_path]
     logging.debug("Command line %s" % " ".join(args))
+
+    # print " ".join(args)
 
     # Kill the process after the timout expired
     def kill_function(p, cmd):
@@ -283,6 +297,8 @@ class Search():
                                 id2bin[bin_id],
                                 proto_search.isoToReference,
                                 subsumes_ref)
+      if bin_res is None:
+        continue
       search_res["popular"] = bin_res
 
       # Process the results that have an anomalous pattern
@@ -296,6 +312,8 @@ class Search():
                                   id2bin[bin_id],
                                   proto_search.isoToAnomalous,
                                   subsumes_ref)
+        if bin_res is None:
+          continue
         search_res["anomalous"] = bin_res
 
       search_res_list.append(search_res)
@@ -386,19 +404,24 @@ class Search():
                                 acdfg_repr,
                                 query_to_ref_mapping)
     diffs = patchGenerator.get_diffs()
+    if len(diffs) == 0:
+      # no diffs found
+      # not significant pattern
+      return None
+    else:
+      pass
+
+
+
     # get the code patch, calling the source code service
     lineNum = LineNum(isoRes.acdfg_1.node_lines)
-    patches = self.format_patches(diffs,
-                                  query_to_ref_mapping,
-                                  lineNum)
-    res_bin["diffs"] = patches
-
 
     # Creates three lists of lines association between
     # the query acdf and all the other acdfgs in the
     # pattern
     acdfg_mappings = []
     visitedMapping = set()
+    first = True
     for isoPair in acdfgBin.names_to_iso:
       mapping = {}
       source_info = self._fill_source_info(isoPair)
@@ -423,6 +446,13 @@ class Search():
       query_to_other_mapping.init_from_others(query_to_ref_mapping,
                                               other_to_ref_mapping)
 
+      if first:
+        patches = self.format_patches(diffs,
+                                      query_to_other_mapping,
+                                      lineNum)
+        first = False
+
+
       (nodes_res, edges_res) = query_to_other_mapping.get_lines(
         acdfg_query,
         isoRes.acdfg_1.node_lines,
@@ -446,7 +476,12 @@ class Search():
                           "remove" : edges_res[2]}
       acdfg_mappings.append(mapping)
 
+    if first:
+      patches = self.format_patches(diffs,
+                                    query_to_ref_mapping,
+                                    lineNum)
     res_bin["acdfg_mappings"] = acdfg_mappings
+    res_bin["diffs"] = patches
 
     return res_bin
 
@@ -495,8 +530,6 @@ class Search():
   def format_patches(self, diffs, query_to_ref_mapping, lineNum):
     """ Returns a readable representatio nof the the patches.
 
-    TODO: we can try the code generation out of the subgraph.
-
     Out format:
     [ { "type" :  string, (either "+" or "-")
         "entry" : {
@@ -512,11 +545,23 @@ class Search():
     ]
     """
 
+    def _get_other_line(mapping, node_b):
+      if node_b is None:
+        return None
+      else:
+        for (iso_a, iso_b) in mapping._isos:
+          if (iso_b.id == node_b.id and 
+              mapping._is_node(iso_a)):
+            return iso_a
+
+      return None
+
+
     diffs_json = []
     for diff in diffs:
       diff_json = {}
 
-      diff_type = "+" if AcdfgDiff.DiffType.ADD else "-"
+      diff_type = "+" if diff._diff_type == AcdfgDiff.DiffType.ADD else "-"
 
       entry = {}
       if diff._entry_node is None:
@@ -524,9 +569,15 @@ class Search():
       elif diff._diff_type == AcdfgDiff.DiffType.REMOVE:
         entry_line = lineNum.get_line(diff._entry_node)
       elif diff._diff_type == AcdfgDiff.DiffType.ADD:
-        other_entry_line = lineNum.get_line(diff._entry_node)
+        node_a = _get_other_line(query_to_ref_mapping,
+                                 diff._entry_node)
+        if (not node_a is None):
+          entry_line = lineNum.get_line(node_a)
+        else:
+          entry_line = None
+
         # TODO --- FIX, use iso
-        entry_line = 0
+        # entry_line = 0
 
       after = diff.get_entry_string()
       what = diff.get_what_string()
@@ -551,9 +602,15 @@ class Search():
             if exit_line is None:
               exit_line = 0
           elif diff._diff_type == AcdfgDiff.DiffType.ADD:
-            other_exit_line = lineNum.get_line(exit_node)
             # TODO --- FIX, use iso
-            exit_line = 0
+            node_a = _get_other_line(query_to_ref_mapping,
+                                     exit_node)
+
+            if (not node_a is None):
+              exit_line = lineNum.get_line(node_a)
+            else:
+              exit_line = 0
+
           before = diff.get_exit_string(exit_node)
 
         exits.append( {"line" : exit_line, "before" : before} )

@@ -47,12 +47,18 @@ class AcdfgPatch(object):
     """
 
     roots = acdfg.find_control_roots()
-    stack = [n for n in roots if is_iso_f(n)]
-    root_not_iso = [n for n in roots if is_iso_f(n)]
+    if (len(roots) == 0):
+      myroot = acdfg.find_first_control_node()
+      roots.add(myroot)
+      acdfg.remove_incoming(myroot)
 
-    diff = self._process_frontier(helper, None, root_not_iso,
-                                  diff_type, is_iso_f)
-    diffs.append(diff)
+    stack = [n for n in roots if is_iso_f(n)]
+    root_not_iso = [n for n in roots if not is_iso_f(n)]
+
+    if (len(root_not_iso) > 0):
+      diff = self._process_frontier(helper, None, root_not_iso,
+                                    diff_type, is_iso_f)
+      diffs.append(diff)
 
     visited = set()
     while (len(stack) > 0):
@@ -67,7 +73,8 @@ class AcdfgPatch(object):
         if (not is_iso_f(edge.to_node)):
           diff = self._process_frontier(helper, current, [edge.to_node],
                                         diff_type, is_iso_f)
-          diffs.append(diff)
+          if (not diff is None):
+            diffs.append(diff)
         else:
           stack.append(edge.to_node)
         visited_next.add(edge.to_node)
@@ -120,7 +127,7 @@ class AcdfgPatch(object):
 class AcdfgDiff(object):
   class DiffType(Enum):
     ADD = 0
-    REMOVE = 0
+    REMOVE = 1
 
   def __init__(self, entry_node, roots, diff_type):
     """

@@ -66,12 +66,12 @@ class GroumIndex(object):
         self.appid2groums = {}
         self.groumid2path = {}
 
-        index_file_name = os.path.join(self.graph_path, "graph_index.json")
-        if (os.path.exists(index_file_name)):
-            self.load_index(index_file_name)
+        self.index_file_name = os.path.join(self.graph_path, "graph_index.json")
+        if (os.path.exists(self.index_file_name)):
+            self.load_index(self.index_file_name)
         else:
             self.build_index()
-            self.write_index(index_file_name)
+            self.write_index(self.index_file_name)
 
     def get_apps(self):
         return self.apps

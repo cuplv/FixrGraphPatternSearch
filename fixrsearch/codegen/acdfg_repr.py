@@ -96,6 +96,14 @@ class AcdfgRepr(object):
       self._data.append(node)
     self._id2node[node.id] = node
 
+  def remove_incoming(self, node):
+    new_edges = []
+    for e in self._edges:
+      if (e.to_node.id != node.id):
+        new_edges.append(e)
+    self._edges = new_edges
+
+
   def __init__(self, acdfgProto):
     self._nodes = []
     self._control = []
@@ -189,6 +197,19 @@ class AcdfgRepr(object):
       if e.to_node in roots and e.from_node in self._control:
         roots.remove(e.to_node)
     return roots
+
+  def find_first_control_node(self):
+    """  """
+    root = None
+    min_line = -1
+
+    for n in self._control:
+      if (not n.line_no is None):
+        if n.line_no > min_line:
+          min_line = n.line_no
+          root = n
+    return root
+
 
   def print_dot(self, out_stream, filter_set = {Edge.Type.TRANS,
                                                 Edge.Type.EXCEPTIONAL}):
