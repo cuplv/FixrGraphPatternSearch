@@ -130,7 +130,7 @@ class TestDb(unittest.TestCase):
                          "MyClass.java")
 
       anomaly = Anomaly(1, method, pr, "description",
-                        "patch", "pattern", pattern)
+                        "patch", "pattern", pattern, "MyClass.java")
 
       (res_id, old_data) = self.db.new_anomaly(anomaly)
       self.assertEquals(old_data, anomaly)

@@ -240,6 +240,7 @@ class Db(object):
                           res.description,
                           res.patch_text,
                           res.pattern_text,
+                          res.git_path,
                           pattern)
         return anomaly
 
@@ -413,6 +414,7 @@ class Db(object):
                                       description = anomaly.description,
                                       patch_text = anomaly.patch_text,
                                       pattern_text = anomaly.pattern_text,
+                                      git_path = anomaly.git_path,
                                       status = anomaly.status)
 
       result = self.connection.execute(ins)
@@ -433,6 +435,7 @@ class Db(object):
                anomalies.c.description == data.anomaly.description and
                anomalies.c.patch_text == data.anomaly.patch_text and
                anomalies.c.pattern_text == data.anomaly.pattern_text and
+               anomalies.c.git_path == data.anomaly.git_path and
                anomalies.c.status == data.anomaly.status).limit(1)
 
     def _create_db(self):
@@ -489,6 +492,7 @@ class Db(object):
                                Column('description', VARCHAR),
                                Column('patch_text', VARCHAR),
                                Column('pattern_text', VARCHAR),
+                               Column('git_path', VARCHAR),
                                Column('status', VARCHAR))
 
         self.metadata.create_all(self.engine)

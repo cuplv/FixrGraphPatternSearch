@@ -35,7 +35,8 @@ class Anomaly(object):
                description,
                patch_text,
                pattern_text,
-               pattern):
+               pattern,
+               git_path):
     # progressive id of the anomaly in the pull request
     self.numeric_id = numeric_id
     # method for which we found the anomaly
@@ -50,6 +51,8 @@ class Anomaly(object):
     self.pattern_text = pattern_text
     # pattern that was violated in the anomaly
     self.pattern = pattern
+    # path to the file in the git repo
+    self.git_path= git_path
     # status of the anomaly
     self.status = Anomaly.Status.NEW
 
@@ -64,6 +67,7 @@ class Anomaly(object):
       "METHODNAME" : self.method_ref.method_name,
       "METHODLINE" : str(self.method_ref.start_line_number),
       "METHODFILE" : self.method_ref.source_class_name,
+      "GIT_PATH" : self.git_path,
       "DESCRIPTION" : self.description,
       "PATCH" : self.patch_text,
       "PATTERN_TEXT" : self.pattern_text,

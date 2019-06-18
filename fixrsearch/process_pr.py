@@ -159,7 +159,8 @@ class PrProcessor:
                       description,
                       patch_text,
                       pattern_anomaly_text,
-                      pattern_ref)
+                      pattern_ref,
+                      git_path)
     return anomaly
 
 
@@ -235,18 +236,18 @@ class PrProcessor:
       diff_entry = diff_json["entry"]
       entry_text = "[%d] After method %s at line %s " \
                    "you %s the following " \
-                   "methods:\n%s\n" % (i,
-                                       diff_entry["after"],
-                                       diff_entry["line"],
-                                       change,
-                                       diff_entry["what"])
+                   "methods:\n%s" % (i,
+                                     diff_entry["after"],
+                                     diff_entry["line"],
+                                     change,
+                                     diff_entry["what"])
 
       output.write(entry_text)
 
       for diff_exit in diff_json["exits"]:
-        exit_text = "[%d] change ends before method %s at " \
-                    "line %s." % (i, diff_exit["before"],
-                                  diff_exit["line"])
+        exit_text = "[%d] change should be applied before method %s at " \
+                    "line %s.\n" % (i, diff_exit["before"],
+                                    diff_exit["line"])
         output.write(exit_text)
 
     return output.getvalue()
