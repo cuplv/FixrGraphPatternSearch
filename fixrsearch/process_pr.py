@@ -58,7 +58,13 @@ class PrProcessor:
                                      pull_request_ref.repo_ref.repo_name,
                                      pull_request_ref.commit_ref.commit_hash)
     groum_records = self.groum_index.get_groums(app_key)
+    groum_count = 0
+    tot_groums = len(groum_records)
+    logging.info("Found %d groums to process." % (tot_groums))
     for groum_record in groum_records:
+      groum_count = groum_count + 1
+      logging.info("Processing groum %d/%d" % (groum_count, tot_groums))
+
       groum_id = groum_record["groum_key"]
       groum_file = self.groum_index.get_groum_path(groum_id)
 
@@ -76,6 +82,7 @@ class PrProcessor:
                              groum_record["source_class_name"])
 
       # Search for anomalies
+      logging.info("Searching groum %d/%d" % (groum_count, tot_groums))
       results = self.search.search_from_groum(groum_file, True)
       for cluster_res in results:
         assert "cluster_info" in cluster_res
@@ -109,7 +116,7 @@ class PrProcessor:
 
     # sort the anomalies
     sorted_anomalies = sorted(anomalies, key = lambda pair : pair[0],
-                       reverse=False)
+                              reverse=False)
     anomaly_out = []
     anomaly_id = 0
     for (score, anomaly) in sorted_anomalies:
@@ -117,6 +124,8 @@ class PrProcessor:
         anomaly.numeric_id = anomaly_id
         self.db.new_anomaly(anomaly)
         anomaly_out.append(anomaly)
+
+    logging.info("Found %s anomalies." % (len(anomaly_out)))
 
     return anomaly_out
 

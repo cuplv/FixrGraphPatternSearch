@@ -60,6 +60,10 @@ def get_malformed_request(error = None):
        error = "Malformed request"
     else:
        error = "Malformed request (%s)" % error
+
+
+    logging.error(error)
+
     reply_json = {"status": 1, "error" : "Malformed requests"}
     return Response(json.dumps(reply_json),
                     status=400,
@@ -142,9 +146,20 @@ def process_graphs_in_pull_request():
     repo_name = content["repo"]
     pull_request_id = content["pullRequestId"]
 
-    commits = content["commitHashes"]
-    commit_hash = commits[0]
+    commitHash = content["commitHashes"]
+    data = commitHash["data"]
+    commit_hash = data[0]["sha"]
     modifiedFiles = content["modifiedFiles"]
+
+
+    logging.info(str(modifiedFiles))
+
+    logging.info("Processing pull request for:\n" \
+                 "%s\n%s\n%s\n%s\n" %
+                 (user_name,
+                  repo_name,
+                  str(pull_request_id),
+                  commit_hash))
 
     try:
         db = get_new_db(current_app.config[DB_CONFIG])
@@ -157,6 +172,7 @@ def process_graphs_in_pull_request():
                                           current_app.config[TIMEOUT]),
                                    current_app.config[SRC_CLIENT])
 
+        logging.info("Searching for anomalies...")
         pr_ref = PullRequestRef(RepoRef(repo_name, user_name), pull_request_id,
                                 CommitRef(RepoRef(repo_name, user_name),
                                           commit_hash))
@@ -173,19 +189,27 @@ def process_graphs_in_pull_request():
                             "packageName" : anomaly.method_ref.package_name,
                             "className" : anomaly.method_ref.class_name,
                             "methodName" : anomaly.method_ref.method_name,
-                            "fileName" : anomaly.method_ref.source_class_name,
+                            "fileName" : anomaly.git_path,
                             "line" : anomaly.method_ref.start_line_number}
+
+            logging.info("Found anomaly %s: " % str(json_anomaly))
+
             json_data.append(json_anomaly)
 
         db.disconnect()
+
+        logging.info("Generating the response for %d anomalies..." % (len(anomalies)))
+
         response = Response(json.dumps(json_data),
                             status=200,
                             mimetype='application/json')
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         logging.error(str(e))
 
-        response = Response(reply_json = {"status": 1,
-                                          "error" : "Generic error"},
+        response = Response(json.dumps({"status": 1,
+                                        "error" : "Generic error"}),
                             status=500,
                             mimetype='application/json')
 
@@ -193,11 +217,12 @@ def process_graphs_in_pull_request():
 
 
 def _lookup_anomaly(current_app, content):
-    if (content is None): return get_malformed_request()
     for f in ["anomalyId", "pullRequest"]:
-        if f not in content: return get_malformed_request("%s not in the request" % f)
+        if f not in content:
+            return (None, None, get_malformed_request("%s not in the request" % f))
     for f in ["user","repo","id"]:
-        if f not in content["pullRequest"]: return get_malformed_request("%s not in the pull request" % f)
+        if f not in content["pullRequest"]:
+            return (None, None, get_malformed_request("%s not in the pull request" % f))
 
     user_name = content["pullRequest"]["user"]
     repo_name = content["pullRequest"]["repo"]
@@ -214,6 +239,7 @@ def _lookup_anomaly(current_app, content):
                                current_app.config[SRC_CLIENT])
 
     pr_ref = pr_processor.find_pr_commit(user_name, repo_name, pull_request_id)
+
     if pr_ref is None:
         error_msg = "Cannot find pull request %s for %s/%s" % (str(pull_request_id),
                                                                user_name,
@@ -237,7 +263,11 @@ def _lookup_anomaly(current_app, content):
 
 
 def inspect_anomaly():
+    logging.info("Inspect anomalies...")
+
     content = request.get_json(force=True)
+    if content is None:
+        return get_malformed_request()
 
     (pr_processor, anomaly_ref, error) = _lookup_anomaly(current_app, content)
 
@@ -247,9 +277,12 @@ def inspect_anomaly():
     # TODO: generate more meaningful data for the edit suggestion
     # This should happen when creating the patch
     edit_suggestion = {"editText" : anomaly_ref.patch_text,
-                       "fileName" : anomaly_ref.method_ref.source_class_name,
+                       "fileName" : anomaly_ref.git_path,
                        "lineNumber" : anomaly_ref.method_ref.start_line_number}
 
+    logging.debug(edit_suggestion)
+
+    logging.info("Anomaly found, returning file...")
     return Response(json.dumps(edit_suggestion),
                     status=200,
                     mimetype='application/json')
@@ -257,14 +290,17 @@ def inspect_anomaly():
 
 def explain_anomaly():
     content = request.get_json(force=True)
+    if content is None:
+        return get_malformed_request()
+
 
     (pr_processor, anomaly_ref, error) = _lookup_anomaly(current_app, content)
 
     if (not error is None): return error
     assert (not pr_processor is None) and (not anomaly_ref is None)
 
-    # TODO: get the number of examples (use the pattern and cluster informations)
-    pattern_info = {"patternCode" : anomaly_ref.pattern_text, "numberOfExamples" : 1}
+    pattern_info = {"patternCode" : anomaly_ref.pattern_text,
+                    "numberOfExamples" : anomaly_ref.pattern.frequency}
 
     return Response(json.dumps(pattern_info),
                     status=200,
@@ -282,6 +318,9 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
     p.add_option('-g', '--graph_path', help="Base path to the acdfgs")
     p.add_option('-c', '--cluster_path', help="Base path to the cluster directory")
     p.add_option('-i', '--iso_path', help="Path to the isomorphism computation")
+
+    p.add_option('-z', '--srcclientaddress', help="")
+    p.add_option('-l', '--srcclientport', help="")
 
     # p.add_option('-d', '--db_type', type='choice',
     #              choices= ["sqlite"],
@@ -301,6 +340,9 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
 
     host = opts.address if opts.address else default_host
     port = opts.port if opts.port else default_port
+
+    srchost = opts.srcclientaddress if opts.srcclientaddress else None
+    srcport = opts.srcclientport if opts.srcclientport else None
 
     if (not opts.cluster_path):
         usage("Cluster path not provided!")
@@ -323,7 +365,7 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
     app = create_app(opts.graph_path, opts.cluster_path,
                      opts.iso_path,
                      DB_NAME,
-                     None, None)
+                     srchost,srcport)
 
     app.run(
         debug=opts.debug,
@@ -338,7 +380,7 @@ def create_app(graph_path, cluster_path, iso_path,
                src_client_address = None,
                src_client_port = None):
     app = Flask(__name__)
-    app.config[TIMEOUT] = 10
+    app.config[TIMEOUT] = 360
     app.config[CLUSTER_PATH] = cluster_path
     app.config[ISO_PATH] = iso_path
 

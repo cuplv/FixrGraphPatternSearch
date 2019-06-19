@@ -240,8 +240,8 @@ class Db(object):
                           res.description,
                           res.patch_text,
                           res.pattern_text,
-                          res.git_path,
-                          pattern)
+                          pattern,
+                          res.git_path)
         return anomaly
 
     def get_anomalies(self, pull_request):
