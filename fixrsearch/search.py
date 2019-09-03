@@ -85,7 +85,16 @@ class Search():
     min_in_common = MIN_METHODS_IN_COMMON
     clusters = self.index.get_clusters(method_list, min_in_common)
 
-    return clusters
+    new_clusters = []
+    for cluster_info in clusters:
+      # Comment out filtering of cluster
+      # Here we got rid of a set of cluster to show less noisy data during the
+      # video demo --- should be removed on merging into master
+      if not cluster_info.id in [161,154,159,9,426,427,185,333,187,189,448,447,
+                                 323,296,177,84,236,270,265,365,348]:
+        new_clusters.append(cluster_info)
+
+    return new_clusters
 
   def search_from_groum(self, groum_path,
                         filter_for_bugs = False,
