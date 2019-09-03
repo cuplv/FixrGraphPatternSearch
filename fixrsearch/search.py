@@ -28,14 +28,13 @@ from fixrsearch.codegen.generator import CodeGenerator, CFGAnalyzer
 
 JSON_OUTPUT = True
 
-MIN_METHODS_IN_COMMON = 2
+MIN_METHODS_IN_COMMON = 1
 
 RESULT_CODE="result_code"
 ERROR_MESSAGE="error_messages"
 PATTERN_KEY = "pattern_key"
 ISO_DOT = "iso_dot"
 RESULTS_LIST = "patterns"
-OBJ_VAL = "obj_val"
 SEARCH_SUCCEEDED_RESULT = 0
 ERROR_RESULT = 1
 
@@ -67,16 +66,39 @@ class Search():
       method_list = []
       for method_node in acdfg.method_node:
         std_str = str(method_node.name)
-
-        method_list.append(std_str)
+        if not std_str in {"is_true",
+                           "is_false",
+                           "EQ",
+                           "NEQ",
+                           "GE",
+                           "GT",
+                           "LE",
+                           "LT",
+                           "NOT",
+                           "AND",
+                           "OR",
+                           "XOR"}:
+          method_list.append(std_str)
       fgroum.close()
 
     # 2. Search the clusters
-    clusters = self.index.get_clusters(method_list, MIN_METHODS_IN_COMMON)
+    min_in_common = MIN_METHODS_IN_COMMON
+    clusters = self.index.get_clusters(method_list, min_in_common)
 
-    return clusters
+    new_clusters = []
+    for cluster_info in clusters:
+      # Comment out filtering of cluster
+      # Here we got rid of a set of cluster to show less noisy data during the
+      # video demo --- should be removed on merging into master
+      if not cluster_info.id in [161,154,159,9,426,427,185,333,187,189,448,447,
+                                 323,296,177,84,236,270,265,365,348]:
+        new_clusters.append(cluster_info)
 
-  def search_from_groum(self, groum_path):
+    return new_clusters
+
+  def search_from_groum(self, groum_path,
+                        filter_for_bugs = False,
+                        filter_cluster = None):
     logging.info("Search for groum %s" % groum_path)
 
     # 1. Search the clusters
@@ -88,7 +110,13 @@ class Search():
       logging.debug("Searching in cluster %d (%s)..." % (cluster_info.id,
                                                          ",".join(cluster_info.methods_list)))
 
-      results_cluster = self.search_cluster(groum_path, cluster_info)
+      if ((not filter_cluster is None) and
+          (not cluster_info.id in filter_cluster)):
+        logging.debug("Filtered out cluster %s", cluster_info.id)
+        continue
+
+      results_cluster = self.search_cluster(groum_path, cluster_info,
+                                            filter_for_bugs)
       if results_cluster is None:
         logging.debug("Found 0 in cluster %d..." % cluster_info.id)
       else:
@@ -119,7 +147,8 @@ class Search():
     return results
 
 
-  def search_cluster(self, groum_path, cluster_info):
+  def search_cluster(self, groum_path, cluster_info,
+                     filter_for_bugs = False):
     """
     Search for similarities and anomalies inside a single lattice
     """
@@ -131,7 +160,8 @@ class Search():
 
     if (os.path.exists(lattice_path)):
       logging.debug("Searching lattice %s..." % lattice_path)
-      result = self.call_iso(groum_path, lattice_path)
+      result = self.call_iso(groum_path, lattice_path,
+                             filter_for_bugs)
     else:
       logging.debug("Lattice file %s not found" % lattice_path)
       result = None
@@ -139,7 +169,8 @@ class Search():
     return result
 
 
-  def call_iso(self, groum_path, lattice_path):
+  def call_iso(self, groum_path, lattice_path,
+               filter_for_bugs = False):
     """
     Search the element in the lattice that are similar to the groum
     """
@@ -154,12 +185,13 @@ class Search():
             "-o", search_path]
     logging.debug("Command line %s" % " ".join(args))
 
+    # print " ".join(args)
+
     # Kill the process after the timout expired
     def kill_function(p, cmd):
       logging.info("Execution timed out executing %s" % (cmd))
       p.kill()
 
-    # DEBUG
     proc = Popen(args, cwd=None, stdout=PIPE,  stderr=PIPE)
     timer = Timer(self.timeout, kill_function, [proc, "".join(args)])
     try:
@@ -169,8 +201,6 @@ class Search():
       logging.error(e.message)
     finally:
       timer.cancel() # Cancel the timer, no matter what
-    # proc = Popen(args, cwd=None, stdout=PIPE,  stderr=PIPE)
-    # (stdout, stderr) = proc.communicate() # execute the process
 
     result = None
     return_code = proc.returncode
@@ -184,7 +214,7 @@ class Search():
     else:
       logging.info("Search finished...")
 
-      result = self.formatOutput(search_path)
+      result = self.formatOutput(search_path, filter_for_bugs)
 
     if os.path.isfile(search_path):
       os.remove(search_path)
@@ -224,7 +254,7 @@ class Search():
     return (res_type, subsumes_ref, subsumes_anom)
 
 
-  def formatOutput(self, search_path):
+  def formatOutput(self, search_path, filter_for_bugs=False):
     """
     Read the results from the search and produce the json output
     """
@@ -262,6 +292,12 @@ class Search():
       search_res["type"] = res_type
       logging.debug("Search res: " + search_res["type"])
 
+
+      if (filter_for_bugs and 
+          (not res_type in ["ANOMALOUS_SUBSUMED",
+                            "CORRECT_SUBSUMED"])):
+        continue
+
       # Process the reference pattern, and set it as
       # popular key in the result
       bin_id = proto_search.referencePatternId
@@ -270,6 +306,8 @@ class Search():
                                 id2bin[bin_id],
                                 proto_search.isoToReference,
                                 subsumes_ref)
+      if bin_res is None:
+        continue
       search_res["popular"] = bin_res
 
       # Process the results that have an anomalous pattern
@@ -283,6 +321,8 @@ class Search():
                                   id2bin[bin_id],
                                   proto_search.isoToAnomalous,
                                   subsumes_ref)
+        if bin_res is None:
+          continue
         search_res["anomalous"] = bin_res
 
       search_res_list.append(search_res)
@@ -373,19 +413,24 @@ class Search():
                                 acdfg_repr,
                                 query_to_ref_mapping)
     diffs = patchGenerator.get_diffs()
+    if len(diffs) == 0:
+      # no diffs found
+      # not significant pattern
+      return None
+    else:
+      pass
+
+
+
     # get the code patch, calling the source code service
     lineNum = LineNum(isoRes.acdfg_1.node_lines)
-    patches = self.format_patches(diffs,
-                                  query_to_ref_mapping,
-                                  lineNum)
-    res_bin["diffs"] = patches
-
 
     # Creates three lists of lines association between
     # the query acdf and all the other acdfgs in the
     # pattern
     acdfg_mappings = []
     visitedMapping = set()
+    first = True
     for isoPair in acdfgBin.names_to_iso:
       mapping = {}
       source_info = self._fill_source_info(isoPair)
@@ -410,6 +455,13 @@ class Search():
       query_to_other_mapping.init_from_others(query_to_ref_mapping,
                                               other_to_ref_mapping)
 
+      if first:
+        patches = self.format_patches(diffs,
+                                      query_to_other_mapping,
+                                      lineNum)
+        first = False
+
+
       (nodes_res, edges_res) = query_to_other_mapping.get_lines(
         acdfg_query,
         isoRes.acdfg_1.node_lines,
@@ -433,7 +485,12 @@ class Search():
                           "remove" : edges_res[2]}
       acdfg_mappings.append(mapping)
 
+    if first:
+      patches = self.format_patches(diffs,
+                                    query_to_ref_mapping,
+                                    lineNum)
     res_bin["acdfg_mappings"] = acdfg_mappings
+    res_bin["diffs"] = patches
 
     return res_bin
 
@@ -482,8 +539,6 @@ class Search():
   def format_patches(self, diffs, query_to_ref_mapping, lineNum):
     """ Returns a readable representatio nof the the patches.
 
-    TODO: we can try the code generation out of the subgraph.
-
     Out format:
     [ { "type" :  string, (either "+" or "-")
         "entry" : {
@@ -499,11 +554,23 @@ class Search():
     ]
     """
 
+    def _get_other_line(mapping, node_b):
+      if node_b is None:
+        return None
+      else:
+        for (iso_a, iso_b) in mapping._isos:
+          if (iso_b.id == node_b.id and 
+              mapping._is_node(iso_a)):
+            return iso_a
+
+      return None
+
+
     diffs_json = []
     for diff in diffs:
       diff_json = {}
 
-      diff_type = "+" if AcdfgDiff.DiffType.ADD else "-"
+      diff_type = "+" if diff._diff_type == AcdfgDiff.DiffType.ADD else "-"
 
       entry = {}
       if diff._entry_node is None:
@@ -511,11 +578,22 @@ class Search():
       elif diff._diff_type == AcdfgDiff.DiffType.REMOVE:
         entry_line = lineNum.get_line(diff._entry_node)
       elif diff._diff_type == AcdfgDiff.DiffType.ADD:
-        other_entry_line = lineNum.get_line(diff._entry_node)
+        node_a = _get_other_line(query_to_ref_mapping,
+                                 diff._entry_node)
+        if (not node_a is None):
+          entry_line = lineNum.get_line(node_a)
+        else:
+          entry_line = None
+
         # TODO --- FIX, use iso
-        entry_line = None
+        # entry_line = 0
+
       after = diff.get_entry_string()
       what = diff.get_what_string()
+
+      # TODO -- FIX
+      if entry_line is None:
+        entry_line = 0
 
       entry = {"line" : entry_line,
                "after" : after,
@@ -526,19 +604,29 @@ class Search():
         exits.append( {"line" : 0, "before" : "exit"} )
       else:
         for exit_node in diff._exit_nodes:
-          exit_line = None
+          exit_line = 0
           if diff._diff_type == AcdfgDiff.DiffType.REMOVE:
+            # TODO: fix
             exit_line = lineNum.get_line(exit_node)
+            if exit_line is None:
+              exit_line = 0
           elif diff._diff_type == AcdfgDiff.DiffType.ADD:
-            other_exit_line = lineNum.get_line(exit_node)
             # TODO --- FIX, use iso
-            exit_line = None
+            node_a = _get_other_line(query_to_ref_mapping,
+                                     exit_node)
+
+            if (not node_a is None):
+              exit_line = lineNum.get_line(node_a)
+            else:
+              exit_line = 0
+
           before = diff.get_exit_string(exit_node)
+
         exits.append( {"line" : exit_line, "before" : before} )
 
       diff_json["type"] = diff_type
       diff_json["entry"] = entry
-      diff_json["exists"] = exits
+      diff_json["exits"] = exits
 
       diffs_json.append(diff_json)
 
@@ -689,13 +777,22 @@ class Search():
     if not found_orig:
       return ("", None)
 
-    acdfg_proto = Acdfg()
-    with open(acdfg_orig_path, "rb") as f1:
-      acdfg_proto.ParseFromString(f1.read())
-      f1.close()
-    acdfg_original = AcdfgRepr(acdfg_proto)
-    code_gen = CodeGenerator(acdfg_reduced, acdfg_original)
-    code = code_gen.get_code_text()
+    try:
+      acdfg_proto = Acdfg()
+      with open(acdfg_orig_path, "rb") as f1:
+        acdfg_proto.ParseFromString(f1.read())
+        f1.close()
+      acdfg_original = AcdfgRepr(acdfg_proto)
+      code_gen = CodeGenerator(acdfg_reduced, acdfg_original)
+      code = code_gen.get_code_text()
+    except Exception as e:
+      logging.debug("Error generating source code for:\n" \
+                    "acdfg_reduced (bin id): %s\n" \
+                    "acdfg_orig_path: %s\n"
+                    % (acdfgBin.id,
+                       acdfg_orig_path))
+
+      code = ""
 
     return (code, acdfg_reduced)
 

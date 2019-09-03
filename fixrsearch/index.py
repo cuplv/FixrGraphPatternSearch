@@ -122,6 +122,18 @@ class IndexNode(object):
       self._print_(stringio, "")
       return stringio.getvalue()
 
+   def _dbg_print_(self, stream):
+      # TODO: remove/improve as tree visit --- used for testing
+      #
+      stack = [self]
+      while len(stack) > 0:
+         index = stack.pop()
+         for c in index.clusters:
+            stream.write("%s: %s\n" % (str(c.id),
+                                       c.methods_list))
+         for c in index.children:
+            stack.append(c)
+
    def __eq__(self, other):
       if type(self) != type(other):
          return False

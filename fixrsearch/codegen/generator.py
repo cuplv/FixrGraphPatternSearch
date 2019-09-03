@@ -14,6 +14,8 @@ from fixrsearch.codegen.acdfg_repr import (
 from enum import Enum
 import StringIO
 
+
+
 class CodeGenerator(object):
   """ Generate mock source code from a pattern
 
@@ -22,6 +24,8 @@ class CodeGenerator(object):
   edges (the miner just hides them with the trans
   control edges)
   """
+
+  PROCESS_SEQ_COUNTER = 0
 
   def __init__(self, sliced_acdfg, original_acdfg):
     self.sliced_acdfg = sliced_acdfg
@@ -35,6 +39,11 @@ class CodeGenerator(object):
   def _get_ast(self):
     """ Construct an AST representing the graph control flow """
     roots = self.sliced_acdfg.find_control_roots()
+
+    if (len(roots) == 0):
+      myroot = self.sliced_acdfg.find_first_control_node()
+      roots.add(myroot)
+      self.sliced_acdfg.remove_incoming(myroot)
 
     # Show only the original control edges
     self._fix_control_edges()
@@ -57,12 +66,13 @@ class CodeGenerator(object):
     return main_ast
 
   def _get_node_ast(self, acdfg, root, loops):
+    # print "GET NODE _AST"
     """ get the ast for the root node """
     helper = CodeGenerator.Helper(acdfg, loops)
 
     # get the body of the pattern
     control_ast = self._get_node_ast_rec(acdfg, root,
-                                         helper, [])
+                                         helper, [], set())
 
     # add definition of variables
     ast = control_ast
@@ -94,12 +104,13 @@ class CodeGenerator(object):
                         acdfg,
                         node,
                         helper,
-                        stack):
+                        stack,
+                        visited):
     """ Returns the ast node for the the
     cfg node and the next cfg node to process
     in sequence.
     """
-
+    # print "GET NODE _AST REC"
     # Process "base cases", when the recursion
     # must stop
     if helper.is_tail(node):
@@ -115,11 +126,19 @@ class CodeGenerator(object):
       stack.append(node)
       return expr_ast
 
+    # if node.id in visited:
+    #   skip_ast = PatternAST(PatternAST.NodeType.SKIP)
+    #   stack.append(node)
+    #   print "SKIP"
+    #   return skip_ast
+
+    # visited.add(node.id)
+
     # Get the base expression for the node
     expr_ast = CodeGenerator.get_expression_ast(node)
 
     is_loop = helper.is_head(node)
-    is_if = helper.is_if(node)
+    is_if = helper.is_if(node) 
     is_seq = helper.is_seq(node)
 
     assert ((not is_seq) or not is_if)
@@ -129,12 +148,14 @@ class CodeGenerator(object):
       (if_ast, rest_ast) = self._process_if(acdfg,
                                             node,
                                             helper,
-                                            stack)
+                                            stack,
+                                            visited)
     elif is_seq:
       rest_ast = self._process_seq(acdfg,
                                    node,
                                    helper,
-                                   stack)
+                                   stack,
+                                   visited)
 
     if not is_loop:
       # Done, concatenate the rest with the node
@@ -145,6 +166,8 @@ class CodeGenerator(object):
         seq_ast.set_children([expr_ast, app_ast])
       elif is_seq:
         seq_ast = PatternAST(PatternAST.NodeType.SEQ)
+        assert not expr_ast is None
+        assert not rest_ast is None
         seq_ast.set_children([expr_ast, rest_ast])
       expr_ast = seq_ast
     else:
@@ -171,19 +194,22 @@ class CodeGenerator(object):
         rest_ast = self._get_node_ast_rec(acdfg,
                                           loop_tail_node,
                                           helper,
-                                          stack)
+                                          stack,
+                                          visited)
         assert not rest_ast is None
       elif helper.is_if(loop_tail_node):
         (if_ast, rest_ast) = self._process_if(acdfg,
                                               loop_tail_node,
                                               helper,
-                                              stack)
+                                              stack,
+                                              visited)
         assert not rest_ast is None
       elif helper.is_seq(loop_tail_node):
         rest_ast = self._process_seq(acdfg,
                                      loop_tail_node,
                                      helper,
-                                     stack)
+                                     stack,
+                                     visited)
         assert not rest_ast is None
       else:
         # Tail
@@ -230,35 +256,41 @@ class CodeGenerator(object):
     else:
       assert False
 
-  def _process_seq(self, acdfg, node, helper, stack):
+  def _process_seq(self, acdfg, node, helper, stack, visited):
+    CodeGenerator.PROCESS_SEQ_COUNTER += 1
     next_node = helper.get_next(node)
     rest_ast = self._get_node_ast_rec(acdfg,
                                       next_node,
                                       helper,
-                                      stack)
+                                      stack,
+                                      visited)
     return rest_ast
 
 
-  def _process_if(self, acdfg, node, helper, stack):
+  def _process_if(self, acdfg, node, helper, stack, visited):
     # Creates the AST for the two branches
     (left_node, right_node) = helper.get_if_branches(node)
     left_ast = self._get_node_ast_rec(acdfg,
                                       left_node,
                                       helper,
-                                      stack)
+                                      stack,
+                                      visited)
     assert len(stack) > 0
     join_node_left = stack.pop()
 
-    left_ast = self._get_node_ast_rec(acdfg,
-                                      rigt_node,
-                                      helper,
-                                      stack)
+    right_ast = self._get_node_ast_rec(acdfg,
+                                       right_node,
+                                       helper,
+                                       stack,
+                                       visited)
     assert len(stack) > 0
-    join_node_left = stack.pop()
+    join_node_right = stack.pop()
 
     # The join must be the same
-    assert (not join_node_left is None and
-            join_node_left == join_node_right)
+    assert ((not join_node_left is None) and
+            (join_node_left == join_node_right or
+             right_ast.ast_type == PatternAST.NodeType.SKIP or
+             left_ast.ast_type == PatternAST.NodeType.SKIP))
 
     if_ast = PatternAST(PatternAST.NodeType.IF)
     if_ast.set_children([left_ast, right_ast])
@@ -266,7 +298,8 @@ class CodeGenerator(object):
     rest_ast = self._get_node_ast_rec(acdfg,
                                       join_node_left,
                                       helper,
-                                      stack)
+                                      stack,
+                                      visited)
     return (if_ast, rest_ast)
 
   def _fix_control_edges(self):
@@ -605,13 +638,15 @@ class PatternAST(object):
     IF = 5
     WHILE = 6
     DECL = 7
+    SKIP = 8
 
   INDENT = "  "
   HAVOC_COND = "true"
   HAVOC_VAR = ""
 
   CMD_TYPES = {NodeType.METHOD, NodeType.ASSIGN, NodeType.SEQ,
-               NodeType.IF, NodeType.WHILE, NodeType.DECL}
+               NodeType.IF, NodeType.WHILE, NodeType.DECL,
+               NodeType.SKIP}
   EXPR_TYPES = {NodeType.VAR, NodeType.CONST}
 
   DATA_MAP = {"name" : {NodeType.VAR, NodeType.CONST},
@@ -681,6 +716,11 @@ class PatternAST(object):
         err = "Node %s must be a var!" % str(c)
         raise PatternAST.MalformedASTException(err)
 
+    elif self.ast_type == PatternAST.Node.SKIP:
+      if len_c != 0:
+        err = "Node must have 0 children, %d given!" % len_c
+        raise PatternAST.MalformedASTException(err)
+
     elif self.is_expr():
       if len_c != 0:
         err = "Node must have 0 children, %d given!" % len_c
@@ -710,9 +750,11 @@ class PatternAST(object):
     return self.ast_type in PatternAST.EXPR_TYPES
 
   def _print(self, out_stream, indent):
-    if (self.ast_type in {PatternAST.NodeType.VAR, PatternAST.NodeType.CONST}):
+    if (self.ast_type in {PatternAST.NodeType.SKIP}):
+      out_stream.write("%s; // skip" % (indent))
+    elif (self.ast_type in {PatternAST.NodeType.VAR,
+                            PatternAST.NodeType.CONST}):
       out_stream.write("%s%s" % (indent, self._get_data("name")))
-
     elif (self.ast_type == PatternAST.NodeType.METHOD):
       out_stream.write("%s%s(" % (indent, self._get_data("method_name")))
 
