@@ -229,34 +229,49 @@ class PrProcessor:
   @staticmethod
   def _get_description(diffs_json):
     """
-    Construct a description of the anomaly
+    Construct a small description of the anomaly
     """
     output = StringIO.StringIO()
+
+    has_addition = False
+    has_removals = False
 
     i = 0
     for diff_json in diffs_json:
       i += 1
 
       if diff_json["type"] == "+":
-        change = "may need to invoke"
+        has_addition = True
       else:
-        change = "may not invoke"
+        has_removals = True
 
-      diff_entry = diff_json["entry"]
-      entry_text = "[%d] After method %s at line %s " \
-                   "you %s the following " \
-                   "methods:\n%s" % (i,
-                                     diff_entry["after"],
-                                     diff_entry["line"],
-                                     change,
-                                     diff_entry["what"])
+      # if diff_json["type"] == "+":
+      #   change = "may need to invoke"
+      # else:
+      #   change = "may not invoke"
 
-      output.write(entry_text)
+      # diff_entry = diff_json["entry"]
+      # entry_text = "[%d] After method %s at line %s " \
+      #              "you %s the following " \
+      #              "methods:\n%s" % (i,
+      #                                diff_entry["after"],
+      #                                diff_entry["line"],
+      #                                change,
+      #                                diff_entry["what"])
 
-      for diff_exit in diff_json["exits"]:
-        exit_text = "[%d] change should be applied before method %s at " \
-                    "line %s.\n" % (i, diff_exit["before"],
-                                    diff_exit["line"])
-        output.write(exit_text)
+      # output.write(entry_text)
+
+      # for diff_exit in diff_json["exits"]:
+      #   exit_text = "[%d] change should be applied before method %s at " \
+      #               "line %s.\n" % (i, diff_exit["before"],
+      #                               diff_exit["line"])
+      #   output.write(exit_text)
+
+    if (has_addition and (not has_removals)):
+      output.write("missing method calls")
+    elif (has_removals and (not has_addition)):
+      output.write("misplaced invocations")
+    elif (has_removals and  has_addition):
+      output.write("misplaced and missing invocations")
 
     return output.getvalue()
