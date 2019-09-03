@@ -38,7 +38,7 @@ def search() :
 
 
     # filter_keys = set(["Kaain/ToDoPlus/9d3c3ba347c1b3a93391b075b3073e1f1dcd97d2"])
-    filter_keys = set(["smover/AwesomeApp/9d759f47dc6b7b404a32eafcbc654b134bf6778a"])
+    filter_keys = set(["smover/AwesomeApp/04f68b69a6f9fa254661b481a757fa1c834b52e1"])
     # max_res = 3
     max_res = -1
 
@@ -101,6 +101,7 @@ def search() :
     some_results = 0
     all_apps = groum_index.get_apps()
     tot_apps = len(all_apps)
+
     for repo in all_apps:
         count_apps += 1
         app_key = repo["app_key"]
@@ -129,8 +130,8 @@ def search() :
             groum_file = groum_index.get_groum_path(groum_id)
 
             # DEBUG
-            if not groum_file.endswith(groum_path):
-                continue
+#            if not groum_file.endswith(groum_path):
+#                continue
 
 
             processing_msg = "   processing %s, %s...\n" % (str(groum_id), groum_file)
