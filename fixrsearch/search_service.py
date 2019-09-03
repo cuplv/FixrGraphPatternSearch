@@ -148,7 +148,7 @@ def process_graphs_in_pull_request():
 
     commitHash = content["commitHashes"]
     data = commitHash["data"]
-    commit_hash = data[0]["sha"]
+    commit_hash = data[len(data)-1]["sha"]
     modifiedFiles = content["modifiedFiles"]
 
 
@@ -183,13 +183,23 @@ def process_graphs_in_pull_request():
 
         json_data = []
 
+
         for anomaly in anomalies:
+            hack_link = "https://github.com/%s/%s/blob/%s/%s" % (
+                anomaly.pull_request.repo_ref.user_name,
+                anomaly.pull_request.repo_ref.repo_name,
+                anomaly.pull_request.commit_ref.commit_hash,
+                anomaly.git_path
+            )
+
+            hackfn = "[%s](%s)" % (anomaly.method_ref.source_class_name,
+                                   hack_link)
             json_anomaly = {"id" : anomaly.numeric_id,
-                            "error" : "",
+                            "error" : anomaly.description,
                             "packageName" : anomaly.method_ref.package_name,
                             "className" : anomaly.method_ref.class_name,
                             "methodName" : anomaly.method_ref.method_name,
-                            "fileName" : anomaly.git_path,
+                            "fileName" : hackfn,
                             "line" : anomaly.method_ref.start_line_number}
 
             logging.info("Found anomaly %s: " % str(json_anomaly))
