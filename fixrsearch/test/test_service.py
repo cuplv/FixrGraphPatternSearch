@@ -269,7 +269,7 @@ class TestServices(unittest.TestCase):
 
     expected_output = {
       "editText" : "",
-      "fileName" : anomaly.method_ref.source_class_name,
+      "fileName" : anomaly.git_path,
       "lineNumber" : anomaly.method_ref.start_line_number
     }
 
