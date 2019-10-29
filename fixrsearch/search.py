@@ -292,10 +292,10 @@ class Search():
       search_res["type"] = res_type
       logging.debug("Search res: " + search_res["type"])
 
-
       if (filter_for_bugs and 
           (not res_type in ["ANOMALOUS_SUBSUMED",
                             "CORRECT_SUBSUMED"])):
+        logging.debug("Filtering cluster (not anomalous or correct subsumed)")
         continue
 
       # Process the reference pattern, and set it as

@@ -47,7 +47,7 @@ java.lang.Object value) {
     banana
      */
     builder.setRelativeUrl(value);
-    // [0] The change should ends here (before calling the method exit)
+    // [0] The change should end here (before calling the method exit)
 }"""
 
     expected_path = "retrofit/src/main/java/retrofit2/ParameterHandler.java"
@@ -55,6 +55,5 @@ java.lang.Object value) {
     res = src_client.getPatch(src_method, diffs_to_apply)
 
     self.assertFalse(res.is_error())
-
     self.assertTrue(res.get_patch() == expected_patch)
     self.assertTrue(res.get_git_path() == expected_path)
