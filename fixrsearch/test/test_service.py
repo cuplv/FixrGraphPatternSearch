@@ -297,7 +297,7 @@ class TestServices(unittest.TestCase):
 
     expected_output = {
       "patternCode" : "",
-      "numberOfExamples" : 1
+      "numberOfExamples" : 1.0
     }
 
     response = self.test_client.post('/explain_anomaly',
