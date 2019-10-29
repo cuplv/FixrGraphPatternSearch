@@ -86,11 +86,22 @@ class TestServices(unittest.TestCase):
 
 
   def test_search(self):
-    key = "%s/%s/%s/%s/%s" % ("dfredriksen",
-                              "stealthmessenger",
-                              "d6612b984e9c2eca48bdd73fc7d0d29c242207ff",
-                              "com.ninjitsuware.notepad.NotesDbAdapter.fetchNote",
-                              "161")
+    user_name = "mmcguinn"
+    repo_name = "iSENSE-Hardware"
+    commit_hash = "0700782f9d3aa4cb3d4c86c3ccf9dcab13fa3aad"
+
+    # key = "%s/%s/%s/%s/%s" % ("dfredriksen",
+    #                           "stealthmessenger",
+    #                           "d6612b984e9c2eca48bdd73fc7d0d29c242207ff",
+    #                           "com.ninjitsuware.notepad.NotesDbAdapter.fetchNote",
+    #                           "161")
+
+    key = "%s/%s/%s/%s/%s" % (user_name,
+                              repo_name,
+                              commit_hash,
+                              "edu.uml.cs.droidsense.comm.RestAPIDbAdapter.getExperiments",
+                              405)
+
 
     data = {"groum_key" : key}
     response = self.test_client.post('/search',
@@ -99,6 +110,7 @@ class TestServices(unittest.TestCase):
     json_data = json.loads(response.get_data(as_text=True))
 
     assert json_data['status'] == 0
+
     assert len(json_data['results']) > 0
 
     found = False
@@ -109,7 +121,7 @@ class TestServices(unittest.TestCase):
         if 'popular' in res:
           elem = res['popular']
           if (elem['type'] == 'popular' and
-              elem['frequency'] == 48):
+              elem['frequency'] == 72):
             found = True
             break
 
