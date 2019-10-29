@@ -171,9 +171,11 @@ class TestServices(unittest.TestCase):
     commit_ref = CommitRef(repo_ref, commit_hash)
     pr_ref = PullRequestRef(repo_ref, pr_id, commit_ref)
 
+    commit_hash_data = {"data" : [{"sha" : commit_hash}]}
+
     pull_request_data = {"user" : user_name,
                          "repo" : repo_name,
-                         "commitHashes" : [commit_hash],
+                         "commitHashes" : commit_hash_data,
                          "modifiedFiles" : [],
                          "pullRequestId" : pr_id}
 
@@ -198,9 +200,11 @@ class TestServices(unittest.TestCase):
     commit_ref = CommitRef(repo_ref, commit_hash)
     pr_ref = PullRequestRef(repo_ref, pr_id, commit_ref)
 
+    commit_hash_data = {"data" : [{"sha" : commit_hash}]}
+
     pull_request_data = {"user" : user_name,
                          "repo" : repo_name,
-                         "commitHashes" : [commit_hash],
+                         "commitHashes" : commit_hash_data,
                          "modifiedFiles" : [],
                          "pullRequestId" : pr_id}
 
