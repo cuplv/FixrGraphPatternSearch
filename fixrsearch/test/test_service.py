@@ -201,8 +201,6 @@ class TestServices(unittest.TestCase):
     self.assertTrue(len(json_data) > 0)
 
   def test_process_graphs_in_pull_request_2(self):
-    # pre-populate the db with the pull request data
-    # temporary
     user_name = "DevelopFreedom"
     repo_name = "logmein-android"
     commit_hash = "418b37ffbafac3502b661d0918d1bc190e3c2dd1"
@@ -228,6 +226,58 @@ class TestServices(unittest.TestCase):
     json_data = json.loads(response.get_data(as_text=True))
 
     self.assertTrue(len(json_data) > 0)
+
+  def test_process_graphs_in_pull_request_3(self):
+    user_name = "smover"
+    repo_name = "AwesomeApp"
+    commit_hash = "04f68b69a6f9fa254661b481a757fa1c834b52e1"
+    pr_id = 1
+
+    repo_ref = RepoRef(repo_name, user_name)
+    commit_ref = CommitRef(repo_ref, commit_hash)
+    pr_ref = PullRequestRef(repo_ref, pr_id, commit_ref)
+
+    commit_hash_data = {"data" : [{"sha" : commit_hash}]}
+
+    pull_request_data = {"user" : user_name,
+                         "repo" : repo_name,
+                         "commitHashes" : commit_hash_data,
+                         "modifiedFiles" : [],
+                         "pullRequestId" : pr_id}
+
+    response = self.test_client.post('/process_graphs_in_pull_request',
+                                     data=json.dumps(pull_request_data),
+                                     content_type='application/json')
+    self.assertTrue(200 == response.status_code)
+
+    json_data = json.loads(response.get_data(as_text=True))
+
+    # At least some result
+    self.assertTrue(len(json_data) > 0)
+
+    # Compare with the expected output
+    expected_output = [
+      {
+        u'methodName': u'showDialog',
+        u'packageName': u'fixr.plv.colorado.edu.awesomeapp',
+        u'fileName': u'[MainActivity.java](https://github.com/smover/AwesomeApp/blob/04f68b69a6f9fa254661b481a757fa1c834b52e1/app/src/main/java/fixr/plv/colorado/edu/awesomeapp/MainActivity.java)',
+        u'className': u'fixr.plv.colorado.edu.awesomeapp.MainActivity',
+        u'error': u'missing method calls',
+        u'line': 47,
+        u'id': 1
+      },
+      {u'methodName': u'showDialog',
+       u'packageName': u'fixr.plv.colorado.edu.awesomeapp',
+       u'fileName': u'[MainActivity.java](https://github.com/smover/AwesomeApp/blob/04f68b69a6f9fa254661b481a757fa1c834b52e1/app/src/main/java/fixr/plv/colorado/edu/awesomeapp/MainActivity.java)',
+       u'className': u'fixr.plv.colorado.edu.awesomeapp.MainActivity',
+      u'error': u'missing method calls',
+       u'line': 47,
+       u'id': 2
+      }
+    ]
+
+    self.assertTrue(json.dumps(json_data, sort_keys=True) ==
+                    json.dumps(expected_output, sort_keys=True))
 
 
 
