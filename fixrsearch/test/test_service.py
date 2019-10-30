@@ -86,11 +86,22 @@ class TestServices(unittest.TestCase):
 
 
   def test_search(self):
-    key = "%s/%s/%s/%s/%s" % ("dfredriksen",
-                              "stealthmessenger",
-                              "d6612b984e9c2eca48bdd73fc7d0d29c242207ff",
-                              "com.ninjitsuware.notepad.NotesDbAdapter.fetchNote",
-                              "161")
+    user_name = "mmcguinn"
+    repo_name = "iSENSE-Hardware"
+    commit_hash = "0700782f9d3aa4cb3d4c86c3ccf9dcab13fa3aad"
+
+    # key = "%s/%s/%s/%s/%s" % ("dfredriksen",
+    #                           "stealthmessenger",
+    #                           "d6612b984e9c2eca48bdd73fc7d0d29c242207ff",
+    #                           "com.ninjitsuware.notepad.NotesDbAdapter.fetchNote",
+    #                           "161")
+
+    key = "%s/%s/%s/%s/%s" % (user_name,
+                              repo_name,
+                              commit_hash,
+                              "edu.uml.cs.droidsense.comm.RestAPIDbAdapter.getExperiments",
+                              405)
+
 
     data = {"groum_key" : key}
     response = self.test_client.post('/search',
@@ -99,6 +110,7 @@ class TestServices(unittest.TestCase):
     json_data = json.loads(response.get_data(as_text=True))
 
     assert json_data['status'] == 0
+
     assert len(json_data['results']) > 0
 
     found = False
@@ -109,7 +121,7 @@ class TestServices(unittest.TestCase):
         if 'popular' in res:
           elem = res['popular']
           if (elem['type'] == 'popular' and
-              elem['frequency'] == 48):
+              elem['frequency'] == 72):
             found = True
             break
 
@@ -171,9 +183,11 @@ class TestServices(unittest.TestCase):
     commit_ref = CommitRef(repo_ref, commit_hash)
     pr_ref = PullRequestRef(repo_ref, pr_id, commit_ref)
 
+    commit_hash_data = {"data" : [{"sha" : commit_hash}]}
+
     pull_request_data = {"user" : user_name,
                          "repo" : repo_name,
-                         "commitHashes" : [commit_hash],
+                         "commitHashes" : commit_hash_data,
                          "modifiedFiles" : [],
                          "pullRequestId" : pr_id}
 
@@ -187,8 +201,6 @@ class TestServices(unittest.TestCase):
     self.assertTrue(len(json_data) > 0)
 
   def test_process_graphs_in_pull_request_2(self):
-    # pre-populate the db with the pull request data
-    # temporary
     user_name = "DevelopFreedom"
     repo_name = "logmein-android"
     commit_hash = "418b37ffbafac3502b661d0918d1bc190e3c2dd1"
@@ -198,9 +210,11 @@ class TestServices(unittest.TestCase):
     commit_ref = CommitRef(repo_ref, commit_hash)
     pr_ref = PullRequestRef(repo_ref, pr_id, commit_ref)
 
+    commit_hash_data = {"data" : [{"sha" : commit_hash}]}
+
     pull_request_data = {"user" : user_name,
                          "repo" : repo_name,
-                         "commitHashes" : [commit_hash],
+                         "commitHashes" : commit_hash_data,
                          "modifiedFiles" : [],
                          "pullRequestId" : pr_id}
 
@@ -212,6 +226,58 @@ class TestServices(unittest.TestCase):
     json_data = json.loads(response.get_data(as_text=True))
 
     self.assertTrue(len(json_data) > 0)
+
+  def test_process_graphs_in_pull_request_3(self):
+    user_name = "smover"
+    repo_name = "AwesomeApp"
+    commit_hash = "04f68b69a6f9fa254661b481a757fa1c834b52e1"
+    pr_id = 1
+
+    repo_ref = RepoRef(repo_name, user_name)
+    commit_ref = CommitRef(repo_ref, commit_hash)
+    pr_ref = PullRequestRef(repo_ref, pr_id, commit_ref)
+
+    commit_hash_data = {"data" : [{"sha" : commit_hash}]}
+
+    pull_request_data = {"user" : user_name,
+                         "repo" : repo_name,
+                         "commitHashes" : commit_hash_data,
+                         "modifiedFiles" : [],
+                         "pullRequestId" : pr_id}
+
+    response = self.test_client.post('/process_graphs_in_pull_request',
+                                     data=json.dumps(pull_request_data),
+                                     content_type='application/json')
+    self.assertTrue(200 == response.status_code)
+
+    json_data = json.loads(response.get_data(as_text=True))
+
+    # At least some result
+    self.assertTrue(len(json_data) > 0)
+
+    # Compare with the expected output
+    expected_output = [
+      {
+        u'methodName': u'showDialog',
+        u'packageName': u'fixr.plv.colorado.edu.awesomeapp',
+        u'fileName': u'[MainActivity.java](https://github.com/smover/AwesomeApp/blob/04f68b69a6f9fa254661b481a757fa1c834b52e1/app/src/main/java/fixr/plv/colorado/edu/awesomeapp/MainActivity.java)',
+        u'className': u'fixr.plv.colorado.edu.awesomeapp.MainActivity',
+        u'error': u'missing method calls',
+        u'line': 47,
+        u'id': 1
+      },
+      {u'methodName': u'showDialog',
+       u'packageName': u'fixr.plv.colorado.edu.awesomeapp',
+       u'fileName': u'[MainActivity.java](https://github.com/smover/AwesomeApp/blob/04f68b69a6f9fa254661b481a757fa1c834b52e1/app/src/main/java/fixr/plv/colorado/edu/awesomeapp/MainActivity.java)',
+       u'className': u'fixr.plv.colorado.edu.awesomeapp.MainActivity',
+      u'error': u'missing method calls',
+       u'line': 47,
+       u'id': 2
+      }
+    ]
+
+    self.assertTrue(json.dumps(json_data, sort_keys=True) ==
+                    json.dumps(expected_output, sort_keys=True))
 
 
 
@@ -265,7 +331,7 @@ class TestServices(unittest.TestCase):
 
     expected_output = {
       "editText" : "",
-      "fileName" : anomaly.method_ref.source_class_name,
+      "fileName" : anomaly.git_path,
       "lineNumber" : anomaly.method_ref.start_line_number
     }
 
@@ -293,7 +359,7 @@ class TestServices(unittest.TestCase):
 
     expected_output = {
       "patternCode" : "",
-      "numberOfExamples" : 1
+      "numberOfExamples" : 1.0
     }
 
     response = self.test_client.post('/explain_anomaly',
