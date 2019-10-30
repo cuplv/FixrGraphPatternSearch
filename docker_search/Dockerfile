@@ -11,7 +11,7 @@ RUN apt-get update -qq -y \
     openssh-server gcc make sudo cmake apt-transport-https software-properties-common \
     binutils g++ glpk-utils libglpk-dev python-cffi libssl-dev time binutils ant \
     python python-pip python-sqlalchemy curl wget perl bzip2 unzip git \
-    && autoconf automake libtool
+    autoconf automake libtool \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -69,8 +69,6 @@ USER biggroum
 WORKDIR /home/biggroum
 
 RUN echo "Cloning repo..."
-
-RUN rm -rf biggroum
 
 # Clone our repositories
 RUN git clone https://github.com/cuplv/biggroum \
