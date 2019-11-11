@@ -24,6 +24,9 @@ from src_service_client import (
 
 class PrProcessor:
   def __init__(self, groum_index, search, src_client):
+    """ Here the groum index is the index where to find the
+    current repository's graphs (not the graphs used for the search).
+    """
     self.groum_index = groum_index
     self.search = search
     self.src_client = src_client
