@@ -4,6 +4,14 @@ Implement the search of a pattern from a GROUM
 
 # Spin up the service
 
+You need to run the source code service before (in `../fixr_source_code_service/` if you are in the `biggroum` repository, or alternatively clone `https://github.com/cuplv/fixr_source_code_service`) using `sbt run`.
+
+Also, the command line above assumes you are in the `biggroum` repository and you have compiled the graph isomorphism.
+
+
+```python fixrsearch/search_service.py -a localhost -p 8081 -g ./fixrsearch/test/data/graphs -c ./fixrsearch/test/data/clusters -i ../FixrGraphIso/build/src/fixrgraphiso/searchlattice -d -l 8080 -z localhost
+```
+
 ```
 python ./fixrsearch/search_service.py \
   -c ~/works/projects/muse/repos/test_clusters/clusters \

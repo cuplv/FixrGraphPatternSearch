@@ -164,7 +164,6 @@ def process_graphs_in_pull_request():
     try:
         db = get_new_db(current_app.config[DB_CONFIG])
         pr_processor = PrProcessor(current_app.config[GROUM_INDEX],
-                                   db,
                                    Search(current_app.config[CLUSTER_PATH],
                                           current_app.config[ISO_PATH],
                                           current_app.config[CLUSTER_INDEX],
@@ -185,6 +184,8 @@ def process_graphs_in_pull_request():
 
 
         for anomaly in anomalies:
+            db.new_anomaly(anomaly)
+
             hack_link = "https://github.com/%s/%s/blob/%s/%s" % (
                 anomaly.pull_request.repo_ref.user_name,
                 anomaly.pull_request.repo_ref.repo_name,
@@ -240,7 +241,7 @@ def _lookup_anomaly(current_app, content):
     anomaly_number = content["anomalyId"]
 
     db = get_new_db(current_app.config[DB_CONFIG])
-    pr_processor = PrProcessor(current_app.config[GROUM_INDEX], db,
+    pr_processor = PrProcessor(current_app.config[GROUM_INDEX],
                                Search(current_app.config[CLUSTER_PATH],
                                       current_app.config[ISO_PATH],
                                       current_app.config[CLUSTER_INDEX],
@@ -248,7 +249,15 @@ def _lookup_anomaly(current_app, content):
                                       current_app.config[TIMEOUT]),
                                current_app.config[SRC_CLIENT])
 
-    pr_ref = pr_processor.find_pr_commit(user_name, repo_name, pull_request_id)
+
+    # Find the pr in the database --- need to get the commit of the pull
+    # request to process it.
+    # The commit id of the pull request must have been set when extracting
+    # the graphs for the last commit.
+    pr_ref = PullRequestRef(RepoRef(repo_name, user_name),
+                            pull_request_id,
+                            None)
+    pr_ref = db.get_pr_ignore_commit(pr_ref)
 
     if pr_ref is None:
         error_msg = "Cannot find pull request %s for %s/%s" % (str(pull_request_id),
