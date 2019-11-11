@@ -23,9 +23,9 @@ import optparse
 import logging
 import os
 import sys
+import shutil
 import copy
-
-
+from zipfile import ZipFile
 
 from search import (
     Search,
@@ -46,6 +46,61 @@ DB_NAME = "service_db"
 DB_CONFIG="db_config"
 SRC_CLIENT ="src_client"
 TIMEOUT = 10
+TMP_DIR = os.path.dirname(os.path.abspath(__file__)) + "/tmp/"
+GRAPH_PATH = TMP_DIR + "graphs/"
+SRC_PATH = TMP_DIR + "src/"
+
+def process_muse_data():
+    """
+    Receives two files: a zip of groums, and a zip of src files
+    
+    Groum zip should have key "graph"
+    Src zip should have key "src"
+
+    Process input on local filesystem in preparation for calling the 
+    anomaly extraction
+
+    groums ought to be organized as "username/reponame/commitID,", but for
+    now we'll assume that the zipped files are already structured this way
+    """
+    if not os.path.exists(TMP_DIR):
+        # create temp directories
+        os.mkdir(TMP_DIR)
+        os.mkdir(GRAPH_PATH)
+        os.mkdir(SRC_PATH)
+    try:
+        # save zips to respective directories
+        graph_file = request.files["graph"]
+        src_file = request.files["src"]
+        graph_filename = os.path.join(GRAPH_PATH, graph_file.filename)
+        src_filename = os.path.join(SRC_PATH, src_file.filename)
+
+        graph_file.save(graph_filename)
+        src_file.save(src_filename)
+
+        # unzip and delete archives
+        with ZipFile(graph_filename) as z:
+            z.extractall(GRAPH_PATH)
+        with ZipFile(src_filename) as z:
+            z.extractall(SRC_PATH)
+        os.remove(graph_filename)
+        os.remove(src_filename)
+        
+        # TODO: call anomaly detection
+
+        # delete temp directories
+        if os.path.exists(TMP_DIR):
+            shutil.rmtree(TMP_DIR)
+
+        # return dummy data; TODO: change to return anomaly_json data
+        reply = {"status": 0}
+        return Response(json.dumps(reply),
+                        status=200,
+                        mimetype='application/json')
+    except Exception as e:
+        print(e)
+        return get_malformed_request()
+
 
 def get_new_db(config, create=False):
     db = Db(config)
@@ -432,6 +487,9 @@ def create_app(graph_path, cluster_path, iso_path,
     app.route('/process_graphs_in_pull_request', methods=['POST'])(process_graphs_in_pull_request)
     app.route('/inspect_anomaly', methods=['POST'])(inspect_anomaly)
     app.route('/explain_anomaly', methods=['POST'])(explain_anomaly)
+
+              
+    app.route('/process_muse_data', methods=['POST'])(process_muse_data)
 
 
     return app
