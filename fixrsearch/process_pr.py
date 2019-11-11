@@ -28,7 +28,9 @@ class PrProcessor:
     self.search = search
     self.src_client = src_client
 
-  def process_graphs_from_pr(self, pull_request_ref):
+  def process_graphs_from_commit(self,
+                                 commit_ref,
+                                 pull_request_ref = None):
     """ Process all the graphs produced in the pull request creating the
     anomalies.
 
@@ -37,9 +39,10 @@ class PrProcessor:
     Return the list of anomalies created for all the graphs.
     """
     anomalies = []
-    app_key = GroumIndex.get_app_key(pull_request_ref.repo_ref.user_name,
-                                     pull_request_ref.repo_ref.repo_name,
-                                     pull_request_ref.commit_ref.commit_hash)
+    app_key = GroumIndex.get_app_key(commit_ref.repo_ref.user_name,
+                                     commit_ref.repo_ref.repo_name,
+                                     commit_ref.commit_hash)
+
     groum_records = self.groum_index.get_groums(app_key)
     groum_count = 0
     tot_groums = len(groum_records)
@@ -57,7 +60,7 @@ class PrProcessor:
         logging.debug(error_msg)
         continue
 
-      method_ref = MethodRef(pull_request_ref.commit_ref,
+      method_ref = MethodRef(commit_ref,
                              groum_record["class_name"],
                              groum_record["package_name"],
                              groum_record["method_name"],
@@ -89,10 +92,11 @@ class PrProcessor:
           assert bin_res["type"] == "popular"
 
           anomaly = PrProcessor._process_search_res(self.src_client,
-                                                    pull_request_ref,
                                                     method_ref,
                                                     cluster_ref,
-                                                    bin_res)
+                                                    bin_res,
+                                                    pull_request_ref)
+
           # insert the frequency to sort the anomalies
           anomalies.append((bin_res["frequency"], anomaly))
 
@@ -111,13 +115,23 @@ class PrProcessor:
 
     return anomaly_out
 
+  def process_graphs_from_pr(self, pull_request_ref):
+    """ Process all the graphs produced in the pull request creating the
+    anomalies.
+
+    Side effect on the internal database
+
+    Return the list of anomalies created for all the graphs.
+    """
+    return self.process_graphs_from_commit(pull_request_ref.commit_ref,
+                                           pull_request_ref)
 
   @staticmethod
   def _process_search_res(src_client,
-                          pull_request_ref,
                           method_ref,
                           cluster_ref,
-                          bin_res):
+                          bin_res,
+                          pull_request_ref = None):
     """ Process a single search for a single anomaly.
     """
 
@@ -133,7 +147,7 @@ class PrProcessor:
     # 2. Get the patch text
     diffs_json = bin_res["diffs"]
     (patch_text, git_path) = PrProcessor._get_patch_text(src_client,
-                                                         pull_request_ref.commit_ref,
+                                                         method_ref.commit_ref,
                                                          method_ref,
                                                          diffs_json)
 
