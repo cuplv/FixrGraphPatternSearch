@@ -6,7 +6,6 @@ import logging
 import StringIO
 
 from fixrsearch.groum_index import GroumIndex
-import fixrsearch.db
 from fixrsearch.anomaly import Anomaly
 
 from fixrsearch.utils import (
@@ -24,26 +23,10 @@ from src_service_client import (
 )
 
 class PrProcessor:
-  def __init__(self, groum_index, db, search, src_client):
+  def __init__(self, groum_index, search, src_client):
     self.groum_index = groum_index
-    self.db = db
     self.search = search
     self.src_client = src_client
-
-  def find_pr_commit(self, repo_user, repo_name, pull_request_id):
-    """
-    Find the pr in the database --- need to get the commit of the pull
-    request to process it.
-
-    The commit id of the pull request must have been set when extracting
-    the graphs for the last commit.
-    """
-    pr_ref = PullRequestRef(RepoRef(repo_name, repo_user),
-                            pull_request_id,
-                            None)
-    pr_ref = self.db.get_pr_ignore_commit(pr_ref)
-    return pr_ref
-
 
   def process_graphs_from_pr(self, pull_request_ref):
     """ Process all the graphs produced in the pull request creating the
@@ -122,7 +105,6 @@ class PrProcessor:
     for (score, anomaly) in sorted_anomalies:
         anomaly_id += 1
         anomaly.numeric_id = anomaly_id
-        self.db.new_anomaly(anomaly)
         anomaly_out.append(anomaly)
 
     logging.info("Found %s anomalies." % (len(anomaly_out)))
