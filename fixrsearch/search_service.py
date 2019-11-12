@@ -25,7 +25,8 @@ import os
 import sys
 import shutil
 import copy
-from zipfile import ZipFile
+import fixrgraph.wireprotocol.search_service_wire_protocol as wp
+import tempfile
 
 from search import (
     Search,
@@ -46,9 +47,6 @@ DB_NAME = "service_db"
 DB_CONFIG="db_config"
 SRC_CLIENT ="src_client"
 TIMEOUT = 10
-TMP_DIR = os.path.dirname(os.path.abspath(__file__)) + "/tmp/"
-GRAPH_PATH = TMP_DIR + "graphs/"
-SRC_PATH = TMP_DIR + "src/"
 
 def process_muse_data():
     """
@@ -63,34 +61,34 @@ def process_muse_data():
     groums ought to be organized as "username/reponame/commitID,", but for
     now we'll assume that the zipped files are already structured this way
     """
-    if not os.path.exists(TMP_DIR):
-        # create temp directories
-        os.mkdir(TMP_DIR)
-        os.mkdir(GRAPH_PATH)
-        os.mkdir(SRC_PATH)
+    
+    # create temp directories
+    tmp_dir = tempfile.mkdtemp()
+    graph_path = tmp_dir + "/graphs/"
+    src_path = tmp_dir + "/src/"
+    os.mkdir(graph_path)
+    os.mkdir(src_path)
+    
     try:
         # save zips to respective directories
         graph_file = request.files["graph"]
         src_file = request.files["src"]
-        graph_filename = os.path.join(GRAPH_PATH, graph_file.filename)
-        src_filename = os.path.join(SRC_PATH, src_file.filename)
+        graph_filename = os.path.join(graph_path, graph_file.filename)
+        src_filename = os.path.join(src_path, src_file.filename)
 
         graph_file.save(graph_filename)
         src_file.save(src_filename)
 
         # unzip and delete archives
-        with ZipFile(graph_filename) as z:
-            z.extractall(GRAPH_PATH)
-        with ZipFile(src_filename) as z:
-            z.extractall(SRC_PATH)
+        wp.decompress(graph_filename, graph_path)
+        wp.decompress(src_filename, src_path)
         os.remove(graph_filename)
         os.remove(src_filename)
         
         # TODO: call anomaly detection
 
         # delete temp directories
-        if os.path.exists(TMP_DIR):
-            shutil.rmtree(TMP_DIR)
+        shutil.rmtree(tmp_dir)
 
         # return dummy data; TODO: change to return anomaly_json data
         reply = {"status": 0}
