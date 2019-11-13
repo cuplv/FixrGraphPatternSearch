@@ -55,11 +55,7 @@ def process_muse_data():
     Groum zip should have key "graph"
     Src zip should have key "src"
 
-    Process input on local filesystem in preparation for calling the 
-    anomaly extraction
-
-    groums ought to be organized as "username/reponame/commitID,", but for
-    now we'll assume that the zipped files are already structured this way
+    Process input on local filesystem and call anomaly extraction
     """
     
     # create temp directories
@@ -68,7 +64,7 @@ def process_muse_data():
     src_path = tmp_dir + "/src/"
     os.mkdir(graph_path)
     os.mkdir(src_path)
-    
+
     try:
         # save zips to respective directories
         graph_file = request.files["graph"]
@@ -82,17 +78,64 @@ def process_muse_data():
         # unzip and delete archives
         wp.decompress(graph_filename, graph_path)
         wp.decompress(src_filename, src_path)
-        os.remove(graph_filename)
-        os.remove(src_filename)
-        
-        # TODO: call anomaly detection
 
+        groum_index = GroumIndex(graph_path)
+
+        directory_data = []
+        for fst, snd, thd in os.walk(graph_path):
+            if snd != []:
+                directory_data.append(snd[0])
+            else:
+                break
+
+        repo_name = directory_data[1]
+        user_name = directory_data[0]
+        commit_hash = directory_data[2]
+        
+        # Create a pull request proessor
+        pr_processor = PrProcessor(current_app.config[GROUM_INDEX],
+                                   Search(current_app.config[CLUSTER_PATH],
+                                          current_app.config[ISO_PATH],
+                                          current_app.config[CLUSTER_INDEX],
+                                          current_app.config[GROUM_INDEX],
+                                          current_app.config[TIMEOUT]),
+                                   current_app.config[SRC_CLIENT])
+        # Process the graphs from the app
+        commit_ref = CommitRef(RepoRef(repo_name, user_name), commit_hash)
+        anomalies = pr_processor.process_graphs_from_commit(commit_ref,
+                                                            None)
+
+        # Process the anomaly in json
+        # This code must be changed to return also:
+        #   - the explanation of the anomaly, the pattern (see explain_anomaly)
+        #   - the patch (see inspect_anomaly)
+        json_data = []
+        for anomaly in anomalies:
+            hack_link = "https://github.com/%s/%s/blob/%s/%s" % (
+                anomaly.commit_ref.repo_ref.user_name,
+                anomaly.commit_ref.repo_ref.repo_name,
+                anomaly.commit_ref.commit_hash,
+                anomaly.git_path)
+            
+            hackfn = "[%s](%s)" % (anomaly.method_ref.source_class_name,
+                                   hack_link)
+            
+            json_anomaly = {"id" : anomaly.numeric_id,
+                            "error" : anomaly.description,
+                            "packageName" : anomaly.method_ref.package_name,
+                            "className" : anomaly.method_ref.class_name,
+                            "methodName" : anomaly.method_ref.method_name,
+                            "fileName" : hackfn,
+                            "line" : anomaly.method_ref.start_line_number}
+            
+            logging.info("Found anomaly %s: " % str(json_anomaly))
+            json_data.append(json_anomaly)
+            
         # delete temp directories
         shutil.rmtree(tmp_dir)
 
         # return dummy data; TODO: change to return anomaly_json data
-        reply = {"status": 0}
-        return Response(json.dumps(reply),
+        return Response(json.dumps(json_data),
                         status=200,
                         mimetype='application/json')
     except Exception as e:
