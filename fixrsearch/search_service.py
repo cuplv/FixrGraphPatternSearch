@@ -107,14 +107,12 @@ def process_muse_data():
 
         # Process the anomaly in json
         # This code must be changed to return also:
-        #   - the explanation of the anomaly, the pattern (see explain_anomaly)
-        #   - the patch (see inspect_anomaly)
         json_data = []
         for anomaly in anomalies:
             hack_link = "https://github.com/%s/%s/blob/%s/%s" % (
-                anomaly.commit_ref.repo_ref.user_name,
-                anomaly.commit_ref.repo_ref.repo_name,
-                anomaly.commit_ref.commit_hash,
+                user_name,
+                repo_name,
+                commit_hash,
                 anomaly.git_path)
             
             hackfn = "[%s](%s)" % (anomaly.method_ref.source_class_name,
@@ -126,7 +124,9 @@ def process_muse_data():
                             "className" : anomaly.method_ref.class_name,
                             "methodName" : anomaly.method_ref.method_name,
                             "fileName" : hackfn,
-                            "line" : anomaly.method_ref.start_line_number}
+                            "line" : anomaly.method_ref.start_line_number,
+                            "pattern" : anomaly.pattern_text,
+                            "patch" : anomaly.patch_text}
             
             logging.info("Found anomaly %s: " % str(json_anomaly))
             json_data.append(json_anomaly)
