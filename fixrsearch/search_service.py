@@ -93,7 +93,7 @@ def process_muse_data():
         commit_hash = directory_data[2]
         
         # Create a pull request proessor
-        pr_processor = PrProcessor(current_app.config[GROUM_INDEX],
+        pr_processor = PrProcessor(groum_index,
                                    Search(current_app.config[CLUSTER_PATH],
                                           current_app.config[ISO_PATH],
                                           current_app.config[CLUSTER_INDEX],
@@ -134,7 +134,7 @@ def process_muse_data():
         # delete temp directories
         shutil.rmtree(tmp_dir)
 
-        # return dummy data; TODO: change to return anomaly_json data
+        # return anomaly data
         return Response(json.dumps(json_data),
                         status=200,
                         mimetype='application/json')
