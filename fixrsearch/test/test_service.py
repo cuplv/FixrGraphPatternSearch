@@ -45,6 +45,7 @@ class TestServices(unittest.TestCase):
     self.data_path = None
     self.graph_path = None
     self.cluster_path = None
+    self.zipped_data_path = None
 
   def setUp(self):
     # Builds the path to find the test data
@@ -53,9 +54,12 @@ class TestServices(unittest.TestCase):
     assert os.path.isdir(self.data_path)
     self.graph_path = os.path.join(self.data_path, "graphs")
     self.cluster_path = os.path.join(self.data_path, "clusters")
+    self.zipped_data_path = os.path.join(self.data_path,
+                                         "test_process_muse_data")
 
     assert os.path.isdir(self.graph_path)
     assert os.path.isdir(self.cluster_path)
+    assert os.path.isdir(self.zipped_data_path)
 
     # Build the path to the graph iso repository
     # Assume to have it in "../../../FixrGraphIso/"
@@ -278,6 +282,58 @@ class TestServices(unittest.TestCase):
 
     self.assertTrue(json.dumps(json_data, sort_keys=True) ==
                     json.dumps(expected_output, sort_keys=True))
+
+
+  def test_process_muse_data(self):
+    graphs_path = os.path.join(self.zipped_data_path,
+                               "graphs.zip")
+    sources_path = os.path.join(self.zipped_data_path,
+                                "sources.zip")
+
+    with open(graphs_path,'rb') as graphs_stream:
+        with open(sources_path,'rb') as sources_stream:
+          response = self.test_client.post('/process_muse_data',
+                                           data = {
+                                             "graph" : graphs_stream,
+                                             "src" : sources_stream,
+                                           },
+                                           content_type='multipart/form-data') # 'application/json')
+    self.assertTrue(200 == response.status_code)
+
+    json_data = json.loads(response.get_data(as_text=True))
+
+    # At least some result
+    self.assertTrue(len(json_data) > 0)
+
+    # Compare with the expected output
+    expected_output = [
+      {
+        "className": "fixr.plv.colorado.edu.awesomeapp.MainActivity",
+        "methodName": "showDialog",
+        "error": "missing method calls",
+        "pattern": "",
+        "packageName": "fixr.plv.colorado.edu.awesomeapp",
+        "patch": "public void showDialog(android.content.Context context) {\n    android.app.AlertDialog.Builder dialogBuilder = new android.app.AlertDialog.Builder(context);\n    java.lang.String title = \"Empty Field(s)\";\n    java.lang.String message = \"Please ensure all fields are contain data\";\n    dialogBuilder.setMessage(message);\n    dialogBuilder.setNegativeButton(\"OK\", new android.content.DialogInterface.OnClickListener() {\n        @java.lang.Override\n        public void onClick(android.content.DialogInterface dialog, int which) {\n        }\n    });\n    dialogBuilder.setPositiveButton(\"Cancel\", new android.content.DialogInterface.OnClickListener() {\n        public void onClick(android.content.DialogInterface dialog, int which) {\n            // continue with delete\n        }\n    });\n    dialogBuilder.create();\n    dialogBuilder.show();\n    // [0] The change should end here (before calling the method exit)\n}",
+        "line": 47,
+        "id": 1,
+        "fileName": "[MainActivity.java](https://github.com/smover/AwesomeApp/blob/04f68b69a6f9fa254661b481a757fa1c834b52e1/app/src/main/java/fixr/plv/colorado/edu/awesomeapp/MainActivity.java)"
+      },
+      {
+        "className": "fixr.plv.colorado.edu.awesomeapp.MainActivity",
+        "methodName": "showDialog",
+        "error": "missing method calls",
+        "pattern": "",
+        "packageName": "fixr.plv.colorado.edu.awesomeapp",
+        "patch": "public void showDialog(android.content.Context context) {\n    android.app.AlertDialog.Builder dialogBuilder = new android.app.AlertDialog.Builder(context);\n    java.lang.String title = \"Empty Field(s)\";\n    java.lang.String message = \"Please ensure all fields are contain data\";\n    dialogBuilder.setMessage(message);\n    dialogBuilder.setNegativeButton(\"OK\", new android.content.DialogInterface.OnClickListener() {\n        @java.lang.Override\n        public void onClick(android.content.DialogInterface dialog, int which) {\n        }\n    });\n    dialogBuilder.setPositiveButton(\"Cancel\", new android.content.DialogInterface.OnClickListener() {\n        public void onClick(android.content.DialogInterface dialog, int which) {\n            // continue with delete\n        }\n    });\n    dialogBuilder.create();\n    dialogBuilder.show();\n    // [0] The change should end here (before calling the method exit)\n}",
+        "line": 47,
+        "id": 2,
+        "fileName": "[MainActivity.java](https://github.com/smover/AwesomeApp/blob/04f68b69a6f9fa254661b481a757fa1c834b52e1/app/src/main/java/fixr/plv/colorado/edu/awesomeapp/MainActivity.java)"
+      }
+    ]
+
+    self.assertTrue(json.dumps(json_data, sort_keys=True) ==
+                    json.dumps(expected_output, sort_keys=True))
+
 
 
 
