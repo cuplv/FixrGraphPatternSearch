@@ -23,9 +23,10 @@ import optparse
 import logging
 import os
 import sys
+import shutil
 import copy
-
-
+import fixrgraph.wireprotocol.search_service_wire_protocol as wp
+import tempfile
 
 from search import (
     Search,
@@ -46,6 +47,101 @@ DB_NAME = "service_db"
 DB_CONFIG="db_config"
 SRC_CLIENT ="src_client"
 TIMEOUT = 10
+
+def process_muse_data():
+    """
+    Receives two files: a zip of groums, and a zip of src files
+
+    Groum zip should have key "graph"
+    Src zip should have key "src"
+
+    Process input on local filesystem and call anomaly extraction
+    """
+
+    # create temp directories
+    tmp_dir = tempfile.mkdtemp()
+    graph_path = os.path.join(tmp_dir, "graphs")
+    src_path = os.path.join(tmp_dir, "src")
+    os.mkdir(graph_path)
+    os.mkdir(src_path)
+
+    try:
+        # save zips to respective directories
+        graph_file = request.files["graph"]
+        src_file = request.files["src"]
+        graph_filename = os.path.join(graph_path, graph_file.filename)
+        src_filename = os.path.join(src_path, src_file.filename)
+
+        graph_file.save(graph_filename)
+        src_file.save(src_filename)
+
+        # unzip and delete archives
+        wp.decompress(graph_filename, graph_path)
+        wp.decompress(src_filename, src_path)
+
+        groum_index = GroumIndex(graph_path)
+
+        directory_data = []
+        for fst, snd, thd in os.walk(graph_path):
+            if snd != []:
+                directory_data.append(snd[0])
+            else:
+                break
+
+        repo_name = directory_data[1]
+        user_name = directory_data[0]
+        commit_hash = directory_data[2]
+
+        # Create a pull request proessor
+        pr_processor = PrProcessor(groum_index,
+                                   Search(current_app.config[CLUSTER_PATH],
+                                          current_app.config[ISO_PATH],
+                                          current_app.config[CLUSTER_INDEX],
+                                          current_app.config[GROUM_INDEX],
+                                          current_app.config[TIMEOUT]),
+                                   current_app.config[SRC_CLIENT])
+        # Process the graphs from the app
+        commit_ref = CommitRef(RepoRef(repo_name, user_name), commit_hash)
+        anomalies = pr_processor.process_graphs_from_commit(commit_ref,
+                                                            None)
+
+        # Process the anomaly in json
+        # This code must be changed to return also:
+        json_data = []
+        for anomaly in anomalies:
+            hack_link = "https://github.com/%s/%s/blob/%s/%s" % (
+                user_name,
+                repo_name,
+                commit_hash,
+                anomaly.git_path)
+
+            hackfn = "[%s](%s)" % (anomaly.method_ref.source_class_name,
+                                   hack_link)
+
+            json_anomaly = {"id" : anomaly.numeric_id,
+                            "error" : anomaly.description,
+                            "packageName" : anomaly.method_ref.package_name,
+                            "className" : anomaly.method_ref.class_name,
+                            "methodName" : anomaly.method_ref.method_name,
+                            "fileName" : hackfn,
+                            "line" : anomaly.method_ref.start_line_number,
+                            "pattern" : anomaly.pattern_text,
+                            "patch" : anomaly.patch_text}
+
+            logging.info("Found anomaly %s: " % str(json_anomaly))
+            json_data.append(json_anomaly)
+
+        # return anomaly data
+        return Response(json.dumps(json_data),
+                        status=200,
+                        mimetype='application/json')
+    except Exception as e:
+        print(e)
+        return get_malformed_request()
+    finally:
+        # delete temp directories
+        shutil.rmtree(tmp_dir)
+
 
 def get_new_db(config, create=False):
     db = Db(config)
@@ -432,6 +528,7 @@ def create_app(graph_path, cluster_path, iso_path,
     app.route('/process_graphs_in_pull_request', methods=['POST'])(process_graphs_in_pull_request)
     app.route('/inspect_anomaly', methods=['POST'])(inspect_anomaly)
     app.route('/explain_anomaly', methods=['POST'])(explain_anomaly)
+    app.route('/process_muse_data', methods=['POST'])(process_muse_data)
 
 
     return app
