@@ -51,13 +51,13 @@ TIMEOUT = 10
 def process_muse_data():
     """
     Receives two files: a zip of groums, and a zip of src files
-    
+
     Groum zip should have key "graph"
     Src zip should have key "src"
 
     Process input on local filesystem and call anomaly extraction
     """
-    
+
     # create temp directories
     tmp_dir = tempfile.mkdtemp()
     graph_path = tmp_dir + "/graphs/"
@@ -91,7 +91,7 @@ def process_muse_data():
         repo_name = directory_data[1]
         user_name = directory_data[0]
         commit_hash = directory_data[2]
-        
+
         # Create a pull request proessor
         pr_processor = PrProcessor(groum_index,
                                    Search(current_app.config[CLUSTER_PATH],
@@ -114,10 +114,10 @@ def process_muse_data():
                 repo_name,
                 commit_hash,
                 anomaly.git_path)
-            
+
             hackfn = "[%s](%s)" % (anomaly.method_ref.source_class_name,
                                    hack_link)
-            
+
             json_anomaly = {"id" : anomaly.numeric_id,
                             "error" : anomaly.description,
                             "packageName" : anomaly.method_ref.package_name,
@@ -127,10 +127,10 @@ def process_muse_data():
                             "line" : anomaly.method_ref.start_line_number,
                             "pattern" : anomaly.pattern_text,
                             "patch" : anomaly.patch_text}
-            
+
             logging.info("Found anomaly %s: " % str(json_anomaly))
             json_data.append(json_anomaly)
-            
+
         # delete temp directories
         shutil.rmtree(tmp_dir)
 
@@ -529,7 +529,7 @@ def create_app(graph_path, cluster_path, iso_path,
     app.route('/inspect_anomaly', methods=['POST'])(inspect_anomaly)
     app.route('/explain_anomaly', methods=['POST'])(explain_anomaly)
 
-              
+
     app.route('/process_muse_data', methods=['POST'])(process_muse_data)
 
 
