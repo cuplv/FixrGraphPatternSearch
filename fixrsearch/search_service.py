@@ -60,8 +60,8 @@ def process_muse_data():
 
     # create temp directories
     tmp_dir = tempfile.mkdtemp()
-    graph_path = tmp_dir + "/graphs/"
-    src_path = tmp_dir + "/src/"
+    graph_path = os.path.join(tmp_dir, "graphs")
+    src_path = os.path.join(tmp_dir, "src")
     os.mkdir(graph_path)
     os.mkdir(src_path)
 
@@ -131,9 +131,6 @@ def process_muse_data():
             logging.info("Found anomaly %s: " % str(json_anomaly))
             json_data.append(json_anomaly)
 
-        # delete temp directories
-        shutil.rmtree(tmp_dir)
-
         # return anomaly data
         return Response(json.dumps(json_data),
                         status=200,
@@ -141,6 +138,9 @@ def process_muse_data():
     except Exception as e:
         print(e)
         return get_malformed_request()
+    finally:
+        # delete temp directories
+        shutil.rmtree(tmp_dir)
 
 
 def get_new_db(config, create=False):
@@ -528,8 +528,6 @@ def create_app(graph_path, cluster_path, iso_path,
     app.route('/process_graphs_in_pull_request', methods=['POST'])(process_graphs_in_pull_request)
     app.route('/inspect_anomaly', methods=['POST'])(inspect_anomaly)
     app.route('/explain_anomaly', methods=['POST'])(explain_anomaly)
-
-
     app.route('/process_muse_data', methods=['POST'])(process_muse_data)
 
 
