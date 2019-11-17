@@ -79,6 +79,8 @@ def process_muse_data():
         wp.decompress(graph_filename, graph_path)
         wp.decompress(src_filename, src_path)
 
+        logging.info("Graph path is %s" % graph_path)
+        graph_path = os.path.join(graph_path, "graphs")
         groum_index = GroumIndex(graph_path)
 
         directory_data = []
@@ -141,6 +143,7 @@ def process_muse_data():
     finally:
         # delete temp directories
         shutil.rmtree(tmp_dir)
+        pass
 
 
 def get_new_db(config, create=False):
