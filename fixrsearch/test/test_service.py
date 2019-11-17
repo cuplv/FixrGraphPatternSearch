@@ -11,11 +11,13 @@ import json
 import optparse
 import httplib
 
+try:
+  import unittest2 as unittest
+except ImportError:
+  import unittest
 
-from fixrsearch.search_service import create_app, get_new_db, DB_CONFIG
 
-from fixrsearch.anomaly import Anomaly 
-
+import fixrsearch
 from fixrsearch.utils import (
   RepoRef,
   PullRequestRef,
@@ -24,14 +26,11 @@ from fixrsearch.utils import (
   ClusterRef,
   PatternRef
 )
-
-try:
-  import unittest2 as unittest
-except ImportError:
-  import unittest
-
 from fixrsearch.index import IndexNode, ClusterIndex
-import fixrsearch
+from fixrsearch.search_service import create_app, get_new_db, DB_CONFIG
+from fixrsearch.anomaly import Anomaly 
+
+import fixrsearch.test
 
 class TestServices(unittest.TestCase):
   DB_PATH = "/tmp/service_db.db"
@@ -307,22 +306,21 @@ class TestServices(unittest.TestCase):
 
     # Compare with the expected output
     expected_output = [
-      {
-        "className": "fixr.plv.colorado.edu.awesomeapp.MainActivity",
-        "methodName": "showDialog",
-        "error": "missing method calls",
-        "pattern": "",
-        "packageName": "fixr.plv.colorado.edu.awesomeapp",
-        "patch": "public void showDialog(android.content.Context context) {\n    android.app.AlertDialog.Builder dialogBuilder = new android.app.AlertDialog.Builder(context);\n    java.lang.String title = \"Empty Field(s)\";\n    java.lang.String message = \"Please ensure all fields are contain data\";\n    dialogBuilder.setMessage(message);\n    dialogBuilder.setNegativeButton(\"OK\", new android.content.DialogInterface.OnClickListener() {\n        @java.lang.Override\n        public void onClick(android.content.DialogInterface dialog, int which) {\n        }\n    });\n    dialogBuilder.setPositiveButton(\"Cancel\", new android.content.DialogInterface.OnClickListener() {\n        public void onClick(android.content.DialogInterface dialog, int which) {\n            // continue with delete\n        }\n    });\n    dialogBuilder.create();\n    dialogBuilder.show();\n    // [0] The change should end here (before calling the method exit)\n}",
-        "line": 47,
-        "id": 1,
-        "fileName": "[MainActivity.java](https://github.com/smover/AwesomeApp/blob/04f68b69a6f9fa254661b481a757fa1c834b52e1/app/src/main/java/fixr/plv/colorado/edu/awesomeapp/MainActivity.java)"
+      {"className": "fixr.plv.colorado.edu.awesomeapp.MainActivity",
+       "methodName": "showDialog",
+       "error": "missing method calls", "fileName": "[MainActivity.java](https://github.com/smover/AwesomeApp/blob/04f68b69a6f9fa254661b481a757fa1c834b52e1/app/src/main/java/fixr/plv/colorado/edu/awesomeapp/MainActivity.java)",
+       "pattern": "android.app.AlertDialog$Builder.<init>($r11, $r12);\n$r13 = android.app.AlertDialog$Builder.setTitle(builder, \"\\u027e\\ufffd\\ufffd\");\n",
+       "packageName": "fixr.plv.colorado.edu.awesomeapp",
+       "patch": "public void showDialog(android.content.Context context) {\n    android.app.AlertDialog.Builder dialogBuilder = new android.app.AlertDialog.Builder(context);\n    java.lang.String title = \"Empty Field(s)\";\n    java.lang.String message = \"Please ensure all fields are contain data\";\n    dialogBuilder.setMessage(message);\n    dialogBuilder.setNegativeButton(\"OK\", new android.content.DialogInterface.OnClickListener() {\n        @java.lang.Override\n        public void onClick(android.content.DialogInterface dialog, int which) {\n        }\n    });\n    dialogBuilder.setPositiveButton(\"Cancel\", new android.content.DialogInterface.OnClickListener() {\n        public void onClick(android.content.DialogInterface dialog, int which) {\n            // continue with delete\n        }\n    });\n    dialogBuilder.create();\n    dialogBuilder.show();\n    // [0] The change should end here (before calling the method exit)\n}",
+       "line": 47,
+       "id": 1,
+      "fileName": "[MainActivity.java](https://github.com/smover/AwesomeApp/blob/04f68b69a6f9fa254661b481a757fa1c834b52e1/app/src/main/java/fixr/plv/colorado/edu/awesomeapp/MainActivity.java)"
       },
       {
         "className": "fixr.plv.colorado.edu.awesomeapp.MainActivity",
         "methodName": "showDialog",
         "error": "missing method calls",
-        "pattern": "",
+        "pattern": "android.app.AlertDialog$Builder.<init>($r0, this);\n$r1 = android.app.AlertDialog$Builder.setTitle($r0, \"Exit\");\n",
         "packageName": "fixr.plv.colorado.edu.awesomeapp",
         "patch": "public void showDialog(android.content.Context context) {\n    android.app.AlertDialog.Builder dialogBuilder = new android.app.AlertDialog.Builder(context);\n    java.lang.String title = \"Empty Field(s)\";\n    java.lang.String message = \"Please ensure all fields are contain data\";\n    dialogBuilder.setMessage(message);\n    dialogBuilder.setNegativeButton(\"OK\", new android.content.DialogInterface.OnClickListener() {\n        @java.lang.Override\n        public void onClick(android.content.DialogInterface dialog, int which) {\n        }\n    });\n    dialogBuilder.setPositiveButton(\"Cancel\", new android.content.DialogInterface.OnClickListener() {\n        public void onClick(android.content.DialogInterface dialog, int which) {\n            // continue with delete\n        }\n    });\n    dialogBuilder.create();\n    dialogBuilder.show();\n    // [0] The change should end here (before calling the method exit)\n}",
         "line": 47,
