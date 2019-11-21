@@ -6,6 +6,7 @@ Client used to access the src service.
 import json
 import logging
 import requests
+import base64
 
 
 class SrcMethodReq:
@@ -21,16 +22,29 @@ class SrcMethodReq:
     self._method_line = method_line
     self._method_name = method_name
 
-  def get_json_repr(self):
-    my_map = {
-      "githubUrl" : self._github_url,
-      "commitId" :     self._commit_id,
-      "declaringFile" : self._declaring_file,
-      "methodLine" : self._method_line,
-      "methodName" : self._method_name,
-    }
-
+  def get_json_repr(self, src_on_disk = None):
+    if src_on_disk is None:
+      my_map = {
+        "githubUrl" : self._github_url,
+        "commitId" :     self._commit_id,
+        "declaringFile" : self._declaring_file,
+        "methodLine" : self._method_line,
+        "methodName" : self._method_name,
+      }
+    else:
+      my_map = {
+        "fileData" : self._get_src_encoding(src_on_disk),
+        "declaringFile" : self._declaring_file,
+        "methodLine" : self._method_line,
+        "methodName" : self._method_name,
+      }
     return my_map
+
+  def _get_src_encoding(self, src_on_disk):
+    file_to_encode = src_on_disk + "/sources/" + self._declaring_file
+    with open(file_to_encode, "rb") as f:
+      encoded = base64.b64encode(f.read().encode("utf-8"))
+    return encoded
 
 
 class DiffEntry():
@@ -108,18 +122,24 @@ class SrcClientService(SrcClient):
     self._address = addresss
     self._port = port
 
-  def _get_service_address(self):
-    address = "http://%s:%s/patch" % (self._address, self._port)
+  def _get_service_address(self, is_local):
+    if patch_from_file:
+      address = "http://%s:%s/patch_from_file" % (self._address, self._port)
+    else:
+      address = "http://%s:%s/patch" % (self._address, self._port)
     return address
 
-  def getPatch(self, method_req, diffs_requests):
+  def getPatch(self, method_req, diffs_requests, src_on_disk = None):
+    if src_on_disk is not None:
+      is_local = True
+    else:
+      is_local = False
     patch_res = None
     diffs_requests_converted = [diffs_req.get_json_repr() for diffs_req in diffs_requests]
-    request = {"methodRef" : method_req.get_json_repr(),
+    request = {"methodRef" : method_req.get_json_repr(src_on_disk),
                "diffsToApply" : [diffs_requests_converted[0]]}
-
     try:
-      service_address = self._get_service_address()
+      service_address = self._get_service_address(is_local)
       request_result = requests.post(service_address, json = request)
 
       if (request_result.status_code == 200):
