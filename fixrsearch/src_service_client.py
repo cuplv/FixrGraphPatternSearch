@@ -123,7 +123,7 @@ class SrcClientService(SrcClient):
     self._port = port
 
   def _get_service_address(self, is_local):
-    if patch_from_file:
+    if is_local:
       address = "http://%s:%s/patch_from_file" % (self._address, self._port)
     else:
       address = "http://%s:%s/patch" % (self._address, self._port)

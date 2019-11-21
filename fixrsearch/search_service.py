@@ -108,7 +108,6 @@ def process_muse_data():
                                                             src_on_disk = src_path)
 
         # Process the anomaly in json
-        # This code must be changed to return also:
         json_data = []
         for anomaly in anomalies:
             hack_link = "https://github.com/%s/%s/blob/%s/%s" % (
