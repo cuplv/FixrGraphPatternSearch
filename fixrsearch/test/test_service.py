@@ -328,7 +328,7 @@ class TestServices(unittest.TestCase):
         "fileName": "[MainActivity.java](https://github.com/cuplv/AwesomeApp/blob/04f68b69a6f9fa254661b481a757fa1c834b52e1/app/src/main/java/fixr/plv/colorado/edu/awesomeapp/MainActivity.java)"
       }
     ]
-
+    
     self.assertTrue(json.dumps(json_data, sort_keys=True) ==
                     json.dumps(expected_output, sort_keys=True))
 

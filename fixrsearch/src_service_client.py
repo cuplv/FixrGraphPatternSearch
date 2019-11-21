@@ -38,6 +38,7 @@ class SrcMethodReq:
         "methodLine" : self._method_line,
         "methodName" : self._method_name,
       }
+
     return my_map
 
   def _get_src_encoding(self, src_on_disk):
@@ -124,7 +125,7 @@ class SrcClientService(SrcClient):
 
   def _get_service_address(self, is_local):
     if is_local:
-      address = "http://%s:%s/patch_from_file" % (self._address, self._port)
+      address = "http://%s:%s/patch_with_file" % (self._address, self._port)
     else:
       address = "http://%s:%s/patch" % (self._address, self._port)
     return address
@@ -141,7 +142,6 @@ class SrcClientService(SrcClient):
     try:
       service_address = self._get_service_address(is_local)
       request_result = requests.post(service_address, json = request)
-
       if (request_result.status_code == 200):
         result_data = request_result.json()
         res_value = result_data["res"]

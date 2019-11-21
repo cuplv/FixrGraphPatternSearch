@@ -57,3 +57,45 @@ java.lang.Object value) {
     self.assertFalse(res.is_error())
     self.assertTrue(res.get_patch() == expected_patch)
     self.assertTrue(res.get_git_path() == expected_path)
+
+  def test_patch_from_file(self):
+    src_client = SrcClientService("localhost", 8080)
+    src_method = SrcMethodReq("https://github.com/cuplv/AwesomeApp",
+                              "04f68b69a6f9fa254661b481a757fa1c834b52e1",
+                              "MainActivity.java",
+                              47,
+                              "showDialog")
+
+    diffs_to_apply = [SourceDiff(
+      "+",
+      DiffEntry(48, "'android.app.AlertDialog$Builder.<init>($r0, this);\n'", ""),
+      [DiffEntry(0, "exit", "  $r2 = android.app.AlertDialog$Builder.setTitle($r1, 2131427348);\n")])]
+
+    expected_patch = """public void showDialog(android.content.Context context) {
+    android.app.AlertDialog.Builder dialogBuilder = new android.app.AlertDialog.Builder(context);
+    java.lang.String title = "Empty Field(s)";
+    java.lang.String message = "Please ensure all fields are contain data";
+    dialogBuilder.setMessage(message);
+    dialogBuilder.setNegativeButton("OK", new android.content.DialogInterface.OnClickListener() {
+        @java.lang.Override
+        public void onClick(android.content.DialogInterface dialog, int which) {
+        }
+    });
+    dialogBuilder.setPositiveButton("Cancel", new android.content.DialogInterface.OnClickListener() {
+        public void onClick(android.content.DialogInterface dialog, int which) {
+            // continue with delete
+        }
+    });
+    dialogBuilder.create();
+    dialogBuilder.show();
+    // [0] The change should end here (before calling the method exit)
+}"""
+    
+    test_path = os.path.dirname(fixrsearch.test.__file__)
+    src_path = os.path.join(test_path,
+                            "data/test_process_muse_data/")
+
+    res = src_client.getPatch(src_method, diffs_to_apply, src_path)
+    
+    self.assertFalse(res.is_error())
+    self.assertTrue(res.get_patch() == expected_patch)
