@@ -58,7 +58,7 @@ java.lang.Object value) {
     self.assertTrue(res.get_patch() == expected_patch)
     self.assertTrue(res.get_git_path() == expected_path)
 
-  def test_patch_from_file(self):
+  def test_patch_with_file(self):
     src_client = SrcClientService("localhost", 8080)
     src_method = SrcMethodReq("https://github.com/cuplv/AwesomeApp",
                               "04f68b69a6f9fa254661b481a757fa1c834b52e1",
