@@ -137,7 +137,8 @@ class SrcClientService(SrcClient):
       is_local = False
     patch_res = None
     diffs_requests_converted = [diffs_req.get_json_repr() for diffs_req in diffs_requests]
-    request = {"methodRef" : method_req.get_json_repr(src_on_disk),
+    method_ref_src = "methodSrc" if is_local else "methodRef"
+    request = {method_ref_src : method_req.get_json_repr(src_on_disk),
                "diffsToApply" : [diffs_requests_converted[0]]}
     try:
       service_address = self._get_service_address(is_local)
