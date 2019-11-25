@@ -33,7 +33,8 @@ class PrProcessor:
 
   def process_graphs_from_commit(self,
                                  commit_ref,
-                                 pull_request_ref = None):
+                                 pull_request_ref = None,
+                                 src_on_disk = None):
     """ Process all the graphs produced in the pull request creating the
     anomalies.
 
@@ -98,7 +99,8 @@ class PrProcessor:
                                                     method_ref,
                                                     cluster_ref,
                                                     bin_res,
-                                                    pull_request_ref)
+                                                    pull_request_ref,
+                                                    src_on_disk = src_on_disk)
 
           # insert the frequency to sort the anomalies
           anomalies.append((bin_res["frequency"], anomaly))
@@ -134,7 +136,8 @@ class PrProcessor:
                           method_ref,
                           cluster_ref,
                           bin_res,
-                          pull_request_ref = None):
+                          pull_request_ref = None,
+                          src_on_disk = None):
     """ Process a single search for a single anomaly.
     """
 
@@ -152,7 +155,8 @@ class PrProcessor:
     (patch_text, git_path) = PrProcessor._get_patch_text(src_client,
                                                          method_ref.commit_ref,
                                                          method_ref,
-                                                         diffs_json)
+                                                         diffs_json,
+                                                         src_on_disk = src_on_disk)
 
     # 3. Get the anomaly text
     pattern_anomaly_text = bin_res["pattern_code"]
@@ -173,7 +177,7 @@ class PrProcessor:
 
 
   @staticmethod
-  def _get_patch_text(src_client, commit_ref, method_ref, diffs_json):
+  def _get_patch_text(src_client, commit_ref, method_ref, diffs_json, src_on_disk = None):
     """
     Call the service that composes the patch text
     """
@@ -186,7 +190,7 @@ class PrProcessor:
                               method_ref.start_line_number,
                               method_ref.method_name)
     source_diff = PrProcessor._get_source_diff(diffs_json)
-    res_patch = src_client.getPatch(src_method, source_diff)
+    res_patch = src_client.getPatch(src_method, source_diff, src_on_disk = src_on_disk)
     if (res_patch.is_error()):
       logging.debug("Cannot compute the patch (%s)" %
                     res_patch.get_error_msg())

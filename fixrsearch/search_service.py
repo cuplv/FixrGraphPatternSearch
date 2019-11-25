@@ -93,7 +93,6 @@ def process_muse_data():
         repo_name = directory_data[1]
         user_name = directory_data[0]
         commit_hash = directory_data[2]
-
         # Create a pull request proessor
         pr_processor = PrProcessor(groum_index,
                                    Search(current_app.config[CLUSTER_PATH],
@@ -105,10 +104,10 @@ def process_muse_data():
         # Process the graphs from the app
         commit_ref = CommitRef(RepoRef(repo_name, user_name), commit_hash)
         anomalies = pr_processor.process_graphs_from_commit(commit_ref,
-                                                            None)
+                                                            None,
+                                                            src_on_disk = src_path)
 
         # Process the anomaly in json
-        # This code must be changed to return also:
         json_data = []
         for anomaly in anomalies:
             hack_link = "https://github.com/%s/%s/blob/%s/%s" % (
