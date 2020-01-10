@@ -5,7 +5,7 @@ Implement the logic that process a pull request
 import logging
 import StringIO
 
-from fixrsearch.groum_index import GroumIndex
+from fixrsearch.groum_index import (GroumIndexBase, GroumIndex)
 from fixrsearch.anomaly import Anomaly
 
 from fixrsearch.utils import (
@@ -43,9 +43,9 @@ class PrProcessor:
     Return the list of anomalies created for all the graphs.
     """
     anomalies = []
-    app_key = GroumIndex.get_app_key(commit_ref.repo_ref.user_name,
-                                     commit_ref.repo_ref.repo_name,
-                                     commit_ref.commit_hash)
+    app_key = GroumIndexBase.get_app_key(commit_ref.repo_ref.user_name,
+                                         commit_ref.repo_ref.repo_name,
+                                         commit_ref.commit_hash)
 
     groum_records = self.groum_index.get_groums(app_key)
     groum_count = 0
@@ -91,7 +91,7 @@ class PrProcessor:
           # 0. Get the popular bin
           bin_res = search_res["popular"]
           bin_res_field = ["type", "acdfg_mappings", "frequency",
-                         "cardinality", "id"]
+                           "cardinality", "id"]
           for i in bin_res_field: assert i in bin_res
           assert bin_res["type"] == "popular"
 
