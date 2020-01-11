@@ -32,7 +32,7 @@ class PrProcessor:
     self.src_client = src_client
 
   def process_graphs_from_commit(self,
-                                 commit_ref,
+                                 commit_ref_search = None,
                                  pull_request_ref = None,
                                  src_on_disk = None):
     """ Process all the graphs produced in the pull request creating the
@@ -43,11 +43,16 @@ class PrProcessor:
     Return the list of anomalies created for all the graphs.
     """
     anomalies = []
-    app_key = GroumIndexBase.get_app_key(commit_ref.repo_ref.user_name,
-                                         commit_ref.repo_ref.repo_name,
-                                         commit_ref.commit_hash)
 
-    groum_records = self.groum_index.get_groums(app_key)
+    if commit_ref_search is None:
+      groum_records = self.groum_index.get_all_groums()
+    else:
+      # Narrow down groums to the commits
+      app_key = GroumIndexBase.get_app_key(commit_ref_search.repo_ref.user_name,
+                                           commit_ref_search.repo_ref.repo_name,
+                                           commit_ref_search.commit_hash)
+      groum_records = self.groum_index.get_groums(app_key)
+
     groum_count = 0
     tot_groums = len(groum_records)
     logging.info("Found %d groums to process." % (tot_groums))
@@ -55,14 +60,19 @@ class PrProcessor:
       groum_count = groum_count + 1
       logging.info("Processing groum %d/%d" % (groum_count, tot_groums))
 
-      groum_id = groum_record["groum_key"]
-      groum_file = self.groum_index.get_groum_path(groum_id)
+      groum_key = groum_record["groum_key"]
+      groum_file = self.groum_index.get_groum_path(groum_key)
 
       if groum_file is None:
         error_msg = "Cannot find groum for %s in %s. " \
-                    "Skipping the groum... " % (groum_id, groum_file)
+                    "Skipping the groum... " % (groum_key, groum_file)
         logging.debug(error_msg)
         continue
+
+      groum_record_repo = groum_record["repo"]
+      commit_ref = CommitRef(RepoRef(groum_record_repo["repo_name"],
+                                     groum_record_repo["user_name"]),
+                             groum_record_repo["commit_hash"])
 
       method_ref = MethodRef(commit_ref,
                              groum_record["class_name"],

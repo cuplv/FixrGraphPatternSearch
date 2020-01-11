@@ -29,10 +29,24 @@ class GroumIndexBase(object):
         return self.apps
 
     def get_groums(self, app_id):
+        """ Get all groums with the app_id
+
+        TODO: transforms this in an iterator
+        """
         if app_id in self.appid2groums:
             return self.appid2groums[app_id]
         else:
             return []
+
+    def get_all_groums(self):
+        """ Get all groums in the index.
+
+        TODO: transforms this in an iterator
+        """
+        all_groums = []
+        for key, groums in self.appid2groums:
+            all_groums += groums
+        return all_groums
 
     def get_groum_path(self, groum_id):
         if groum_id in self.groumid2path:
@@ -112,7 +126,8 @@ class GroumIndexBase(object):
             "package_name": protoSource.package_name,
             "class_name": protoSource.class_name,
             "source_class_name" : protoSource.source_class_name,
-            "method_name": protoSource.method_name
+            "method_name": protoSource.method_name,
+            "repo" : repo
         }
 
         # get the path of the file relative to self.graph_path
@@ -144,7 +159,6 @@ class GroumIndexBase(object):
                     full_file_name = os.path.join(root,item)
                     full_file_name = os.path.abspath(full_file_name)
                     self.process_groum(apps_set, full_file_name)
-
 
         logging.info("Index created - stats:\n" \
                      "\tNumber of repos: %d\n" \
