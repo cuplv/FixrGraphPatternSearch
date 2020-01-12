@@ -44,7 +44,7 @@ class GroumIndexBase(object):
         TODO: transforms this in an iterator
         """
         all_groums = []
-        for key, groums in self.appid2groums:
+        for key, groums in self.appid2groums.iteritems():
             all_groums += groums
         return all_groums
 

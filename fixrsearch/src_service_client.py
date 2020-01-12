@@ -101,7 +101,7 @@ class SrcClient(object):
   def __init__(self):
     super(object, self).__init__()
 
-  def getPatch(self, method_req, diffs_req):
+  def getPatch(self, method_req, diffs_req, src_on_disk = None):
     raise NotImplementedError()
 
 
@@ -109,7 +109,7 @@ class SrcClientMock(SrcClient):
   def __init__(self):
     super(SrcClient, self).__init__()
 
-  def getPatch(self, method_req, diffs_req):
+  def getPatch(self, method_req, diffs_req, src_on_disk = None):
     patch_res = PatchResult(None,
                             "Mock implementation",
                             True,
