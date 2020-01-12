@@ -15,6 +15,7 @@ from fixrgraph.extraction.run_extractor import RepoProcessor
 import fixrgraph.wireprotocol.search_service_wire_protocol as wp
 
 def extract_apk(apk_path,
+                java_files,
                 graph_extractor_jar_path,
                 output_zip,
                 username = "cuplv",
@@ -41,7 +42,8 @@ def extract_apk(apk_path,
                                                  tmp_provenance_out,
                                                  graph_extractor_jar_path,
                                                  BuildInfoApk(apk_path),
-                                                 os.path.dirname(apk_path))
+                                                 os.path.dirname(apk_path),
+                                                 java_files)
     if processed is None:
       raise Exception("Processing of %s failed!" % str(repo))
 
@@ -55,6 +57,16 @@ def extract_apk(apk_path,
   finally:
     shutil.rmtree(tmp_out)
     pass
+
+def get_java_files(source_code_path):
+  if source_code_path is None:
+    return None
+  resfiles = []
+  for root, dirs, files in os.walk(source_code_path):
+    for name in files:
+      if name.endswith(".java"):
+        resfiles.append(os.path.join(root, name))
+  return resfiles
 
 def to_json(anomaly):
   json_anomaly = {"id" : anomaly.numeric_id,

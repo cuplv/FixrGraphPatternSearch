@@ -23,7 +23,7 @@ import shutil
 from fixrsearch.search import Search
 from fixrsearch.groum_index import GroumIndexBase, GroumIndex
 
-from fixrsearch.search_script.utils import extract_apk, to_json, to_html
+from fixrsearch.search_script.utils import extract_apk, to_json, to_html, get_java_files
 from fixrsearch.utils import CommitRef, RepoRef
 from fixrsearch.process_pr import PrProcessor
 from fixrsearch.src_service_client import SrcClientMock
@@ -33,7 +33,9 @@ import fixrgraph.wireprotocol.search_service_wire_protocol as wp
 def parse_args():
   p = optparse.OptionParser()
   p.add_option('-g', '--groum', help="Path to the GROUM file to search")
+
   p.add_option('-a', '--apk', help="Path to the apk file to search")
+  p.add_option('-s', '--source_code', help="Path to the apk source code")
 
   p.add_option('-d', '--graphs_path', help="Path containing the graphs used to mine the patterns")
   p.add_option('-c', '--clusters_path', help="Path to the mined clusters")
@@ -70,6 +72,7 @@ def parse_args():
   timeout = None
   output_file = None
   html_output = None
+  source_code_path = None
   graph_extractor_jar = None
 
   if (opts.groum):
@@ -106,6 +109,10 @@ def parse_args():
   output_file = os.path.abspath(opts.output)
   if (opts.html_output):
     html_output = opts.html_output
+  if (opts.source_code):
+    source_code_path = os.path.abspath(opts.source_code)
+    if not os.path.isdir(source_code_path):
+      usage("%s dir does not exists!" % source_code_path)
 
   for d in [graphs_path,clusters_path]:
     if not os.path.isdir(d):
@@ -143,7 +150,8 @@ def parse_args():
           graph_extractor_jar,
           timeout,
           output_file,
-          html_output)
+          html_output,
+          source_code_path)
 
 
 def main():
@@ -161,7 +169,8 @@ def main():
    graph_extractor_jar,
    timeout,
    output_file,
-   html_output) = args_res
+   html_output,
+   source_code_path) = args_res
 
   # Creates the search object
   search = Search(clusters_path, search_lattice_path,
@@ -178,9 +187,11 @@ def main():
     pr_processor = PrProcessor(index, search, src_client)
     anomalies = pr_processor.process_graphs_from_commit(commit_ref, None, None)
   elif use_apk:
+    source_code_list = get_java_files(source_code_path)
     graphs_zip_file = tempfile.NamedTemporaryFile()
     graphs_zip_name = graphs_zip_file.name
-    graphs_zip_name_res = extract_apk(input_file, graph_extractor_jar,
+    graphs_zip_name_res = extract_apk(input_file, source_code_list,
+                                      graph_extractor_jar,
                                       graphs_zip_name,
                                       commit_ref.repo_ref.user_name,
                                       commit_ref.repo_ref.repo_name,
