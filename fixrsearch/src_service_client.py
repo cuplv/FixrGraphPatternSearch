@@ -3,6 +3,7 @@ Client used to access the src service.
 
 """
 
+import os
 import json
 import logging
 import requests
@@ -43,6 +44,12 @@ class SrcMethodReq:
 
   def _get_src_encoding(self, src_on_disk):
     file_to_encode = src_on_disk + "/sources/" + self._declaring_file
+
+    if not (os.path.isfile(file_to_encode)):
+      error = "File to encode %s does NOT exist " % file_to_encode
+      logging.error(error)
+      raise Exception(error)
+
     with open(file_to_encode, "rb") as f:
       encoded = base64.b64encode(f.read().encode("utf-8"))
     return encoded
@@ -136,11 +143,13 @@ class SrcClientService(SrcClient):
     else:
       is_local = False
     patch_res = None
-    diffs_requests_converted = [diffs_req.get_json_repr() for diffs_req in diffs_requests]
-    method_ref_src = "methodSrc" if is_local else "methodRef"
-    request = {method_ref_src : method_req.get_json_repr(src_on_disk),
-               "diffsToApply" : [diffs_requests_converted[0]]}
+
     try:
+      diffs_requests_converted = [diffs_req.get_json_repr() for diffs_req in diffs_requests]
+      method_ref_src = "methodSrc" if is_local else "methodRef"
+      request = {method_ref_src : method_req.get_json_repr(src_on_disk),
+                 "diffsToApply" : [diffs_requests_converted[0]]}
+
       service_address = self._get_service_address(is_local)
       request_result = requests.post(service_address, json = request)
       if (request_result.status_code == 200):
@@ -172,8 +181,8 @@ class SrcClientService(SrcClient):
           else:
             patch_res = PatchResult(None, "No patch text in the reply", True, "")
         else:
-          patch_res = PatchResult(None, result_data["error"], True, "")
-          logging.error(result_data["error"])
+          patch_res = PatchResult(None, result_data["errorDesc"], True, "")
+          logging.error(result_data["errorDesc"])
 
       else:
         err_msg = "Error code: %s" % (str(request_result.status_code))

@@ -23,10 +23,12 @@ import shutil
 from fixrsearch.search import Search
 from fixrsearch.groum_index import GroumIndexBase, GroumIndex
 
-from fixrsearch.search_script.utils import extract_apk, to_json, to_html, get_java_files
+from fixrsearch.search_script.utils import (
+  extract_apk, to_json, to_html, get_java_files,
+  get_src_archive_zip)
 from fixrsearch.utils import CommitRef, RepoRef
 from fixrsearch.process_pr import PrProcessor
-from fixrsearch.src_service_client import SrcClientMock
+from fixrsearch.src_service_client import SrcClientMock, SrcClientService
 
 import fixrgraph.wireprotocol.search_service_wire_protocol as wp
 
@@ -176,6 +178,7 @@ def main():
   search = Search(clusters_path, search_lattice_path,
                   None, GroumIndex(graphs_path), timeout)
   src_client = SrcClientMock()
+  src_client = SrcClientService("localhost", "8080")
 
   # Search the Groums
   anomalies = None
@@ -187,35 +190,47 @@ def main():
     pr_processor = PrProcessor(index, search, src_client)
     anomalies = pr_processor.process_graphs_from_commit(commit_ref, None, None)
   elif use_apk:
-    source_code_list = get_java_files(source_code_path)
     graphs_zip_file = tempfile.NamedTemporaryFile()
-    graphs_zip_name = graphs_zip_file.name
-    graphs_zip_name_res = extract_apk(input_file, source_code_list,
-                                      graph_extractor_jar,
-                                      graphs_zip_name,
-                                      commit_ref.repo_ref.user_name,
-                                      commit_ref.repo_ref.repo_name,
-                                      commit_ref.commit_hash)
-    if graphs_zip_name_res is None:
-      logging.debug("Error in the extraction of the grapsh from the APKs")
-    else:
+    src_zip = tempfile.NamedTemporaryFile()
+    src_path = tempfile.mkdtemp()
+    graphs_path = tempfile.mkdtemp()
+
+    try:
+      source_code_list = get_java_files(source_code_path)
+      graphs_zip_name = graphs_zip_file.name
+      graphs_zip_name_res = extract_apk(input_file,
+                                        source_code_list,
+                                        graph_extractor_jar,
+                                        graphs_zip_name,
+                                        commit_ref.repo_ref.user_name,
+                                        commit_ref.repo_ref.repo_name,
+                                        commit_ref.commit_hash)
+      if graphs_zip_name_res is None:
+        logging.debug("Error in the extraction of the grapsh from the APKs")
+        print("Error in the extraction of the grapsh from the APKs")
+        sys.exit(1)
       assert graphs_zip_name == graphs_zip_name_res
-      try:
-        graphs_path = tempfile.mkdtemp()
-        try:
-          # Call the search
-          logging.debug("Decompressing the graphs in %s" % graphs_path)
-          wp.decompress(graphs_zip_name, graphs_path)
-          index = GroumIndexBase(graphs_path)
-          index.build_index()
-          pr_processor = PrProcessor(index, search, src_client)
-          anomalies = pr_processor.process_graphs_from_commit(None, None, src_client)
-        finally:
-          shutil.rmtree(graphs_path)
-          pass
-      finally:
-        graphs_zip_file.close()
-        pass
+
+      # Call the search
+      logging.debug("Decompressing the graphs in %s" % graphs_path)
+      wp.decompress(graphs_zip_name, graphs_path)
+
+      if not source_code_path is None:
+        get_src_archive_zip(src_zip.name, source_code_path,
+                            source_code_list)
+      wp.decompress(src_zip.name, src_path)
+
+      index = GroumIndexBase(graphs_path)
+      index.build_index()
+      pr_processor = PrProcessor(index, search, src_client)
+      anomalies = pr_processor.process_graphs_from_commit(None,
+                                                          None,
+                                                          src_path)
+    finally:
+      shutil.rmtree(graphs_path)
+      shutil.rmtree(src_path)
+      src_zip.close()
+      graphs_zip_file.close()
 
   # Prints the results
   if not anomalies is None:

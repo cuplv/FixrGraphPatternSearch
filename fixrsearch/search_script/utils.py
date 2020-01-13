@@ -68,6 +68,25 @@ def get_java_files(source_code_path):
         resfiles.append(os.path.join(root, name))
   return resfiles
 
+def get_src_archive_zip(archive_zip, prefix, source_code_list):
+  tmp_folder = tempfile.mkdtemp()
+  try:
+    dest_sources = os.path.join(tmp_folder, "sources")
+    os.makedirs(dest_sources)
+    for f in source_code_list:
+      # dirname = os.path.dirname(f)
+      # missing = dirname.lstrip(prefix)
+      # dst_folder = os.path.join(tmp_folder, missing)
+      # os.makedirs(dst_folder)
+      dst_folder = dest_sources
+      dst_file = os.path.join(dst_folder, os.path.basename(f))
+      shutil.copyfile(f, dst_file)
+    wp.compress(dest_sources, archive_zip)
+  finally:
+    shutil.rmtree(tmp_folder)
+
+  return archive_zip
+
 def to_json(anomaly):
   json_anomaly = {"id" : anomaly.numeric_id,
                   "error" : anomaly.description,

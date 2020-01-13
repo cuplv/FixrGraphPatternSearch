@@ -43,7 +43,6 @@ class PrProcessor:
     Return the list of anomalies created for all the graphs.
     """
     anomalies = []
-
     if commit_ref_search is None:
       groum_records = self.groum_index.get_all_groums()
     else:
