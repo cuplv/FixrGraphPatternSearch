@@ -22,9 +22,10 @@ import shutil
 
 from fixrsearch.search import Search
 from fixrsearch.groum_index import GroumIndexBase, GroumIndex
+from fixrsearch.anomaly import AnomalyEncoder
 
 from fixrsearch.search_script.utils import (
-  extract_apk, to_json, to_html, get_java_files,
+  extract_apk, to_html, get_java_files,
   get_src_archive_zip)
 from fixrsearch.utils import CommitRef, RepoRef
 from fixrsearch.process_pr import PrProcessor
@@ -235,7 +236,13 @@ def main():
   # Prints the results
   if not anomalies is None:
     # Saves the anomalies on the output file
-    anomalies_json = [to_json(a) for a in anomalies]
+    print("Found %s anomalies" % len(anomalies))
+
+    for a in anomalies:
+      new = a.pattern_text.replace("\n","</BR>")
+      a.pattern_text = new
+
+    anomalies_json = json.dumps(anomalies, cls=AnomalyEncoder)
     with open(output_file, 'w') as f:
       json.dump(anomalies_json, f)
 

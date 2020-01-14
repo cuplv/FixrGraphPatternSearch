@@ -87,17 +87,5 @@ def get_src_archive_zip(archive_zip, prefix, source_code_list):
 
   return archive_zip
 
-def to_json(anomaly):
-  json_anomaly = {"id" : anomaly.numeric_id,
-                  "error" : anomaly.description,
-                  "packageName" : anomaly.method_ref.package_name,
-                  "className" : anomaly.method_ref.class_name,
-                  "methodName" : anomaly.method_ref.method_name,
-                  "fileName" : anomaly.git_path,
-                  "line" : anomaly.method_ref.start_line_number,
-                  "pattern" : anomaly.pattern_text,
-                  "patch" : anomaly.patch_text}
-  return json_anomaly
-
 def to_html(anomalies):
-  return json2html.convert(json = anomalies)
+  return json2html.convert(json = anomalies, escape = False)
