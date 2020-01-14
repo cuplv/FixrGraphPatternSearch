@@ -238,19 +238,14 @@ def main():
     # Saves the anomalies on the output file
     print("Found %s anomalies" % len(anomalies))
 
-    for a in anomalies:
-      new = a.pattern_text.replace("\n","</BR>")
-      a.pattern_text = new
-
-    anomalies_json = json.dumps(anomalies, cls=AnomalyEncoder)
     with open(output_file, 'w') as f:
-      json.dump(anomalies_json, f)
+      json.dump(anomalies, f, cls=AnomalyEncoder)
 
-    if not html_output is None:
-      print("Printing to file %s" % html_output)
-      html_text = to_html(anomalies_json)
-      with open(html_output, 'w') as f:
-        f.write(html_text)
+    # if not html_output is None:
+    #   print("Printing to file %s" % html_output)
+    #   html_text = to_html(anomalies)
+    #   with open(html_output, 'w') as f:
+    #     f.write(html_text)
 
 if __name__ == '__main__':
   main()
