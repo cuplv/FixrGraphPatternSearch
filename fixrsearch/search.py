@@ -26,26 +26,13 @@ from fixrsearch.codegen.diff import AcdfgPatch, AcdfgDiff
 from fixrsearch.codegen.generator import CodeGenerator, CFGAnalyzer
 
 
-JSON_OUTPUT = True
-
-MIN_METHODS_IN_COMMON = 1
-
-RESULT_CODE="result_code"
-ERROR_MESSAGE="error_messages"
-PATTERN_KEY = "pattern_key"
-ISO_DOT = "iso_dot"
-RESULTS_LIST = "patterns"
-SEARCH_SUCCEEDED_RESULT = 0
-ERROR_RESULT = 1
-
-
 def get_cluster_file(cluster_path):
   return os.path.join(cluster_path, "clusters.txt")
 
 class Search():
   def __init__(self, cluster_path, search_lattice_path,
                index = None, groum_index = None,
-               timeout=10):
+               timeout=10, min_methods_in_common = 1):
     """
     Constructs the search object:
 
@@ -53,11 +40,14 @@ class Search():
     - search_lattice_path: path to the search_lattice executable
     - timeout: timeout to search for a match in each cluster
     - groum_index: index of groums used to mine the clusters
+    - min_methods_in_common: minimum number of methods in common between
+      the groum and the cluster to search for
     """
     self.cluster_path = cluster_path
     self.search_lattice_path = search_lattice_path
     self.timeout = timeout
     self.groum_index = groum_index
+    self.min_methods_in_common = min_methods_in_common
 
     # 1. Build the index
     if (index is None):
@@ -90,8 +80,7 @@ class Search():
       fgroum.close()
 
     # 2. Search the clusters
-    min_in_common = MIN_METHODS_IN_COMMON
-    clusters = self.index.get_clusters(method_list, min_in_common)
+    clusters = self.index.get_clusters(method_list, self.min_methods_in_common)
 
     new_clusters = []
     for cluster_info in clusters:
