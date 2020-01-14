@@ -59,7 +59,7 @@ def parse_args():
                                    "-d /extractionpath/graphs "
                                    "-c /extractionpath/clusters "
                                    "-i search_lattice "
-                                   "-o output.json ",
+                                   "-o output.json "
                                    "-p output.html"))
     sys.exit(1)
 
