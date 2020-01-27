@@ -35,3 +35,8 @@ curl -X GET http://localhost:5000/get_apps
 curl -d '{"app_key" : "Dagwaging/RoseWidgets/7848e367734f462a085a72c9d6323262aef29900"}' -X POST http://localhost:5000/get_groums
 
 ```
+
+
+# Other dependencies
+
+- httplib: pip install httplib2
