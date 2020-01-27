@@ -33,7 +33,7 @@ from search import (
     get_cluster_file
 )
 from index import ClusterIndex
-from groum_index import GroumIndex
+from groum_index import GroumIndex, GroumIndexBase
 from db import SQLiteConfig, Db
 from src_service_client import SrcClient, SrcClientMock, SrcClientService
 from process_pr import PrProcessor
@@ -177,7 +177,13 @@ def get_apps():
 def get_groums():
     content = request.get_json(force=True)
     if (not content is None) and ("app_key" in content):
-        app_key = content["app_key"]
+        app_key_str = content["app_key"]
+        splitted = app_key_str.split("/")
+        if (len(splitted) != 3):
+            return get_malformed_request("Malformed key %s" % app_key)
+        app_key = GroumIndexBase.get_app_key(splitted[0],
+                                             splitted[1],
+                                             splitted[2])
 
         groum_index = current_app.config[GROUM_INDEX]
         groums = groum_index.get_groums(app_key)

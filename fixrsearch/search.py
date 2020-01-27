@@ -26,30 +26,28 @@ from fixrsearch.codegen.diff import AcdfgPatch, AcdfgDiff
 from fixrsearch.codegen.generator import CodeGenerator, CFGAnalyzer
 
 
-JSON_OUTPUT = True
-
-MIN_METHODS_IN_COMMON = 1
-
-RESULT_CODE="result_code"
-ERROR_MESSAGE="error_messages"
-PATTERN_KEY = "pattern_key"
-ISO_DOT = "iso_dot"
-RESULTS_LIST = "patterns"
-SEARCH_SUCCEEDED_RESULT = 0
-ERROR_RESULT = 1
-
-
 def get_cluster_file(cluster_path):
   return os.path.join(cluster_path, "clusters.txt")
 
 class Search():
-  def __init__(self, cluster_path, iso_path,
+  def __init__(self, cluster_path, search_lattice_path,
                index = None, groum_index = None,
-               timeout=10):
+               timeout=10, min_methods_in_common = 1):
+    """
+    Constructs the search object:
+
+    - cluster_path: path to the mined clusters
+    - search_lattice_path: path to the search_lattice executable
+    - timeout: timeout to search for a match in each cluster
+    - groum_index: index of groums used to mine the clusters
+    - min_methods_in_common: minimum number of methods in common between
+      the groum and the cluster to search for
+    """
     self.cluster_path = cluster_path
-    self.iso_path = iso_path
+    self.search_lattice_path = search_lattice_path
     self.timeout = timeout
     self.groum_index = groum_index
+    self.min_methods_in_common = min_methods_in_common
 
     # 1. Build the index
     if (index is None):
@@ -82,8 +80,7 @@ class Search():
       fgroum.close()
 
     # 2. Search the clusters
-    min_in_common = MIN_METHODS_IN_COMMON
-    clusters = self.index.get_clusters(method_list, min_in_common)
+    clusters = self.index.get_clusters(method_list, self.min_methods_in_common)
 
     new_clusters = []
     for cluster_info in clusters:
@@ -99,6 +96,14 @@ class Search():
   def search_from_groum(self, groum_path,
                         filter_for_bugs = False,
                         filter_cluster = None):
+    """
+    Searching patterns that are similar to the groum in groum_path.
+
+    - groum_path: path to the groum file
+    - filter_for_bugs: If true only return anomalous_subsumed or correct_subsumed patterns.
+    That'is, it returns the pattern that entirely contains the groum.
+    - filter_cluster: id of clusters to NOT consider in the search
+    """
     logging.info("Search for groum %s" % groum_path)
 
     # 1. Search the clusters
@@ -179,7 +184,7 @@ class Search():
                                                 text=True)
     os.close(search_file)
 
-    args = [self.iso_path,
+    args = [self.search_lattice_path,
             "-q", groum_path,
             "-l", lattice_path,
             "-o", search_path]
@@ -751,6 +756,12 @@ class Search():
     return (nodes_res, edges_res)
 
   def get_pattern_code(self, lattice, id2bin, acdfgBin):
+    """
+    Reconstruct the source code of the pattern represented in the bin.
+
+    It uses the groum index to find the original graph representing
+    the pattern.
+    """
     if self.groum_index is None:
       return ("", None)
 
@@ -796,86 +807,3 @@ class Search():
 
     return (code, acdfg_reduced)
 
-
-
-
-def main():
-  logging.basicConfig(level=logging.DEBUG)
-
-  p = optparse.OptionParser()
-  p.add_option('-g', '--groum', help="Path to the GROUM file to search")
-
-  p.add_option('-d', '--graph_dir', help="Base path containing the graphs")
-  p.add_option('-u', '--user', help="Username")
-  p.add_option('-r', '--repo', help="Repo name")
-  p.add_option('-z', '--hash', help="Hash number")
-  p.add_option('-m', '--method', help="Fully qualified method name")
-  p.add_option('-l', '--line', help="Line number of the method")
-
-  p.add_option('-c', '--cluster_path', help="Base path to the cluster directory")
-  p.add_option('-i', '--iso_path', help="Path to the isomorphism computation")
-
-  def usage(msg=""):
-    if JSON_OUTPUT:
-      result = {RESULT_CODE : ERROR_RESULT,
-                ERROR_MESSAGE: msg,
-                RESULTS_LIST : []}
-      json.dump(result,sys.stdout)
-      sys.exit(0)
-    else:
-      if msg:
-        print "----%s----\n" % msg
-        p.print_help()
-        print "Example of usage %s" % ("python search.py "
-                                       "-g groum.acdfg.bin"
-                                       "-c /extractionpath/clusters",
-                                       "-i /home/sergio/works/projects/muse/repos/FixrGraphIso/build/src/fixrgraphiso")
-      sys.exit(1)
-
-  opts, args = p.parse_args()
-
-  use_groum_file = False
-  if (not opts.groum):
-    if (not opts.graph_dir): usage("Graph dir not provided!")
-    if (not os.path.isdir(opts.graph_dir)):
-      usage("%s does not exist!" % opts.graph_dir)
-    if (not opts.user): usage("User not provided")
-    if (not opts.hash): usage("Hash not provided")
-    if (not opts.repo): usage("Repo not provided")
-    if (not opts.method): usage("Method not provided")
-    if (not opts.line): usage("Line not provided")
-  else:
-    use_groum_file = True
-    if (not os.path.isfile(opts.groum)):
-      usage("GROUM file %s does not exist!" % opts.groum)
-  if (not opts.cluster_path):
-    usage("Cluster path not provided!")
-  if (not os.path.isdir(opts.cluster_path)):
-    usage("Cluster path %s does not exist!" % (opts.cluster_path))
-  if (not opts.iso_path): usage("Iso executable not provided!")
-  if (not os.path.isfile(opts.iso_path)):
-    usage("Iso executable %s does not exist!" % opts.iso_path)
-
-  if use_groum_file:
-    groum_file = opts.groum
-  else:
-    groum_index = GroumIndex(opts.graph_dir)
-    key = groum_index.get_groum_key(opts.user, opts.repo, opts.hash,
-                                    opts.method, opts.line)
-
-    groum_file = groum_index.get_groum_path(key)
-    if groum_file is None:
-      usage("Cannot find groum for %s" % key)
-
-  search = Search(opts.cluster_path, opts.iso_path)
-  results = search.search_from_groum(groum_file)
-
-  result = {RESULT_CODE : SEARCH_SUCCEEDED_RESULT,
-            RESULTS_LIST : results}
-  json.dump(result,sys.stdout)
-
-
-if __name__ == '__main__':
-  main()
-
-  

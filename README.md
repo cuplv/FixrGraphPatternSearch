@@ -1,5 +1,5 @@
 # FixrGraphPatternSearch
-Implement the search of a pattern from a GROUM
+Implement the search of a pattern from a GROUM (both a service and a command line util)
 
 
 # Spin up the service
@@ -19,10 +19,26 @@ python ./fixrsearch/search_service.py \
   -g ~/works/projects/muse/repos/test_clusters/graphs -d - 5008
 ```
 
+# Run the search from the command line command line
+
+```bash
+python fixrsearch/search_script/search_script.py -d /mnt/BigGroumData19/fdroid_out_012519/graphs \
+  -c /mnt/BigGroumData19/fdroid_out_012519/clusters \
+  -i ../FixrGraphIso/build/src/fixrgraphiso/searchlattice \
+  -t 10 \
+  -a /tmp/tmpapk/MapboxAndroidDemo-global-debug.apk \
+  -e ../FixrGraphExtractor/target/scala-2.12/fixrgraphextractor_2.12-0.1.0-one-jar.jar \
+  -s /home/ubuntu/local_search/mapbox-android-demo/MapboxAndroidDemo/src/global \
+  -o mapbox.json \
+  -p mapbox.html
+```
+
 # Unit test
 
 Run the test with:
 ```nosetests```
+
+You need to have a [source code server running on localhost](https://github.com/cuplv/fixr_source_code_service)  and have compiled the searchlattice executable in [FixrGraphIso](https://github.com/cuplv/FixrGraphIso)
 
 # Test
 ```
@@ -35,3 +51,8 @@ curl -X GET http://localhost:5000/get_apps
 curl -d '{"app_key" : "Dagwaging/RoseWidgets/7848e367734f462a085a72c9d6323262aef29900"}' -X POST http://localhost:5000/get_groums
 
 ```
+
+
+
+# Other dependencies
+- httplib: pip install httplib2

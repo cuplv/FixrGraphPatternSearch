@@ -5,7 +5,7 @@ Implement the index/search for clusters
 import logging
 import itertools
 import os
-from cStringIO import StringIO
+from io import StringIO
 from fixrgraph.solr.patterns_utils import parse_clusters, parse_cluster_info
 
 class IndexNode(object):
