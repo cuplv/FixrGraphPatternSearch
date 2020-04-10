@@ -2,9 +2,6 @@
 Utilities to transform acdfgs and mappings to to code
 """
 
-# TODO:
-# generate the method declaration for the pattern
-#
 
 from fixrsearch.codegen.acdfg_repr import (
   AcdfgRepr,
@@ -31,10 +28,15 @@ class CodeGenerator(object):
     self.sliced_acdfg = sliced_acdfg
     self.original_acdfg = original_acdfg
 
+    # Show only the original control edges
+    self._fix_control_edges()
+
+    self.rename_vars(self.sliced_acdfg)
+
+
   def get_code_text(self):
     ast = self._get_ast()
     return str(ast)
-
 
   def _get_ast(self):
     """ Construct an AST representing the graph control flow """
@@ -45,23 +47,21 @@ class CodeGenerator(object):
       roots.add(myroot)
       self.sliced_acdfg.remove_incoming(myroot)
 
-    # Show only the original control edges
-    self._fix_control_edges()
-
-    main_ast = None
-
     # visit the graph from the root generating the AST
+    code_ast = None
     for root in roots:
        cfg_analyzer = CFGAnalyzer(self.sliced_acdfg, root)
        loops = cfg_analyzer.get_loops()
 
        root_ast = self._get_node_ast(self.sliced_acdfg, root, loops)
-       if main_ast is None:
-         main_ast = root_ast
+       if code_ast is None:
+         code_ast = root_ast
        else:
          app_ast = PatternAST(PatternAST.NodeType.IF)
-         app_ast.set_children([main_ast, root_ast])
-         main_ast = app_ast
+         app_ast.set_children([code_ast, root_ast])
+         code_ast = app_ast
+
+    main_ast = self.get_pattern_func_def(cfg_analyzer, code_ast)
 
     return main_ast
 
@@ -85,18 +85,12 @@ class CodeGenerator(object):
     for data_node in to_declare:
       type_ast = PatternAST(PatternAST.NodeType.CONST)
       type_ast._set_data("name", data_node.node_type)
-
       data_ast = CodeGenerator.get_expression_ast(data_node)
-
       decl_ast = PatternAST(PatternAST.NodeType.DECL)
       decl_ast.set_children([type_ast,data_ast])
-
       seq_ast = PatternAST(PatternAST.NodeType.SEQ)
       seq_ast.set_children([decl_ast, ast])
-
       ast = seq_ast
-
-    # TODO: generate the method declaration for the pattern
 
     return ast
 
@@ -111,7 +105,6 @@ class CodeGenerator(object):
     cfg node and the next cfg node to process
     in sequence.
     """
-    # print "GET NODE _AST REC"
     # Process "base cases", when the recursion
     # must stop
     if helper.is_tail(node) and helper.is_join(node) and not force_visit:
@@ -129,14 +122,6 @@ class CodeGenerator(object):
       expr_ast = CodeGenerator.get_expression_ast_method(helper, node)
       stack.append(node)
       return expr_ast
-
-    # if node.id in visited:
-    #   skip_ast = PatternAST(PatternAST.NodeType.SKIP)
-    #   stack.append(node)
-    #   print "SKIP"
-    #   return skip_ast
-
-    # visited.add(node.id)
 
     # Get the base expression for the node
     expr_ast = CodeGenerator.get_expression_ast_method(helper, node)
@@ -234,6 +219,27 @@ class CodeGenerator(object):
 
     return expr_ast
 
+  def get_pattern_func_def(self, cfg_analyzer, body):
+    (params, to_decl) = cfg_analyzer.get_vars_to_decl();
+
+    param_decl_ast = PatternAST(PatternAST.NodeType.VAR_DECL_LIST)
+    params_ast = []
+    for p in params:
+      params_ast.append(CodeGenerator.get_expression_decl_ast(p))
+    param_decl_ast.set_children(params_ast)
+
+
+    method_body_ast = body
+    for v in to_decl:
+      seq = PatternAST(PatternAST.NodeType.SEQ)
+      seq.set_children([CodeGenerator.get_expression_decl_ast(v),
+                        method_body_ast])
+      method_body_ast = seq
+
+    method_decl_node = PatternAST(PatternAST.NodeType.METHOD_DECL)
+    method_decl_node.set_children([param_decl_ast, method_body_ast])
+    return method_decl_node
+
   @staticmethod
   def get_expression_ast(node):
     if isinstance(node, DataNode):
@@ -266,6 +272,22 @@ class CodeGenerator(object):
       return ast
     else:
       assert False
+
+  @staticmethod
+  def get_expression_decl_ast(node):
+    assert isinstance(node, DataNode)
+    assert node.data_type == DataNode.DataType.VAR
+
+    var_name = PatternAST(PatternAST.NodeType.VAR)
+    var_name._set_data("name", node.name)
+
+    var_type = PatternAST(PatternAST.NodeType.CONST)
+    var_type._set_data("name", node.node_type)
+
+    var_decl = PatternAST(PatternAST.NodeType.DECL)
+    var_decl.set_children([var_type, var_name])
+
+    return var_decl
 
   @staticmethod
   def get_expression_ast_method(helper, node):
@@ -552,6 +574,27 @@ class CodeGenerator(object):
       return list(self._fwd[node])
 
 
+
+  def rename_vars(self, acdfg):
+    prefix = "tmp"
+    counter = -1
+    acdfg_to_var = {}
+    acdfg_to_const = {}
+
+    for v in acdfg._data:
+      if (v.data_type == DataNode.DataType.VAR):
+        assert not v.name in acdfg_to_var
+        counter += 1
+        new_val = "%s_%d" % (prefix, counter)
+        acdfg_to_var[v.name] = new_val
+        v.name = new_val
+
+      if (v.data_type == DataNode.DataType.CONST and
+          v.node_type == "java.lang.String"):
+        new_val = ""
+        acdfg_to_const[v.name] = new_val
+        v.name = new_val
+
 class CFGAnalyzer(object):
   def __init__(self, acdfg, root_node):
     super(CFGAnalyzer, self).__init__()
@@ -666,6 +709,29 @@ class CFGAnalyzer(object):
           loops.add( (dominator, node, frozenset(body_nodes)) )
     return loops
 
+  def get_vars_to_decl(self):
+    # Get a list of variables that are read but
+    # not assigned in the cfgs
+    #
+    # Works under the assumption vars "are in SSA" form
+    params = set()
+    vars_to_decl =set()
+    for e in self.acdfg._edges:
+      if (e.edge_type == Edge.Type.USE and
+          e.from_node.data_type == DataNode.DataType.VAR):
+        e.from_node in self.acdfg._data
+        params.add(e.from_node)
+
+    for e in self.acdfg._edges:
+      if (e.edge_type == Edge.Type.DEF_EDGE and
+          e.to_node.data_type == DataNode.DataType.VAR):
+        e.to_node in self.acdfg._data
+        vars_to_decl.add(e.to_node)
+        if e.to_node in params:
+          params.remove(e.to_node)
+
+    return (params, vars_to_decl)
+
   def _reachable_dfs(self, node, bwd=False):
     reachable = set()
     to_visit = [node]
@@ -704,6 +770,7 @@ class PatternAST(object):
          | cmd ; cmd
          | if * then cmd else cmd
          | while * do cmd
+         | void method(type_var, ..., type_var)
   """
 
   class MalformedASTException(Exception):
@@ -722,10 +789,13 @@ class PatternAST(object):
     DECL = 7
     SKIP = 8
     RETURN = 9
+    METHOD_DECL = 10
+    VAR_DECL_LIST = 11
 
   INDENT = "  "
   HAVOC_COND = "?"
   HAVOC_VAR = ""
+  PATTERN_NAME = "pattern"
 
   CMD_TYPES = {NodeType.METHOD, NodeType.ASSIGN, NodeType.SEQ,
                NodeType.IF, NodeType.WHILE, NodeType.DECL,
@@ -771,6 +841,27 @@ class PatternAST(object):
           err = "Node must have 1 children, %d given!" % len_c
           raise PatternAST.MalformedASTException(err)
 
+    elif self.ast_type in {PatternAST.NodeType.METHOD_DECL}:
+      for c in children:
+        if c is None:
+          raise PatternAST.MalformedASTException("None children!")
+
+      if children[0].ast_type != PatternAST.NodeType.VAR_DECL_LIST:
+        err = "No param list for method declaration!"
+        raise PatternAST.MalformedASTException(err)
+      if not children[1].is_cmd():
+        raise PatternAST.MalformedASTException("%s must be a " \
+                                               "command!" % str(c))
+
+    elif self.ast_type in {PatternAST.NodeType.VAR_DECL_LIST}:
+      for c in children:
+        if c is None:
+          raise PatternAST.MalformedASTException("None children!")
+
+        if c.ast_type != PatternAST.NodeType.DECL:
+          err = "%s is not var a declaration!" % str(c)
+          raise PatternAST.MalformedASTException(err)
+
     elif self.ast_type in {PatternAST.NodeType.ASSIGN}:
       if len_c != 2:
           err = "Node must have 2 children, %d given!" % len_c
@@ -799,8 +890,8 @@ class PatternAST(object):
         err = "Node %s must be a var!" % str(c)
         raise PatternAST.MalformedASTException(err)
 
-    elif (self.ast_type == PatternAST.Node.SKIP or
-          self.ast_type == NodeType.RETURN):
+    elif (self.ast_type == PatternAST.NodeType.SKIP or
+          self.ast_type == PatternAST.NodeType.RETURN):
       if len_c != 0:
         err = "Node must have 0 children, %d given!" % len_c
         raise PatternAST.MalformedASTException(err)
@@ -833,7 +924,7 @@ class PatternAST(object):
   def is_expr(self):
     return self.ast_type in PatternAST.EXPR_TYPES
 
-  def _print(self, out_stream, indent):
+  def _print(self, out_stream, indent, inline_decl = False):
     if (self.ast_type in {PatternAST.NodeType.SKIP}):
       out_stream.write("%s// skip\n" % (indent))
     elif (self.ast_type in {PatternAST.NodeType.RETURN}):
@@ -855,10 +946,11 @@ class PatternAST(object):
 
     elif (self.ast_type in {PatternAST.NodeType.DECL}):
       out_stream.write("%s" % (indent))
-      self.children[1]._print(out_stream, "")
-      out_stream.write(" : ")
       self.children[0]._print(out_stream, "")
-      out_stream.write(";\n")
+      out_stream.write(" ")
+      self.children[1]._print(out_stream, "")
+      if not inline_decl:
+        out_stream.write(";\n")
     elif (self.ast_type == PatternAST.NodeType.ASSIGN):
       self.children[0]._print(out_stream, indent)
       out_stream.write(" = ")
@@ -876,6 +968,19 @@ class PatternAST(object):
       out_stream.write("%swhile (%s) {\n" % (indent, PatternAST.HAVOC_COND))
       self.children[0]._print(out_stream, indent + PatternAST.INDENT)
       out_stream.write("%s}\n" % indent)
+    elif (self.ast_type == PatternAST.NodeType.METHOD_DECL):
+      out_stream.write("%svoid %s (" % (indent, PatternAST.PATTERN_NAME))
+      self.children[0]._print(out_stream, indent)
+      out_stream.write(") {\n")
+      self.children[1]._print(out_stream, indent + PatternAST.INDENT)
+      out_stream.write("%s}\n" % indent)
+    elif (self.ast_type == PatternAST.NodeType.VAR_DECL_LIST):
+      first = True
+      for c in self.children:
+        if not first:
+          out_stream.write(", ")
+        c._print(out_stream, indent, True)
+        first = False
     else:
       assert False
 
