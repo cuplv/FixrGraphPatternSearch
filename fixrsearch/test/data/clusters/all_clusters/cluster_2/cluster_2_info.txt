@@ -1,0 +1,463 @@
+Popular Bins: 
+Popular Bin # 1
+Dot: pop_1.dot
+Frequency: 207, 235
+/data/demo_meeting/clusters/all_clusters/cluster_158/RedPheasant.PlannerApp.Page_Main_onBackPressed.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/RedPheasant.PlannerApp.Page_Routes_New_Route_Save_onBackPressed.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/RedPheasant.PlannerApp.Page_Routes_New_Route_onBackPressed.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/aws.apps.keyeventdisplay.ui.MyAlertBox_create.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/b.r.b.LogActivity_popUP.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/br.net.du.fscore.activity.MatchList$4_onMenuItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/br.net.du.fscore.activity.MatchList$5_onMenuItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/br.net.du.fscore.activity.RoundBetsReader_getInputDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/br.net.du.fscore.activity.SingleMatch$5_onMenuItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/br.net.du.fscore.activity.SingleMatch_getAddPlayerDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/br.net.du.studentslist.activity.StudentsList$9_onMenuItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/buet.rafi.dictionary.adapter.WordListAdapter_updateEntries.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/cgeo.geocaching.CacheDetailActivity_addToCalendarWithIntent.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/cgeo.geocaching.activity.ActivityMixin_helpDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/cgeo.geocaching.cgeocaches_importGpxAttachement.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/cn.eoe.app.ui.base.BaseActivity_showAlertDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/cn.err0r.android.sms.view.SMSWaitList$4_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.alarmclocksnoozers.runnershigh.Menu_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.amalgam.app.SupportSimpleAlertDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.animoto.android.DraggableGridViewSampleActivity$4_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.app.happy.FriendsList_onOptionsItemSelected.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.as.slotmachine.MainActivity_onBackPressed.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.bafflesoft.locationcache.viewer.MainActivity_showError.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.bafflesoft.locationcache.viewer.MainActivity_showICSWarning.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.bafflesoft.locationcache.viewer.MainActivity_showSUWarning.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.bojun.cameragl2.BrowseActivity_onListItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.braintreepayments.api.SelectPaymentMethodNonceNonceViewController_showPaymentMethodListDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.bricolsoftconsulting.demo.WebViewActivity$2_onJsAlert.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.bricolsoftconsulting.demo.WebViewActivity$2_onJsConfirm.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.capstonecontrol.CapstoneControlActivity_featureNotEnabledMsg.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.capstonecontrol.SettingsActivity_settingsSavedMsg.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cattailsw.nanidroid.dlgs.GhostListDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cattailsw.nanidroid.dlgs.HelpFuncDlg_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cattailsw.nanidroid.dlgs.NarPickDlg_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cianmcgovern.android.ShopAndShare.ShopAndShare$1_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cradle.iitc_mobile.IITC_DeviceAccountLogin_displayAccountList.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cradle.iitc_mobile.prefs.ForceUpdatePreference_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.datsumi.calc.Calc$4_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.douglasinfoweb.bandecodroid.MainActivity_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.dropbox.examples.lists.ListActivity$2_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.dropbox.examples.lists.SharingDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.android.PersonActivity_onAddClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.android.apis.view.SecureView$3_onTouch.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.androidtestcamera4.MainActivity$2_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.androidtestcamera4.MainActivity$3_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.bluetooth.health.BluetoothHDPActivity$SelectDeviceDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.blunobasicdemo.BlunoLibrary_onCreateProcess.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.player.MainActivity_ShowDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.faintdawn.update.HttpUpdateObserver$3_run.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.faintdawn.update.HttpUpdateObserver$4_run.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.fourmob.colorpicker.ColorPickerDialog_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.freepie.android.imu.MainActivity_error.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.fsck.k9.activity.setup.AccountSetupCheckSettings$3_run.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.fsck.k9.activity.setup.AccountSetupCheckSettings$4_run.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.gaotianpu.ftodo.ui.ItemDetailActivity$DetailReadFragment_remin_next.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.gaotianpu.ftodo.ui.ItemDetailActivity$DetailReadFragment_remind_frequency_picker.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.gaotianpu.ftodo.ui.ItemDetailActivity$DetailReadFragment_set_todo_plan_date.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.gaotianpu.ftodo.ui.ItemDetailActivity$DetailReadFragment_sort_status_picker.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.gaotianpu.ftodo.ui.ItemDetailActivity$DetailReadFragment_todo_status_picker.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.gaotianpu.ftodo.ui.ListFragment_item_img_btn_click.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.gaotianpu.ftodo.ui.ListTodoFragment_item_img_btn_click.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.geel9.facepunch.ReadThreadActivity$4_onLongClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.geel9.facepunch.ThreadActivity$8$1$1_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.google.code.appsorganizer.dialogs.SimpleDialog_createDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.google.code.appsorganizer.dialogs.SingleSelectDialog_createDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.guillaumedelente.android.contacts.common.dialog.ClearFrequentsDialog_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.gvsu.socnet.map.CapsuleActivity_asyncDone.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.gvsu.socnet.map.CapsuleMapActivity_asyncDone.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.gvsu.socnet.user.LoginActivity_asyncDone.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.gvsu.socnet.user.NewEditUserActivity_asyncDone.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.gvsu.socnet.user.ProfileActivity_asyncDone.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.ivehicle.AnBox.SensorTracker_AccCalibration.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.jadn.cc.ui.DownloadProgress$1_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.jason.test.MainActivity$2_onItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.jecelyin.editor.EncodingList_<init>.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.jecelyin.editor.HistoryList_<init>.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.jecelyin.editor.JecEditor_saveConfirm.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.jecelyin.editor.LangList_<init>.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.jikexueyuan.game2048publish.GameView_checkComplete.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.js.mobile.PlayerProfileActivity$1_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.kaixin.android.activity.EditSignatureActivity$2_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.kaixin.android.activity.PhotoReplyActivity$2_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.kaixin.android.activity.SendGiftActivity$2_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.kaixin.android.activity.WriteDiaryActivity_showErrorDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.kaixin.android.activity.WriteRecordActivity$2_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.karumi.dexter.listener.single.DialogOnDeniedPermissionListener_onPermissionDenied.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.kein.imageselector.ImageSelectHelperActivity_showAlert.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.kyview.Invoker_createCloseDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.laevatein.internal.misc.ui.ConfirmationDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.lambdal.railgun.Railgun_onBackPressed.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.lightstudios.mobile.SimpleEULA_show.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.macadamian.mobile.android.monkeycam.AboutDialogBuilder_create.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.makibyte.sudoku.Sudoku_openNewGameDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.matteofini.medianote.TextEditor_applyStyleLink.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.microsoft.aad.adal.HttpAuthDialog_createDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.mirrorlabs.filebrowser.FileUtils_veiwImage.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.mohammadag.samsungusbmassstorageenabler.MainActivity_onMTPButtonClicked.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.mohammadag.samsungusbmassstorageenabler.MainActivity_showInstallBusybox.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.mot.ajaxwebapp.MainActivity_getURLToLoad.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.niceappp.filepanda.FileListFragment_askConfirmToDelete.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.niceappp.filepanda.FileListFragment_askToRenameFile.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.niceappp.filepanda.FileListFragment_getMoreInfo.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.nolanlawson.keepscore.GameActivity_showAddPlayerDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.nolanlawson.keepscore.LoadGameActivity_showEditGameNameDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.nolanlawson.keepscore.SettingsActivity$3_onPreferenceClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.nolanlawson.keepscore.widget.PlayerView_showChangeNameDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.nvidia.fcamerapro.ViewerFragment$ConfirmationDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.paypal.android.sdk.payments.an_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.paypal.android.sdk.payments.cy_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.paypal.android.sdk.payments.da_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.pilot51.voicenotify.MainActivity_showWalletDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.pilot51.voicenotify.NotifyList$Adapter$2_onLongClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.pkuapp.utils.VersionCheckAsyncTask_alertUpdate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.pretzlav.hello.HelloWorldActivity_awesomeness.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.randallma.shukudai.PostAssignmentActivity_cancelPhoto.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.sakurafish.android.primenumberwidget.SettingActivity_showFavoriteDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.squeed.swiper.actions.LaunchDial$1_run.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.tinfoil.sms.sms.ConversationView_betaNotice.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.tinfoil.sms.sms.ConversationView_checkDefault.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.tinfoil.sms.sms.ConversationView_getEULA.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.toycode.pwmemo.EditActivity_onBackPressed.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.toycode.pwmemo.MasterPasswordInput_Ask.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.umich.cooties.RandomActivities_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.uservoice.uservoicesdk.ui.DefaultCallback_onError.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.vic.http.app.BaseActivity_checkNetWorkShowLog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.xhilarate.findroid.full.LocationDlgActivity_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.xhilarate.findroid.full.MainActivity_changePassword.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.yamareco.sample.YamarecoSampleActivity$11_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.yamareco.sample.YamarecoSampleActivity_showDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.zhaoshouren.android.apps.clock.ui.SetAlarmActivity_deleteAlarm.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.zlq.renmaitong.MainActivity$7_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.zlq.renmaitong.MainActivity_showUpdateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.zyrenth.achievement.AboutDialogBuilder_create.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/cx.hell.android.lib.pagesview.PagesView$3_run.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/de.duenndns.ssl.MemorizingActivity_onResume.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/edu.cmu.travelbuddy.facebook.FriendsList_onItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/edu.cmu.travelbuddy.facebook.Places$1_run.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/edu.cmu.travelbuddy.facebook.Places_onItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/edu.gricar.RVMenu.ActionResolved$3_run.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/edu.uml.cs.isense.amusement.SimpleEula_show.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/esos.MobiBench.TabMain_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/esos.ResultListControl.DialogActivity_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/eu.chainfire.opendelta.MainActivity_showAbout.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/eu.chainfire.opendelta.MainActivity_showNetworks.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/fi.aalto.legroup.achso.activity.LoginActivity$1_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/flex.android.magiccube.activity.ActivityBattleMode_showExitGameAlert.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/flex.android.magiccube.activity.ActivityClockingMode_showExitGameAlert.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/flex.android.magiccube.activity.ActivityNormalMode_showExitGameAlert.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/flex.android.magiccube.activity.ActivityReplayMode_showExitGameAlert.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/io.vov.vitamio.widget.VideoView$5_onError.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.Main_like.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.Main_likeAll.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.Main_likeAllFailure.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.Main_loadError.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.Main_loginFailure.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.Main_moveTo.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.Main_noAccount.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.Main_noInternet.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.Main_noSDCard.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.Main_reblog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.Main_reblogAll.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.Main_reblogAllFailure.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.Main_showAbout.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mitukiii.tumblife.ui.TLWebViewClient_alertSendTo.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.sblo.pandora.adice.FontManagerActivity$1$2_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.sblo.pandora.adice.aDiceActivity$5$1_run.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.sblo.pandora.adice.aDiceActivity_addWordBook.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.sumasu.u_s_k.UskPluginActivity_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/kozyr.github.com.foody.AboutActivity_showAcceptDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/ly.kite.journey.AKiteActivity_displayModalDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/name.livitski.games.puzzle.android.Activity_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.azyobuzi.azyotcheck.StartPageActivity$1_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.gabuchan.androidrecipe.recipe038.Recipe038Activity_onTwoClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.gabuchan.androidrecipe.recipe039.Recipe039Activity_onMultiClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.gabuchan.androidrecipe.recipe039.Recipe039Activity_onSingleClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.hagander.mailinglistmoderator.ServerEditor$3_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.hagander.mailinglistmoderator.ServerEditor_ExportServers.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.hagander.mailinglistmoderator.ServerEditor_ImportServers.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.hagander.mailinglistmoderator.ServerEditor_onContextItemSelected.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.helff.inventoryscanner.InventoryScannerActivity$3_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.hockeyapp.android.UpdateActivity_onRequestPermissionsResult.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.magictunnel.TunnelListPreferences_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.magictunnel.Utils_showErrorMessage.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/nl.paulus.nfctagwriter.MainActivity$1_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/nl.vertinode.facepunch.ForumActivity$3_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/nl.vertinode.facepunch.ThreadActivity$4_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.chromium.content.browser.ContentVideoView_onMediaPlayerError.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.cocos2dx.lib.Cocos2dxHandler_showDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.g_okuyama.camera.floating.FloatingCameraActivity_onStart.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.g_okuyama.camera.floating.FloatingCameraActivity_startGallery.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.g_okuyama.camera.floating.pro.FloatingCameraActivity_onStart.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.g_okuyama.camera.floating.pro.FloatingCameraActivity_startGallery.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.peterbaldwin.vlcremote.preference.WhatsNewDialog_build.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.rsternal.sudoku.SudokuActivity_openDialogNewGame.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.sipdroid.sipua.ui.CallScreen_transfer.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.strongswan.android.ui.MainActivity$VpnNotSupportedError_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.strongswan.android.ui.VpnProfileDetailActivity$TncNoticeDialog_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.tamanegi.aneko.skin.droid.SkinActivity_onResume.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/shared.dialog.fixedorderdialog.FixedOrderDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/szelok.app.twister.MainActivity_send_direct_message.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/tv.danmaku.vlcdemo.mediaplayer.PlayerVideoView$5_onError.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/tv.danmaku.vlcdemo.mediaplayer.PlayerVideoView_openVideo.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/vpntether.StartActivity_onActivityResult.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/za.co.house4hack.paint3d.Main_changeBackground.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/za.co.house4hack.paint3d.Main_generateAndPrint.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/za.co.house4hack.paint3d.Main_generatePreview.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/za.co.house4hack.paint3d.Main_onBackPressed.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.xhilarate.findroid.full.MainActivity$7_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.hagander.mailinglistmoderator.MailinglistModerator$1_onItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cianmcgovern.android.ShopAndShare.Share$5_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.shoppingcart.ManageShoppingListActivity_addList.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.bolutions.webserver.ServerService_startServer.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.shoppingcart.CreateShoppingListActivity_removeItem.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.shoppingcart.CreateShoppingListActivity_saveItems.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.shoppingcart.CreateStoreActivity_saveStore.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.shoppingcart.ManageShoppingListActivity_deleteItem.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.shoppingcart.UpdateStoreItemActivity_updateItem.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/moodle.android.moodle.CourseSelect_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.xhilarate.findroid.full.MainActivity$5_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/somitsolutions.training.android.androidpaint.ColorPicker_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.mobilehitchhiker.MainActivity_handleShowMap.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.appkefu.appkehu_3.HomeActivity_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.shoppingcart.AddStoreItemActivity_saveItem.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.yejianfeng.switchhost.ModifyHostActivity_modifyHost.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.g_okuyama.camera.floating.CameraPreview_surfaceCreated.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.g_okuyama.camera.floating.pro.CameraPreview_surfaceCreated.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.bafflesoft.locationcache.viewer.MainActivity_exportData.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.xhilarate.findroid.full.MainActivity_getPhoneDetails.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cianmcgovern.android.ShopAndShare.DisplayResults.ListCreator$2_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.shoppingcart.ManageStoreActivity$6_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.shoppingcart.ManageShoppingListItemsActivity_delList.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.yejianfeng.switchhost.AddHostActivity_addHost.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.classic.rosie.utility.MainActivity_onPreferenceTreeClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.xhilarate.findroid.full.MainActivity$9_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.shoppingcart.ManageShoppingListActivity_delList.acdfg.bin
+Popular Bin # 2
+Dot: pop_2.dot
+Frequency: 116, 129
+/data/demo_meeting/clusters/all_clusters/cluster_158/angeloid.dreamnarae.SecondEgg_onKeyDown.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/app.example.com.MainActivity_onBackPressed.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/b.r.b.MessageActivity$1_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/b.r.b.MessageActivity_contactPickerDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/be.sourcery.ascent.ExportDataActivity$1_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/br.com.cybereagle.androidwidgets.fragment.ConfirmationDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/cc.rainwave.android.NowPlayingActivity_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/cgeo.geocaching.export.ExportFactory_showExportMenu.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.akasuna.kweather.SelectArea_onItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.apgcecil.mileage.MileageActivity_onClickAboutMenuItem.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.apgcecil.mileage.MileageActivity_onClickDeleteHistoryMenuItem.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.arad.widget.dialog.AlertDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.balk.bovespatracker.BovespaTracker_getStockNameDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cattailsw.nanidroid.dlgs.ErrMsgDlg_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cattailsw.nanidroid.dlgs.NoReadmeSwitchDlg_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cattailsw.nanidroid.dlgs.UserSelectDlg_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.chugulu.dungeons.Dungeons_createDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cocosw.query.CocoQuery_confirm.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cocosw.query.CocoQuery_dialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cradle.iitc_mobile.IITC_WebViewClient_createSignInDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.crashlytics.android.core.CrashlyticsCore$7_run.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.dddpeter.app.rainweather.MainActivity_setNetworkMethod.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.dodola.patcher.utils.PromptManager_showErrorDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.dodola.patcher.utils.PromptManager_showNoNetWork.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.entertailion.android.dial.ServerFinder_buildConfirmationDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.entertailion.android.dial.ServerFinder_buildManualIpDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.external.androidquery.service.MarketService_showUpdateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.fidotechnologies.ultitrack90.StopwatchActivity_dialogShare.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.fidotechnologies.ultitrack90.detailview_dialogShare.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.github.learnin.youroomer.HomeTimeLineActivity_createRoomListDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.gsamlabs.bbm.rootcompanion.MainActivity$2_onCheckedChanged.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.harasoft.relaunch.ReLaunch_onKeyDown.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.ipalandroid.login.LoginActivity$UserChecker_onPostExecute.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.jecelyin.editor.Help_popupWindow.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.koalabeast.tagpro.NetworkErrorDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.lamerman.FileDialog_onListItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.launchergap.preview.MetroActivity_showEditDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.littleinc.orm_benchmark.MainActivity$ResultDialog_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.lmn.Arbiter_Android.Dialog.ArbiterDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.loki.camera.CameraActivity_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.microblink.activity.SegmentScanActivity_onError.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.microblink.util.CameraPermissionManager$2_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.neocodenetworks.smsfwd.AlertActivity_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.neoware.fourquadrantplanner.AboutDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.nolanlawson.apptracker.AppTrackerActivity_onItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.nolanlawson.keepscore.GameActivity_showResetScoresDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.nolanlawson.keepscore.LoadGameActivity_showDeleteDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.nolanlawson.keepscore.helper.DialogHelper_showAdditionalDeltasDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.philips.lighting.quickstart.PHWizardAlertDialog_showErrorDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.raspberryremotecontrol.MainActivity$3_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.rekap.remote.MainActivity$3_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.silentcircle.silentphone.activities.Provisioning$InfoMsgDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.silentcircle.silentphone.activities.TCallWindow$InfoMsgDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.snapshotshopper.SnapshotShopper_clearList.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.svpino.longhorn.activities.DashboardActivity_addStockToWatchList.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.svpino.longhorn.fragments.StockListFragment_showDeleteWarningDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.test.MainActivity$1_onItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.tinfoil.sms.settings.UserKeySettings$1_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.tinfoil.sms.settings.UserKeySettings_exportKey.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.tinfoil.sms.sms.KeyExchangeManager$4_invalid.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.tinfoil.sms.sms.SendMessageActivity$2$1_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.tinfoil.sms.sms.SendMessageActivity$2_onItemLongClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.ubertome.objview.SettingsFragment$4_onPreferenceClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.whiz.grxp.BalanceActivity_deletePerson.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.whiz.grxp.BalanceActivity_resetBalance.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.zlq.util.MyUtil_setNetworkMethod.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.zyrenth.achievement.MainListView_LoadBuiltIn.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/created.by.imdad.alapdemo.Alap_showInternetSettingDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/cx.hell.android.pdfviewpro.OpenFileActivity$Finder$1_run.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/cx.hell.android.pdfviewpro.OpenFileActivity_errorMessage.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/de.cketti.library.changelog.ChangeLog_getDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/de.danielweisser.android.plaxosync.authenticator.PlaxoAuthenticatorActivity_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/de.onyxbits.listmyapps.AnnotationsActivity_onItemLongClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/edu.uml.cs.isense.amusement.AmusementPark_getSavePrompt.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/es.uc3m.setichat.activity.MainActivity_showException.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/eu.dirtyharry.androidopsiadmin.ChangeLog_getDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/it.sineo.android.camera.Util_showFatalErrorAndFinish.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/jp.mstssk.kanji_viewer.SetteiGamenActivity_getFontFilePath.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.azyobuzi.azyotcheck.CheckinPageActivity$1_Invoke.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.azyobuzi.azyotcheck.StartPageActivity_getLocation.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.cmikavac.autowol.DeviceActivity_createSSIDEmptyDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.cmikavac.autowol.DeviceActivity_createSSIDExistsDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.cmikavac.autowol.DeviceActivity_displayHelpDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.londatiga.android.bluebamboo.MainActivity_printBarcode.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.siineiolekala.wallsetter.WallSetter$4_onPreferenceClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.barbon.mangaget.fragments.ConfirmationDialog_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.dbartists.PlayerActivity_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.footoo.airdropemergency.util.DialogHelper_showConfirmDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.hbabcock.trivialpassword.AccountEditorFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.hipacc.demo.MainActivity_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.isoblue.ISOBlueDemo.PGNDialogFragment_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.odk.collect.android.activities.DrawActivity_createQuitDrawDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.odk.collect.android.activities.FormEntryActivity_createLanguageDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.odk.collect.android.activities.FormEntryActivity_createQuitDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.odk.collect.android.activities.InstanceUploaderList_showSentAndUnsentChoices.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.peterbaldwin.vlcremote.fragment.BrowseFragment_displayAddToLibraryDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.peterbaldwin.vlcremote.fragment.BrowseFragment_displayRemoveFromLibraryDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.sipdroid.sipua.ui.PresetEditor$3_onItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.sipdroid.sipua.ui.SIPUri_call.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.sipdroid.sipua.ui.SIPUri_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.sipdroid.sipua.ui.Settings$1_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.strongswan.android.ui.CertificateDeleteConfirmationDialog_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.strongswan.android.ui.MainActivity$ConfirmationDialog_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.sudowars.Controller.Local.Activity.MainMenu_onAboutDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.sudowars.Controller.Local.Activity.MainMenu_onBluetoothActivationDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.ukfsn.hexis.SteamCommunityApp.ShortcutList$2_onItemLongClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.whispersystems.libpastelog.SubmitLogFragment_handleShowChooserForIntent.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.whispersystems.libpastelog.SubmitLogFragment_handleShowSuccessDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/se.erichansander.retrotimer.TimerSet_showLicenseDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/se.olle.vabinator.activities.CurrentActivity$4_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/se.olle.vabinator.activities.adaptors.VabEventAdapter$2_onLongClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/sheetrock.panda.changelog.ChangeLog_getDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/si.modrajagoda.didi.DialogEditHabit_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/temp.MyDialog_modify.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/upb.smarthome.SmartHomeActivity$2$1_run.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/xiaowang.filebrowser.bean.ScannResultActivity$1_onItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.ubertome.objview.FileExplorerFragment_onListItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/hey.hoop.HeyHoopActivity_onCreateDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/de.psdev.licensesdialog.LicensesDialog_create.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.data.agroassistant.FarmerSearch_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/somitsolutions.training.android.androidpaint.ColorPicker_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.yejianfeng.switchhost.ModifyHostActivity_modifyHost.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.codeskraps.lolo.home.AddAcount_configureAccount.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.jadn.cc.ui.PodcastList_onMenuItemSelected.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.total_encryption.FileChoose_onListItemClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.microblink.activity.Pdf417ScanActivity_onScanningDone.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.google.corrigan.owen.wordformed.SinglePlayerGameView$2_onFinish.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.shoppingcart.ManageShoppingListItemsActivity_delList.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/eu.ehnes.secondoandroid.FileDialogActivity_onListItemClick.acdfg.bin
+Anomalous Bin # 1
+Dot: anom_1.dot
+Frequency: 1
+/data/demo_meeting/clusters/all_clusters/cluster_158/ru.redsolution.rosyama.ItemizedDialogBuilder_<init>.acdfg.bin
+Isolated Bin # 1
+Dot: isol_1.dot
+Frequency: 4/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.studentplanner.SemesterActivity_clickHandler.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.studentplanner.SemesterActivity_plusHandler.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.lmn.Arbiter_Android.DatabaseHelpers.TableHelpers.TilesetsHelper_cancellationAlert.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.mobiperf.SpeedometerApp_showAccountDialog.acdfg.bin
+Isolated Bin # 2
+Dot: isol_2.dot
+Frequency: 4/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.flashlight.MainActivity_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.kneejah.notely.NotelyMain_createPicOrVidNoteEditDialog.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.matteofini.medianote.MediaNoteAbs_deleteVoicerec.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/id.web.freelancer.example.database1.ListDataActivity_onCreate.acdfg.bin
+Isolated Bin # 3
+Dot: isol_3.dot
+Frequency: 3/data/demo_meeting/clusters/all_clusters/cluster_158/beonit.NaverMoneySync.ViewMain_doSubmit.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/beonit.NaverMoneySync.ViewMain_updateNaverView.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.qiraat.DisplaySuraActivity_getAudhuBismi.acdfg.bin
+Isolated Bin # 4
+Dot: isol_4.dot
+Frequency: 2/data/demo_meeting/clusters/all_clusters/cluster_158/com.artifex.mupdf.MuPDFPageView_<init>.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/com.cognitiveadventure.logicquiz.GameActivity_load.acdfg.bin
+Isolated Bin # 5
+Dot: isol_5.dot
+Frequency: 2/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.eventplanning.RouteActivity$8_onClick.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/net.supudo.apps.aNeolog.Words.WordComments$1_handleMessage.acdfg.bin
+Isolated Bin # 6
+Dot: isol_6.dot
+Frequency: 2/data/demo_meeting/clusters/all_clusters/cluster_158/com.harasoft.relaunch.ReLaunch$1GlSimpleOnGestureListener_onLongPress.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.swiftp.ServerControlActivity$7_onClick.acdfg.bin
+Isolated Bin # 7
+Dot: isol_7.dot
+Frequency: 2/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.whiteeye.MainActivity_onCreate.acdfg.bin
+/data/demo_meeting/clusters/all_clusters/cluster_158/org.tvbrowser.tvbrowser.TvBrowser_onResume.acdfg.bin
+Isolated Bin # 8
+Dot: isol_8.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/uk.ac.ed.inf.mandelbrotmaps.FractalActivity_showIntro.acdfg.bin
+Isolated Bin # 9
+Dot: isol_9.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/eu.dirtyharry.androidopsiadmin.ShowOpsiProductPropertiesTab$3_onClick.acdfg.bin
+Isolated Bin # 10
+Dot: isol_10.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/ly.dweek.reversi.GameState_gameOver.acdfg.bin
+Isolated Bin # 11
+Dot: isol_11.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/org.codechimp.apprater.AppRater_showRateAlertDialog.acdfg.bin
+Isolated Bin # 12
+Dot: isol_12.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/org.eestecmb.oldteam.PorabaActivity_resultError.acdfg.bin
+Isolated Bin # 13
+Dot: isol_13.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/tcc.iesgo.activity.RequestFilterActivity$statusRequest_doInBackground.acdfg.bin
+Isolated Bin # 14
+Dot: isol_14.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/tr.com.turkcellteknoloji.turkcellupdater.UpdaterDialogManager_onUpdateCheckCompleted.acdfg.bin
+Isolated Bin # 15
+Dot: isol_15.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/cn.code.notes.ui.NotesListActivity$10_onPostExecute.acdfg.bin
+Isolated Bin # 16
+Dot: isol_16.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/com.example.musicsaround.dj.DJMusicFragment$6_onClick.acdfg.bin
+Isolated Bin # 17
+Dot: isol_17.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/com.suchangko.assistivetouch.ChatHeadsService_showAlert.acdfg.bin
+Isolated Bin # 18
+Dot: isol_18.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/com.google.code.appsorganizer.AboutDialogCreator_createDialog.acdfg.bin
+Isolated Bin # 19
+Dot: isol_19.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/com.google.code.appsorganizer.ChooseAppsDialogCreator_createDialog.acdfg.bin
+Isolated Bin # 20
+Dot: isol_20.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/com.lmn.Arbiter_Android.CordovaPlugins.ArbiterCordova$4_run.acdfg.bin
+Isolated Bin # 21
+Dot: isol_21.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/com.phasip.camerafolders.FileBrowser_onContextItemSelected.acdfg.bin
+Isolated Bin # 22
+Dot: isol_22.dot
+Frequency: 1/data/demo_meeting/clusters/all_clusters/cluster_158/com.pkuapp.course.PublicCourseListActivity$5_onItemClick.acdfg.bin
+Total Time (s): 31
+# Graphs : 897
+Average # of nodes: 6
+Average # of edges: 5
+Max. # of nodes : 30
+Max. # of edges : 36
+# Subsumption checks: 4755
+
+# SAT calls: 2212
+# satSolverTime (ms): 12823

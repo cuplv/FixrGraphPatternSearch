@@ -1,5 +1,6 @@
 """
-Keeps an index of apps and groums
+Keeps an index of apps and groums existing in the
+dataset.
 """
 
 import json
@@ -10,77 +11,42 @@ import os
 
 from fixrgraph.annotator.protobuf.proto_acdfg_pb2 import Acdfg
 
-groum_key = "Dagwaging/RoseWidgets/7848e367734f462a085a72c9d6323262aef29900/com.dagwaging.rosewidgets.db.widget.UpdateService.update/208"
-groum_data = {
-    "groum_key" : groum_key,
-    "method_line_number": 208,
-    "package_name": "com.dagwaging.rosewidgets.db.widget",
-    "class_name": "com.dagwaging.rosewidgets.db.widget.UpdateService",
-    "source_class_name": "UpdateService.java",
-    "method_name": "update"
-}
-groum_path="Dagwaging/RoseWidgets/7848e367734f462a085a72c9d6323262aef29900/com.dagwaging.rosewidgets.db.widget.UpdateService_update.acdfg.bin"
-
-groum_key_2 = "osmwp/MeMoPlayer/fd47ade14e3f8b256e3a332649bb567052044c70/com.orange.memoplayer.WidgetUpdate.getRemoteView/155"
-groum_data_2 = {
-    "groum_key" : groum_key_2,
-    "method_line_number": 155,
-    "package_name": "com.orange.memoplayer",
-    "class_name": "com.orange.memoplayer.WidgetUpdate",
-    "source_class_name": "WidgetUpdate.java",
-    "method_name": "getRemoteView"
-}
-groum_path_2="osmwp/MeMoPlayer/fd47ade14e3f8b256e3a332649bb567052044c70/com.orange.memoplayer.WidgetUpdate_getRemoteView.acdfg.bin"
-
-app_key = "Dagwaging/RoseWidgets/7848e367734f462a085a72c9d6323262aef29900"
-app_data = {
-    "app_key" : app_key,
-    "url": "https://github.com/Dagwaging/RoseWidgets",
-    "user_name": "Dagwaging",
-    "commit_hash": "7848e367734f462a085a72c9d6323262aef29900",
-    "commit_date": "",
-    "repo_name": "RoseWidgets"
-}
-app_key_2 = "osmwp/MeMoPlayer/fd47ade14e3f8b256e3a332649bb567052044c70"
-app_data_2 = {
-    "app_key" : app_key_2,
-    "url": "https://github.com/osmwp/MeMoPlayer",
-    "user_name": "osmwp",
-    "commit_hash": "fd47ade14e3f8b256e3a332649bb567052044c70",
-    "commit_date": "",
-    "repo_name": "MeMoPlayer"
-}
-
-class GroumIndex(object):
-    def __fake_init__(self, graph_path):
-        self.graph_path = graph_path
-        self.apps = [app_data, app_data_2]
-        self.appid2groums = {app_key : [groum_data], app_key_2 : [groum_data_2]}
-        self.groumid2path = {groum_key : groum_path, groum_key_2 : groum_path_2}
-
+class GroumIndexBase(object):
     def __init__(self, graph_path):
-        self.graph_path = os.path.abspath(graph_path)
-
         self.apps = []
         self.appid2groums = {}
         self.groumid2path = {}
+        self.graph_path = os.path.abspath(graph_path)
 
-        index_file_name = os.path.join(self.graph_path, "graph_index.json")
-        if (os.path.exists(index_file_name)):
-            self.load_index(index_file_name)
-        else:
-            self.build_index()
-            self.write_index(index_file_name)
-
+    @staticmethod
+    def get_app_key(user_name, repo_name, commit_id):
+      app_key = "%s/%s/%s" %(user_name,
+                             repo_name,
+                             commit_id)
+      return app_key
 
     def get_apps(self):
         return self.apps
 
     def get_groums(self, app_id):
+        """ Get all groums with the app_id
+
+        TODO: transforms this in an iterator
+        """
         if app_id in self.appid2groums:
             return self.appid2groums[app_id]
         else:
             return []
+
+    def get_all_groums(self):
+        """ Get all groums in the index.
+
+        TODO: transforms this in an iterator
+        """
+        all_groums = []
+        for key, groums in self.appid2groums.iteritems():
+            all_groums += groums
+        return all_groums
 
     def get_groum_path(self, groum_id):
         if groum_id in self.groumid2path:
@@ -98,7 +64,6 @@ class GroumIndex(object):
         key = "%s/%s/%s" % (app_key,
                             method_name, line_number)
         return key
-
 
     def process_groum(self, apps_set, groum_abs_path):
         # Read the groum
@@ -161,7 +126,8 @@ class GroumIndex(object):
             "package_name": protoSource.package_name,
             "class_name": protoSource.class_name,
             "source_class_name" : protoSource.source_class_name,
-            "method_name": protoSource.method_name
+            "method_name": protoSource.method_name,
+            "repo" : repo
         }
 
         # get the path of the file relative to self.graph_path
@@ -194,11 +160,26 @@ class GroumIndex(object):
                     full_file_name = os.path.abspath(full_file_name)
                     self.process_groum(apps_set, full_file_name)
 
-
         logging.info("Index created - stats:\n" \
                      "\tNumber of repos: %d\n" \
                      "\tNumber of graphs: %d\n" % (len(self.apps),
                                                    len(self.groumid2path)))
+
+
+
+class GroumIndex(GroumIndexBase):
+    """
+    Serializable version of the groum index
+    """
+    def __init__(self, graph_path):
+        super(GroumIndex, self).__init__(graph_path)
+
+        self.index_file_name = os.path.join(self.graph_path, "graph_index.json")
+        if (os.path.exists(self.index_file_name)):
+            self.load_index(self.index_file_name)
+        else:
+            self.build_index()
+            self.write_index(self.index_file_name)
 
     def write_index(self, index_file_name):
         logging.info("Writing index...")

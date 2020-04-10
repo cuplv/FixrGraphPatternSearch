@@ -1,0 +1,16 @@
+android.content.ContentResolver.query
+android.content.Context.getContentResolver
+android.content.ContextWrapper.getContentResolver
+android.database.Cursor.close
+android.database.Cursor.getColumnIndex
+android.database.Cursor.getCount
+android.database.Cursor.getInt
+android.database.Cursor.getLong
+android.database.Cursor.getString
+android.database.Cursor.isAfterLast
+android.database.Cursor.moveToFirst
+android.database.Cursor.moveToNext
+android.database.sqlite.SQLiteClosable.close
+android.database.sqlite.SQLiteDatabase.query
+android.database.sqlite.SQLiteDatabase.rawQuery
+android.util.Log.e
