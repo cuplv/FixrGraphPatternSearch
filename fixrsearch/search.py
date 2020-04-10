@@ -25,14 +25,133 @@ from fixrsearch.codegen.mappings import Mappings, LineNum
 from fixrsearch.codegen.diff import AcdfgPatch, AcdfgDiff
 from fixrsearch.codegen.generator import CodeGenerator, CFGAnalyzer
 
+from fixrgraph.pipeline.pipeline import Pipeline
 
 def get_cluster_file(cluster_path):
   return os.path.join(cluster_path, "clusters.txt")
 
+def get_duplicate_file(cluster_path):
+  return os.path.join(cluster_path,
+                      Pipeline.PATTERN_DUPLICATES)
+
+def get_duplicate_file(cluster_path):
+  return os.path.join(cluster_path,
+                      Pipeline.PATTERN_DUPLICATES)
+
+
+class DuplicateMap():
+  def __init__(self, duplicate_files):
+    self.duplicate_map = {}
+
+    with open(duplicate_files, "r") as f:
+      for line in f.readlines():
+        line = line.strip()
+        c1,id1,c2,id2 = line.split(",")
+        p1 = (c1,id1)
+        p2 = (c2,id2)
+
+        # merge sets
+        if p1 in self.duplicate_map:
+          s1 = self.duplicate_map[p1]
+        else:
+          s1 = set(p1)
+          self.duplicate_map[p1] = s1
+        s2 = self.duplicate_map if p2 in self.duplicate_map else set(p2)
+        s1 = s1.update(s2)
+        for p_in_s2 in s2:
+          self.duplicate_map[p_in_s2] = s1
+
+  def find_set(self, pattern_id):
+    if not pattern_id in self.duplicate_map:
+      return {pattern_id}
+    else:
+      return self.duplicate_map[pattern_id]
+
+  def remove_duplicates(self, results):
+    visited_id = {}
+    new_results = []
+    total = 0
+    new = 0
+    for cluster_res in results:
+      assert "cluster_info" in cluster_res
+      cluster_id = cluster_res["cluster_info"]["id"]
+
+      added = {}
+      added["cluster_info"] = cluster_res["cluster_info"]
+
+      added["search_results"] = []
+      new_results.append(added)
+      for elem in cluster_res["search_results"]:
+        total += 1
+        bin_res = elem["popular"]
+        bin_id = int(bin_res["id"])
+        pattern_id = (cluster_id, bin_id)
+
+        if not pattern_id in visited_id:
+          visited = self.find_set(pattern_id)
+          visited_id.update(visited)
+          added["search_results"].append(elem)
+          new += 1
+
+    logging.info("Filtering from %d to %d" % (total,new))
+
+    return new_results
+
+
+class PatternFilters:
+
+  @staticmethod
+  def get_from_blacklist(cluster_path):
+    pf = PatternFilters()
+    pf.__fill__(cluster_path)
+    return pf
+
+  def __init__(self):
+    self.blacklist = {}
+
+  def __fill__(self, cluster_path):
+    # ClusterId (Int) -> List[PatternId(int)]
+    # if the list is empty then we cut all the patterns in the
+    # cluster
+    self.blacklist = {}
+
+    # Read the blacklist
+    try:
+      blacklist_file = os.path.join(cluster_path, "blacklist.json")
+      with open(blacklist_file, "r") as f:
+        data = json.load(f)
+
+        for d in data:
+          cluster_id = int(d["id"])
+
+
+          patterns = []
+          for pattern_id in d["patterns"]:
+            patterns.append(int(pattern_id))
+
+          if (len(patterns) == 0):
+            logging.info("Will skip cluster id %d" % cluster_id)
+
+          self.blacklist[cluster_id] = list(patterns)
+    except Exception as e:
+      logging.error(e.message)
+      logging.error("Cannot read blacklist")
+
+  def has_all_cluster(self, cluster_id):
+    return (cluster_id in self.blacklist and
+            0 == len(self.blacklist[cluster_id]))
+
+  def has_pattern(self, cluster_id, pattern_id):
+    return (cluster_id in self.blacklist and
+            pattern_id in self.blacklist[cluster_id])
+
+
 class Search():
   def __init__(self, cluster_path, search_lattice_path,
                index = None, groum_index = None,
-               timeout=10, min_methods_in_common = 1):
+               timeout=10, min_methods_in_common = 1,
+               avoid_duplicates = True,
+               use_blacklist = True):
     """
     Constructs the search object:
 
@@ -42,12 +161,17 @@ class Search():
     - groum_index: index of groums used to mine the clusters
     - min_methods_in_common: minimum number of methods in common between
       the groum and the cluster to search for
+    - avoid_duplicates: avoids the duplicate patterns (need to build the
+      duplicate clusters
+    - use_blacklist: use the list of blacklisted cluster/patterns
     """
     self.cluster_path = cluster_path
     self.search_lattice_path = search_lattice_path
     self.timeout = timeout
     self.groum_index = groum_index
     self.min_methods_in_common = min_methods_in_common
+    self.avoid_duplicates = avoid_duplicates
+    self.use_blacklist = use_blacklist
 
     # 1. Build the index
     if (index is None):
@@ -55,6 +179,16 @@ class Search():
       self.index = ClusterIndex(cluster_file)
     else:
       self.index = index
+
+    if avoid_duplicates:
+      self.duplicate_map = DuplicateMap(get_duplicate_file(cluster_path))
+    else:
+      self.duplicate_map = None
+
+    if use_blacklist:
+      self.blacklist = PatternFilters.get_from_blacklist(cluster_path)
+    else:
+      self.blacklist = PatternFilters()
 
   def _get_clusters(self, groum_path):
     # 1. Get the method list from the GROUM
@@ -84,12 +218,13 @@ class Search():
 
     new_clusters = []
     for cluster_info in clusters:
-      # Comment out filtering of cluster
-      # Here we got rid of a set of cluster to show less noisy data during the
-      # video demo --- should be removed on merging into master
-      # if not cluster_info.id in [161,154,159,9,426,427,185,333,187,189,448,447,
-      #                            323,296,177,84,236,270,265,365,348]:
       new_clusters.append(cluster_info)
+
+    logging.debug("Keys: %s" %
+                  ",".join([str(method_name) for method_name in method_list]))
+
+    logging.debug("Found clusters: %s" %
+                  ",".join([str(cluster_info.id) for cluster_info in clusters]))
 
     return new_clusters
 
@@ -120,6 +255,10 @@ class Search():
         logging.debug("Filtered out cluster %s", cluster_info.id)
         continue
 
+      if  (self.blacklist.has_all_cluster(int(cluster_info.id))):
+        logging.debug("Skipping blacklisted cluster %s....", cluster_info.id)
+        continue
+
       results_cluster = self.search_cluster(groum_path, cluster_info,
                                             filter_for_bugs)
       if results_cluster is None:
@@ -142,13 +281,16 @@ class Search():
           elem = res_list["search_results"][0]
 
           if "popular" in elem:
-            return elem["popular"]["frequency"]
+             return elem["popular"]["frequency"]
           if "anomalous" in elem:
             return elem["anomalous"]["frequency"]
-
       return 0
 
     results = sorted(results, key=lambda res: mysort(res), reverse=True)
+
+    if (not self.duplicate_map is None):
+      results = self.duplicate_map.remove_duplicates(results)
+
     return results
 
 
@@ -166,6 +308,7 @@ class Search():
     if (os.path.exists(lattice_path)):
       logging.debug("Searching lattice %s..." % lattice_path)
       result = self.call_iso(groum_path, lattice_path,
+                             int(cluster_info.id),
                              filter_for_bugs)
     else:
       logging.debug("Lattice file %s not found" % lattice_path)
@@ -175,6 +318,7 @@ class Search():
 
 
   def call_iso(self, groum_path, lattice_path,
+               cluster_id,
                filter_for_bugs = False):
     """
     Search the element in the lattice that are similar to the groum
@@ -189,8 +333,6 @@ class Search():
             "-l", lattice_path,
             "-o", search_path]
     logging.debug("Command line %s" % " ".join(args))
-
-    # print " ".join(args)
 
     # Kill the process after the timout expired
     def kill_function(p, cmd):
@@ -219,7 +361,7 @@ class Search():
     else:
       logging.info("Search finished...")
 
-      result = self.formatOutput(search_path, filter_for_bugs)
+      result = self.formatOutput(search_path, cluster_id, filter_for_bugs)
 
     if os.path.isfile(search_path):
       os.remove(search_path)
@@ -259,7 +401,7 @@ class Search():
     return (res_type, subsumes_ref, subsumes_anom)
 
 
-  def formatOutput(self, search_path, filter_for_bugs=False):
+  def formatOutput(self, search_path, cluster_id, filter_for_bugs=False):
     """
     Read the results from the search and produce the json output
     """
@@ -297,10 +439,18 @@ class Search():
       search_res["type"] = res_type
       logging.debug("Search res: " + search_res["type"])
 
-      if (filter_for_bugs and 
-          (not res_type in ["ANOMALOUS_SUBSUMED",
-                            "CORRECT_SUBSUMED"])):
-        logging.debug("Filtering cluster (not anomalous or correct subsumed)")
+      # Just show ANOMALOUS_SUBSUMED patterns
+      # anomaly_categories = ["ANOMALOUS_SUBSUMED", "CORRECT_SUBSUMED"]
+      anomaly_categories = ["ANOMALOUS_SUBSUMED"]
+      if (filter_for_bugs and (not res_type in anomaly_categories)):
+        logging.info("Filtering cluster (not anomalous or correct subsumed)")
+        continue
+
+      # check if the pattern is blacklisted
+      bin_id = proto_search.referencePatternId
+      if (self.blacklist.has_pattern(cluster_id, int(bin_id))):
+        logging.info("Filtering blacklisted pattern %d %d..." % (int(cluster_id),
+                                                                 int(bin_id)))
         continue
 
       # Process the reference pattern, and set it as
@@ -466,29 +616,36 @@ class Search():
                                       lineNum)
         first = False
 
+      try:
+        (nodes_res, edges_res) = query_to_other_mapping.get_lines(
+          acdfg_query,
+          isoRes.acdfg_1.node_lines,
+          acdfg_other,
+          isoPair.iso.acdfg_1.node_lines)
 
-      (nodes_res, edges_res) = query_to_other_mapping.get_lines(
-        acdfg_query,
-        isoRes.acdfg_1.node_lines,
-        acdfg_other,
-        isoPair.iso.acdfg_1.node_lines)
+        # Computes the mapping from the acdfg used in the
+        # query and the acdfg in the bin
+        (nodes_res, edges_res) = Search.get_mapping(isoRes.acdfg_1,
+                                                    isoPair.iso.acdfg_1,
+                                                    isoRes,
+                                                    isoPair.iso,
+                                                    # Never reverse, the data is
+                                                    # already ok
+                                                    False)
+        mapping["nodes"] = {"iso" : nodes_res[0],
+                            "add" : nodes_res[1],
+                            "remove" : nodes_res[2]}
+        mapping["edges"] = {"iso" : edges_res[0],
+                            "add" : edges_res[1],
+                            "remove" : edges_res[2]}
+      except Exception as e:
+        logging.debug("Error mapping nodes nodes:\n%s\n" % str(e))
 
-      # Computes the mapping from the acdfg used in the
-      # query and the acdfg in the bin
-      (nodes_res, edges_res) = Search.get_mapping(isoRes.acdfg_1,
-                                                  isoPair.iso.acdfg_1,
-                                                  isoRes,
-                                                  isoPair.iso,
-                                                  # Never reverse, the data is
-                                                  # already ok
-                                                  False)
-      mapping["nodes"] = {"iso" : nodes_res[0],
-                          "add" : nodes_res[1],
-                          "remove" : nodes_res[2]}
-      mapping["edges"] = {"iso" : edges_res[0],
-                          "add" : edges_res[1],
-                          "remove" : edges_res[2]}
-      acdfg_mappings.append(mapping)
+      finally:
+        # skip exception building the mapping, be robust if we fail
+        # the mapping is used to morph my code into the examples, but now we do
+        # not show this on the interface
+        acdfg_mappings.append(mapping)
 
     if first:
       patches = self.format_patches(diffs,
@@ -767,8 +924,6 @@ class Search():
 
     found_orig = False;
     for isoPair in acdfgBin.names_to_iso:
-      acdfg_reduced = AcdfgRepr(isoPair.iso.acdfg_1)
-
       source_info = self._fill_source_info(isoPair)
       repo_tag = self._fill_repo_tag(isoPair)
 
@@ -782,6 +937,8 @@ class Search():
       acdfg_orig_path = self.groum_index.get_groum_path(key)
       if not acdfg_orig_path is None:
         if os.path.exists(acdfg_orig_path):
+          acdfg_reduced = AcdfgRepr(isoPair.iso.acdfg_1)
+
           found_orig = True
           break
 
@@ -793,16 +950,23 @@ class Search():
       with open(acdfg_orig_path, "rb") as f1:
         acdfg_proto.ParseFromString(f1.read())
         f1.close()
+
+      # Guess we need the original so that we have
+      # all the edges to start with!
+      # In the bin we have a reduced acdfg!
       acdfg_original = AcdfgRepr(acdfg_proto)
       code_gen = CodeGenerator(acdfg_reduced, acdfg_original)
       code = code_gen.get_code_text()
+      logging.debug("\nGENERATED CODE\n")
+      logging.debug(code)
     except Exception as e:
+      # import traceback
+      # traceback.print_exc(file=sys.stdout)
       logging.debug("Error generating source code for:\n" \
                     "acdfg_reduced (bin id): %s\n" \
                     "acdfg_orig_path: %s\n"
                     % (acdfgBin.id,
                        acdfg_orig_path))
-
       code = ""
 
     return (code, acdfg_reduced)

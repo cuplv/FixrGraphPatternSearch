@@ -28,20 +28,40 @@ class IndexNode(object):
 
    @staticmethod
    def _find_index(children, key):
-      def _find_index_rec(children, key, low, high):
+      # def _find_index_rec(children, key, low, high):
+      #    if low > high:
+      #       return (low,high)
+      #    else:
+      #       idx = (low + high) / 2
+      #       if children[idx].key == key:
+      #          return (idx,idx)
+      #       elif key < children[idx].key:
+      #          return _find_index_rec(children, key, low, idx-1)
+      #       else:
+      #          return _find_index_rec(children, key, low+1, high)
+
+      # return _find_index_rec(children, key,
+      #                        0, len(children) - 1)
+
+      found = False
+      low = 0
+      high = len(children) - 1
+      res = None
+      while (not found):
          if low > high:
-            return (low,high)
+            res = (low,high)
+            found = True
+            break
          else:
             idx = (low + high) / 2
             if children[idx].key == key:
-               return (idx,idx)
+               res = (idx,idx)
+               found = True
             elif key < children[idx].key:
-               return _find_index_rec(children, key, low, idx-1)
+               high = idx-1
             else:
-               return _find_index_rec(children, key, low+1, high)
-
-      return _find_index_rec(children, key,
-                             0, len(children) - 1)
+               low = low + 1
+      return res
 
    def _insert_rec(self, int_list, value, l, h):
       if (l > h):

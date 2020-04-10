@@ -183,14 +183,13 @@ def main():
 
   # Search the Groums
   anomalies = None
-  commit_ref = CommitRef(RepoRef("temporary_search", "cuplv"), "0")
   if use_groum_file:
-    # results = search.search_from_groum(input_file, False, None)
     index = GroumIndexBase(os.path.dirname(input_file))
     index.process_groum(set(), input_file)
     pr_processor = PrProcessor(index, search, src_client)
-    anomalies = pr_processor.process_graphs_from_commit(commit_ref, None, None)
+    anomalies = pr_processor.process_graphs_from_commit(None, None, None)
   elif use_apk:
+    commit_ref = CommitRef(RepoRef("temporary_search", "cuplv"), "0")
     graphs_zip_file = tempfile.NamedTemporaryFile()
     src_zip = tempfile.NamedTemporaryFile()
     src_path = tempfile.mkdtemp()

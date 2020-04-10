@@ -119,7 +119,7 @@ class Mappings():
       if edge_lines_a is None or edge_lines_b is None:
         return None
       else:
-        (line_a, line_b)
+        (edge_lines_a, edge_lines_b)
 
     assert isinstance(acdfg_a, AcdfgRepr)
     assert isinstance(acdfg_b, AcdfgRepr)
