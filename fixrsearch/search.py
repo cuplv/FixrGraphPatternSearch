@@ -334,8 +334,6 @@ class Search():
             "-o", search_path]
     logging.debug("Command line %s" % " ".join(args))
 
-    # print " ".join(args)
-
     # Kill the process after the timout expired
     def kill_function(p, cmd):
       logging.info("Execution timed out executing %s" % (cmd))
@@ -641,7 +639,8 @@ class Search():
                             "add" : edges_res[1],
                             "remove" : edges_res[2]}
       except Exception as e:
-        print(e)
+        logging.debug("Error mapping nodes nodes:\n%s\n" % str(e))
+
       finally:
         # skip exception building the mapping, be robust if we fail
         # the mapping is used to morph my code into the examples, but now we do
@@ -954,7 +953,11 @@ class Search():
       acdfg_original = AcdfgRepr(acdfg_proto)
       code_gen = CodeGenerator(acdfg_reduced, acdfg_original)
       code = code_gen.get_code_text()
+      logging.debug("\nGENERATED CODE\n")
+      logging.debug(code)
     except Exception as e:
+      # import traceback
+      # traceback.print_exc(file=sys.stdout)
       logging.debug("Error generating source code for:\n" \
                     "acdfg_reduced (bin id): %s\n" \
                     "acdfg_orig_path: %s\n"
