@@ -924,8 +924,6 @@ class Search():
 
     found_orig = False;
     for isoPair in acdfgBin.names_to_iso:
-      acdfg_reduced = AcdfgRepr(isoPair.iso.acdfg_1)
-
       source_info = self._fill_source_info(isoPair)
       repo_tag = self._fill_repo_tag(isoPair)
 
@@ -939,6 +937,8 @@ class Search():
       acdfg_orig_path = self.groum_index.get_groum_path(key)
       if not acdfg_orig_path is None:
         if os.path.exists(acdfg_orig_path):
+          acdfg_reduced = AcdfgRepr(isoPair.iso.acdfg_1)
+
           found_orig = True
           break
 
@@ -950,6 +950,10 @@ class Search():
       with open(acdfg_orig_path, "rb") as f1:
         acdfg_proto.ParseFromString(f1.read())
         f1.close()
+
+      # Guess we need the original so that we have
+      # all the edges to start with!
+      # In the bin we have a reduced acdfg!
       acdfg_original = AcdfgRepr(acdfg_proto)
       code_gen = CodeGenerator(acdfg_reduced, acdfg_original)
       code = code_gen.get_code_text()
@@ -963,7 +967,6 @@ class Search():
                     "acdfg_orig_path: %s\n"
                     % (acdfgBin.id,
                        acdfg_orig_path))
-
       code = ""
 
     return (code, acdfg_reduced)

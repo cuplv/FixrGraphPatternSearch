@@ -31,6 +31,12 @@ class AcdfgPatch(object):
 
     self._devel_acdfg = devel_acdfg
     self._pattern_acdfg = pattern_acdfg
+
+    v2n = {}
+    c2n = {}
+    CodeGenerator.rename_vars(self._pattern_acdfg, v2n, c2n)
+
+
     self._mappings = mappings
 
   def _is_iso_devel(self, elem):

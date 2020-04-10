@@ -31,8 +31,10 @@ class CodeGenerator(object):
     # Show only the original control edges
     self._fix_control_edges()
 
-    self.rename_vars(self.sliced_acdfg)
-
+    v2n = {}
+    c2n = {}
+    CodeGenerator.rename_vars(self.original_acdfg, v2n, c2n)
+    CodeGenerator.rename_vars(self.sliced_acdfg, v2n, c2n)
 
   def get_code_text(self):
     ast = self._get_ast()
@@ -574,26 +576,31 @@ class CodeGenerator(object):
       return list(self._fwd[node])
 
 
-
-  def rename_vars(self, acdfg):
+  @staticmethod
+  def rename_vars(acdfg,
+                  acdfg_to_var,
+                  acdfg_to_const):
     prefix = "tmp"
     counter = -1
-    acdfg_to_var = {}
-    acdfg_to_const = {}
 
     for v in acdfg._data:
       if (v.data_type == DataNode.DataType.VAR):
-        assert not v.name in acdfg_to_var
-        counter += 1
-        new_val = "%s_%d" % (prefix, counter)
-        acdfg_to_var[v.name] = new_val
-        v.name = new_val
+        if (not v.name in acdfg_to_var):
+          counter += 1
+          new_val = "%s_%d" % (prefix, counter)
+          acdfg_to_var[v.name] = new_val
+          v.name = new_val
+        else:
+          v.name = acdfg_to_var[v.name]
 
       if (v.data_type == DataNode.DataType.CONST and
           v.node_type == "java.lang.String"):
-        new_val = ""
-        acdfg_to_const[v.name] = new_val
-        v.name = new_val
+        if (not v.name in acdfg_to_const):
+          new_val = "\"\""
+          acdfg_to_const[v.name] = new_val
+          v.name = new_val
+        else:
+          v.name = acdfg_to_const[v.name]
 
 class CFGAnalyzer(object):
   def __init__(self, acdfg, root_node):
@@ -931,7 +938,7 @@ class PatternAST(object):
       out_stream.write("%s%s" % (indent, "return;\n"))
     elif (self.ast_type in {PatternAST.NodeType.VAR,
                             PatternAST.NodeType.CONST}):
-      out_stream.write("%s%s" % (indent, self._get_data("name")))
+      out_stream.write("%s%s" % (indent, self._get_data("name").strip()))
     elif (self.ast_type == PatternAST.NodeType.METHOD):
       out_stream.write("%s%s(" % (indent, self._get_data("method_name")))
 
