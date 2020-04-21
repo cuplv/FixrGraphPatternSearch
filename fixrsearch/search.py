@@ -274,7 +274,54 @@ class Search():
     clusters = self._get_clusters(groum_path)
 
     # 2. Search the clusters
+    results = self.search_all_clusters(clusters,
+                                       groum_path,
+                                       filter_for_bugs,
+                                       filter_cluster)
+
+    # 3. sort results by popularity
+    def mysort(res_list):
+      if "search_results" in res_list:
+        if len(res_list["search_results"]) > 0:
+          elem = res_list["search_results"][0]
+
+          if "popular" in elem:
+             return elem["popular"]["frequency"]
+          if "anomalous" in elem:
+            return elem["anomalous"]["frequency"]
+      return 0
+
+    results = sorted(results, key=lambda res: mysort(res), reverse=True)
+
+    if (not self.duplicate_map is None):
+      results = self.duplicate_map.remove_duplicates(results)
+
+    return results
+
+  @staticmethod
+  def postprocess_cluster_results(cluster_info,
+                                  results_cluster_search,
+                                  results):
+    if results_cluster_search is None:
+      logging.debug("Found 0 in cluster %d..." % cluster_info.id)
+    else:
+      logging.debug("Found %d in cluster %d..." % (len(results_cluster_search),
+                                                   cluster_info.id))
+      cluster_info_map = {}
+      cluster_info_map["id"] = cluster_info.id
+      cluster_info_map["methods_list"] = [n for n in
+                                          cluster_info.methods_list]
+      results_cluster_search["cluster_info"] = cluster_info_map
+
+      results.append(results_cluster_search)
+
+
+  def search_all_clusters(self, clusters,
+                          groum_path,
+                          filter_for_bugs,
+                          filter_cluster):
     results = []
+
     for cluster_info in clusters:
       logging.debug("Searching in cluster %d (%s)..." % (cluster_info.id,
                                                          ",".join(cluster_info.methods_list)))
@@ -298,37 +345,13 @@ class Search():
                                               groum_path,
                                               cluster_info,
                                               filter_for_bugs)
-      if results_cluster is None:
-        logging.debug("Found 0 in cluster %d..." % cluster_info.id)
-      else:
-        logging.debug("Found %d in cluster %d..." % (len(results_cluster),
-                                                     cluster_info.id))
-        cluster_info_map = {}
-        cluster_info_map["id"] = cluster_info.id
-        cluster_info_map["methods_list"] = [n for n in
-                                            cluster_info.methods_list]
-        results_cluster["cluster_info"] = cluster_info_map
 
-        results.append(results_cluster)
-
-    # 3. sort results by popularity
-    def mysort(res_list):
-      if "search_results" in res_list:
-        if len(res_list["search_results"]) > 0:
-          elem = res_list["search_results"][0]
-
-          if "popular" in elem:
-             return elem["popular"]["frequency"]
-          if "anomalous" in elem:
-            return elem["anomalous"]["frequency"]
-      return 0
-
-    results = sorted(results, key=lambda res: mysort(res), reverse=True)
-
-    if (not self.duplicate_map is None):
-      results = self.duplicate_map.remove_duplicates(results)
+      Search.postprocess_cluster_results(cluster_info,
+                                         results_cluster,
+                                         results)
 
     return results
+
 
 
   @staticmethod
