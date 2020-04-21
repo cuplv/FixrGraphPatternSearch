@@ -13,6 +13,11 @@ from subprocess import Popen, PIPE
 import re
 import tempfile
 
+try:
+    import Queue as Queue
+except ImportError:
+    import queue as Queue
+
 from fixrsearch.index import ClusterIndex
 from fixrsearch.groum_index import GroumIndex
 from fixrgraph.annotator.protobuf.proto_acdfg_pb2 import Acdfg
@@ -106,6 +111,11 @@ class PatternFilters:
     pf.__fill__(cluster_path)
     return pf
 
+  def copy(self):
+    other = PatternFilters()
+    other.blacklist = self.blacklist.copy()
+    return other
+
   def __init__(self):
     self.blacklist = {}
 
@@ -146,7 +156,26 @@ class PatternFilters:
             pattern_id in self.blacklist[cluster_id])
 
 
+class ClusterSearchData:
+  """
+  Data structure used to run the search in parallel.
+  """
+
+  def __init__(self,
+               cluster_path,
+               search_lattice_path,
+               groum_index,
+               timeout,
+               blacklist):
+    self.cluster_path = cluster_path
+    self.search_lattice_path = search_lattice_path
+    self.groum_index = groum_index.copy()
+    self.timeout = timeout
+    self.blacklist = blacklist.copy()
+
 class Search():
+
+
   def __init__(self, cluster_path, search_lattice_path,
                index = None, groum_index = None,
                timeout=10, min_methods_in_common = 1,
@@ -259,8 +288,16 @@ class Search():
         logging.debug("Skipping blacklisted cluster %s....", cluster_info.id)
         continue
 
-      results_cluster = self.search_cluster(groum_path, cluster_info,
-                                            filter_for_bugs)
+      cluster_data = ClusterSearchData(self.cluster_path,
+                                       self.search_lattice_path,
+                                       self.groum_index,
+                                       self.timeout,
+                                       self.blacklist)
+
+      results_cluster = Search.search_cluster(cluster_data,
+                                              groum_path,
+                                              cluster_info,
+                                              filter_for_bugs)
       if results_cluster is None:
         logging.debug("Found 0 in cluster %d..." % cluster_info.id)
       else:
@@ -294,12 +331,13 @@ class Search():
     return results
 
 
-  def search_cluster(self, groum_path, cluster_info,
+  @staticmethod
+  def search_cluster(cluster_data, groum_path, cluster_info,
                      filter_for_bugs = False):
     """
     Search for similarities and anomalies inside a single lattice
     """
-    current_path = os.path.join(self.cluster_path,
+    current_path = os.path.join(cluster_data.cluster_path,
                                 "all_clusters",
                                 "cluster_%d" % cluster_info.id)
     lattice_path = os.path.join(current_path,
@@ -307,9 +345,10 @@ class Search():
 
     if (os.path.exists(lattice_path)):
       logging.debug("Searching lattice %s..." % lattice_path)
-      result = self.call_iso(groum_path, lattice_path,
-                             int(cluster_info.id),
-                             filter_for_bugs)
+      result = Search.call_iso(cluster_data,
+                               groum_path, lattice_path,
+                               int(cluster_info.id),
+                               filter_for_bugs)
     else:
       logging.debug("Lattice file %s not found" % lattice_path)
       result = None
@@ -317,7 +356,10 @@ class Search():
     return result
 
 
-  def call_iso(self, groum_path, lattice_path,
+  @staticmethod
+  def call_iso(cluster_data,
+               groum_path,
+               lattice_path,
                cluster_id,
                filter_for_bugs = False):
     """
@@ -328,7 +370,7 @@ class Search():
                                                 text=True)
     os.close(search_file)
 
-    args = [self.search_lattice_path,
+    args = [cluster_data.search_lattice_path,
             "-q", groum_path,
             "-l", lattice_path,
             "-o", search_path]
@@ -340,7 +382,7 @@ class Search():
       p.kill()
 
     proc = Popen(args, cwd=None, stdout=PIPE,  stderr=PIPE)
-    timer = Timer(self.timeout, kill_function, [proc, "".join(args)])
+    timer = Timer(cluster_data.timeout, kill_function, [proc, "".join(args)])
     try:
       timer.start()
       (stdout, stderr) = proc.communicate() # execute the process
@@ -361,7 +403,8 @@ class Search():
     else:
       logging.info("Search finished...")
 
-      result = self.formatOutput(search_path, cluster_id, filter_for_bugs)
+      result = Search.formatOutput(cluster_data, search_path, cluster_id,
+                                   filter_for_bugs)
 
     if os.path.isfile(search_path):
       os.remove(search_path)
@@ -369,7 +412,8 @@ class Search():
     return result
 
 
-  def get_res_type(self, proto_search_type):
+  @staticmethod
+  def get_res_type(proto_search_type):
     if (proto_search_type == SearchResults.SearchResult.CORRECT):
       res_type = "CORRECT"
       subsumes_ref = True
@@ -400,8 +444,8 @@ class Search():
 
     return (res_type, subsumes_ref, subsumes_anom)
 
-
-  def formatOutput(self, search_path, cluster_id, filter_for_bugs=False):
+  @staticmethod
+  def formatOutput(cluster_data, search_path, cluster_id, filter_for_bugs=False):
     """
     Read the results from the search and produce the json output
     """
@@ -435,7 +479,7 @@ class Search():
       search_res = {}
 
       # Get the type of the pattern
-      (res_type, subsumes_ref, subsume_anom) = self.get_res_type(proto_search.type)
+      (res_type, subsumes_ref, subsume_anom) = Search.get_res_type(proto_search.type)
       search_res["type"] = res_type
       logging.debug("Search res: " + search_res["type"])
 
@@ -448,7 +492,7 @@ class Search():
 
       # check if the pattern is blacklisted
       bin_id = proto_search.referencePatternId
-      if (self.blacklist.has_pattern(cluster_id, int(bin_id))):
+      if (cluster_data.blacklist.has_pattern(cluster_id, int(bin_id))):
         logging.info("Filtering blacklisted pattern %d %d..." % (int(cluster_id),
                                                                  int(bin_id)))
         continue
@@ -456,11 +500,12 @@ class Search():
       # Process the reference pattern, and set it as
       # popular key in the result
       bin_id = proto_search.referencePatternId
-      bin_res = self.format_bin(proto_results.lattice,
-                                id2bin,
-                                id2bin[bin_id],
-                                proto_search.isoToReference,
-                                subsumes_ref)
+      bin_res = Search.format_bin(cluster_data.groum_index,
+                                  proto_results.lattice,
+                                  id2bin,
+                                  id2bin[bin_id],
+                                  proto_search.isoToReference,
+                                  subsumes_ref)
       if bin_res is None:
         continue
       search_res["popular"] = bin_res
@@ -471,11 +516,12 @@ class Search():
       if (proto_search.HasField("anomalousPatternId") and
           proto_search.HasField("isoToAnomalous")):
         bin_id = proto_search_res.anomalousPatternId
-        bin_res = self.format_bin(proto_results.lattice,
-                                  id2bin,
-                                  id2bin[bin_id],
-                                  proto_search.isoToAnomalous,
-                                  subsumes_ref)
+        bin_res = Search.format_bin(cluster_data.groum_index,
+                                    proto_results.lattice,
+                                    id2bin,
+                                    id2bin[bin_id],
+                                    proto_search.isoToAnomalous,
+                                    subsumes_ref)
         if bin_res is None:
           continue
         search_res["anomalous"] = bin_res
@@ -494,7 +540,8 @@ class Search():
 
     return results
 
-  def get_popularity(self, lattice, id2bin, acdfg_bin):
+  @staticmethod
+  def get_popularity(lattice, id2bin, acdfg_bin):
     """
     Get the popular measure exploring the lattice
     """
@@ -517,7 +564,8 @@ class Search():
     return popularity
 
 
-  def format_bin(self, lattice, id2bin, acdfgBin, isoRes, subsumes):
+  @staticmethod
+  def format_bin(groum_index, lattice, id2bin, acdfgBin, isoRes, subsumes):
     """
     Format one of the result of the search --- i.e. a relation from a
     pattern (either popular/anomalous/isolated) to the groum used in the
@@ -550,14 +598,15 @@ class Search():
       res_bin["type"] = "isolated"
 
     res_bin["id"] = acdfgBin.id
-    res_bin["frequency"] = self.get_popularity(lattice, id2bin, acdfgBin)
+    res_bin["frequency"] = Search.get_popularity(lattice, id2bin, acdfgBin)
     res_bin["cardinality"] = len(acdfgBin.names_to_iso)
 
 
     # Get the source code of the pattern
-    (source_code, acdf_reduced) = self.get_pattern_code(lattice,
-                                                        id2bin,
-                                                        acdfgBin)
+    (source_code, acdf_reduced) = Search.get_pattern_code(groum_index,
+                                                          lattice,
+                                                          id2bin,
+                                                          acdfgBin)
     res_bin["pattern_code"] = source_code
 
     # Compute the patch from the acdfgs
@@ -588,9 +637,9 @@ class Search():
     first = True
     for isoPair in acdfgBin.names_to_iso:
       mapping = {}
-      source_info = self._fill_source_info(isoPair)
+      source_info = Search._fill_source_info(isoPair)
       mapping["source_info"] = source_info
-      repo_tag = self._fill_repo_tag(isoPair)
+      repo_tag = Search._fill_repo_tag(isoPair)
       mapping["repo_tag"] = repo_tag
 
       # remove duplicates from the visit
@@ -611,9 +660,9 @@ class Search():
                                               other_to_ref_mapping)
 
       if first:
-        patches = self.format_patches(diffs,
-                                      query_to_other_mapping,
-                                      lineNum)
+        patches = Search.format_patches(diffs,
+                                        query_to_other_mapping,
+                                        lineNum)
         first = False
 
       try:
@@ -648,16 +697,17 @@ class Search():
         acdfg_mappings.append(mapping)
 
     if first:
-      patches = self.format_patches(diffs,
-                                    query_to_ref_mapping,
-                                    lineNum)
+      patches = Search.format_patches(diffs,
+                                      query_to_ref_mapping,
+                                      lineNum)
     res_bin["acdfg_mappings"] = acdfg_mappings
     res_bin["diffs"] = patches
 
     return res_bin
 
 
-  def _fill_source_info(self, isoPair):
+  @staticmethod
+  def _fill_source_info(isoPair):
     assert isoPair.iso.acdfg_1.HasField("source_info")
 
     source_info = {}
@@ -679,7 +729,8 @@ class Search():
 
     return source_info
 
-  def _fill_repo_tag(self, isoPair):
+  @staticmethod
+  def _fill_repo_tag(isoPair):
     assert (isoPair.iso.acdfg_1.HasField("repo_tag"))
 
     repo_tag = {}
@@ -698,7 +749,8 @@ class Search():
 
     return repo_tag
 
-  def format_patches(self, diffs, query_to_ref_mapping, lineNum):
+  @staticmethod
+  def format_patches(diffs, query_to_ref_mapping, lineNum):
     """ Returns a readable representatio nof the the patches.
 
     Out format:
@@ -912,20 +964,21 @@ class Search():
 
     return (nodes_res, edges_res)
 
-  def get_pattern_code(self, lattice, id2bin, acdfgBin):
+  @staticmethod
+  def get_pattern_code(groum_index, lattice, id2bin, acdfgBin):
     """
     Reconstruct the source code of the pattern represented in the bin.
 
     It uses the groum index to find the original graph representing
     the pattern.
     """
-    if self.groum_index is None:
+    if groum_index is None:
       return ("", None)
 
     found_orig = False;
     for isoPair in acdfgBin.names_to_iso:
-      source_info = self._fill_source_info(isoPair)
-      repo_tag = self._fill_repo_tag(isoPair)
+      source_info = Search._fill_source_info(isoPair)
+      repo_tag = Search._fill_repo_tag(isoPair)
 
       key = u"%s/%s/%s/%s.%s/%s" % (repo_tag["user_name"],
                                     repo_tag["repo_name"],
@@ -934,7 +987,7 @@ class Search():
                                     source_info["method_name"],
                                     source_info["method_line_number"])
 
-      acdfg_orig_path = self.groum_index.get_groum_path(key)
+      acdfg_orig_path = groum_index.get_groum_path(key)
       if not acdfg_orig_path is None:
         if os.path.exists(acdfg_orig_path):
           acdfg_reduced = AcdfgRepr(isoPair.iso.acdfg_1)

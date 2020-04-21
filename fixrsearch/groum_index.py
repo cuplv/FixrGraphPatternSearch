@@ -25,6 +25,17 @@ class GroumIndexBase(object):
                              commit_id)
       return app_key
 
+    def copy(self):
+        other = GroumIndexBase(self.graph_path)
+
+        # shallow copy is fine, we store int and strings
+        # and we do not do side effect on strings
+        other.apps = [app for app in self.apps]
+        other.appid2groums = self.appid2groums.copy()
+        other.groumid2path = self.groumid2path.copy()
+
+        return other
+
     def get_apps(self):
         return self.apps
 
