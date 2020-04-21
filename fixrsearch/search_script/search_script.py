@@ -19,6 +19,7 @@ import sys
 import json
 import tempfile
 import shutil
+import multiprocessing
 
 from fixrsearch.search import Search
 from fixrsearch.groum_index import GroumIndexBase, GroumIndex
@@ -177,7 +178,9 @@ def main():
 
   # Creates the search object
   search = Search(clusters_path, search_lattice_path,
-                  None, GroumIndex(graphs_path), timeout)
+                  None, GroumIndex(graphs_path), timeout,
+                  1, True, True,
+                  max(1, multiprocessing.cpu_count() - 2))
   src_client = SrcClientMock()
   src_client = SrcClientService("localhost", "8080")
 

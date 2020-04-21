@@ -15,7 +15,7 @@ RUN apt-get update -qq -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN sudo pip install nose six protobuf requests flask enum34
+RUN sudo pip install nose six protobuf requests flask enum34 html
 
 # Google protobuffer
 RUN curl -OL https://github.com/google/protobuf/releases/download/v3.5.0/protobuf-all-3.5.0.zip \
