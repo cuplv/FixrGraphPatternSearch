@@ -188,7 +188,8 @@ class Search():
                index = None, groum_index = None,
                timeout=10, min_methods_in_common = 1,
                avoid_duplicates = True,
-               use_blacklist = True):
+               use_blacklist = True,
+               num_threads = 0):
     """
     Constructs the search object:
 
@@ -209,6 +210,7 @@ class Search():
     self.min_methods_in_common = min_methods_in_common
     self.avoid_duplicates = avoid_duplicates
     self.use_blacklist = use_blacklist
+    self.num_threads = num_threads
 
     # 1. Build the index
     if (index is None):
@@ -294,10 +296,17 @@ class Search():
 
 
     # 2. Search the clusters
-    results = self.search_all_clusters_multithread(clusters,
-                                                   groum_path,
-                                                   filter_for_bugs,
-                                                   8)
+    if (self.num_threads <= 0):
+      logging.debug("Single thread search...")
+      results = self.search_all_clusters(clusters,
+                                         groum_path,
+                                         filter_for_bugs)
+    else:
+      logging.debug("Going to use %d threads..." % self.num_threads)
+      results = self.search_all_clusters_multithread(clusters,
+                                                     groum_path,
+                                                     filter_for_bugs,
+                                                     self.num_threads)
 
     # 3. sort results by popularity
     def mysort(res_list):
