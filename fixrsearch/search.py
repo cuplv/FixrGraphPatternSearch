@@ -9,9 +9,11 @@ import logging
 import json
 import tempfile
 from threading import Timer
+import threading
 from subprocess import Popen, PIPE
 import re
 import tempfile
+
 
 try:
     import Queue as Queue
@@ -162,16 +164,22 @@ class ClusterSearchData:
   """
 
   def __init__(self,
+               groum_path,
                cluster_path,
                search_lattice_path,
                groum_index,
                timeout,
-               blacklist):
+               blacklist,
+               filter_for_bugs,
+               cluster_info):
+    self.groum_path = groum_path
     self.cluster_path = cluster_path
     self.search_lattice_path = search_lattice_path
     self.groum_index = groum_index.copy()
     self.timeout = timeout
     self.blacklist = blacklist.copy()
+    self.filter_for_bugs = filter_for_bugs
+    self.cluster_info = cluster_info
 
 class Search():
 
@@ -270,14 +278,26 @@ class Search():
     """
     logging.info("Search for groum %s" % groum_path)
 
-    # 1. Search the clusters
-    clusters = self._get_clusters(groum_path)
+    # 1. Get the clusters and filter them
+    clusters = []
+    for cluster_info in self._get_clusters(groum_path):
+      if ((not filter_cluster is None) and
+          (not cluster_info.id in filter_cluster)):
+        logging.debug("Filtered out cluster %s", cluster_info.id)
+        continue
+
+      if  (self.blacklist.has_all_cluster(int(cluster_info.id))):
+        logging.debug("Skipping blacklisted cluster %s....", cluster_info.id)
+        continue
+
+      clusters.append(cluster_info)
+
 
     # 2. Search the clusters
-    results = self.search_all_clusters(clusters,
-                                       groum_path,
-                                       filter_for_bugs,
-                                       filter_cluster)
+    results = self.search_all_clusters_multithread(clusters,
+                                                   groum_path,
+                                                   filter_for_bugs,
+                                                   8)
 
     # 3. sort results by popularity
     def mysort(res_list):
@@ -318,33 +338,23 @@ class Search():
 
   def search_all_clusters(self, clusters,
                           groum_path,
-                          filter_for_bugs,
-                          filter_cluster):
+                          filter_for_bugs):
     results = []
 
     for cluster_info in clusters:
       logging.debug("Searching in cluster %d (%s)..." % (cluster_info.id,
                                                          ",".join(cluster_info.methods_list)))
 
-      if ((not filter_cluster is None) and
-          (not cluster_info.id in filter_cluster)):
-        logging.debug("Filtered out cluster %s", cluster_info.id)
-        continue
-
-      if  (self.blacklist.has_all_cluster(int(cluster_info.id))):
-        logging.debug("Skipping blacklisted cluster %s....", cluster_info.id)
-        continue
-
-      cluster_data = ClusterSearchData(self.cluster_path,
+      cluster_data = ClusterSearchData(groum_path,
+                                       self.cluster_path,
                                        self.search_lattice_path,
                                        self.groum_index,
                                        self.timeout,
-                                       self.blacklist)
+                                       self.blacklist,
+                                       filter_for_bugs,
+                                       cluster_info)
 
-      results_cluster = Search.search_cluster(cluster_data,
-                                              groum_path,
-                                              cluster_info,
-                                              filter_for_bugs)
+      results_cluster = Search.search_cluster(cluster_data)
 
       Search.postprocess_cluster_results(cluster_info,
                                          results_cluster,
@@ -352,26 +362,89 @@ class Search():
 
     return results
 
+  def search_all_clusters_multithread(self, clusters,
+                                      groum_path,
+                                      filter_for_bugs,
+                                      threads_count):
+    def worker():
+      while True:
+        item = q.get()
+        if item is None:
+          break
+
+        (thread_results, cluster_data) = item
+
+        do_work(cluster_data, thread_results)
+        q.task_done()
+
+    def do_work(cluster_data, results):
+      try:
+        logging.debug("Searching in cluster %d (%s)..." % (cluster_data.cluster_info.id,
+                                                           ",".join(cluster_data.cluster_info.methods_list)))
+        results_cluster = Search.search_cluster(cluster_data)
+        Search.postprocess_cluster_results(cluster_info,
+                                           results_cluster,
+                                           results)
+      except e:
+        logging.debug("Error searching the cluster %d (%s)..." % (cluster_data.cluster_info.id,
+                                                                  str(e)))
+      finally:
+        return
+
+    q = Queue.Queue()
+    threads = []
+    for i in range(threads_count):
+      t = threading.Thread(target = worker)
+      t.start()
+      threads.append(t)
+
+    threads_results = [[] for c in clusters]
+    i = -1
+    for cluster_info in clusters:
+      i = i + 1
+      logging.debug("Enqueuing search for cluster %d (%s)..." % (cluster_info.id,
+                                                                 ",".join(cluster_info.methods_list)))
+      cluster_data = ClusterSearchData(groum_path,
+                                       self.cluster_path,
+                                       self.search_lattice_path,
+                                       self.groum_index,
+                                       self.timeout,
+                                       self.blacklist,
+                                       filter_for_bugs,
+                                       cluster_info)
+      q.put((threads_results[i], cluster_data))
+    q.join()
+
+    for i in range(len(threads)):
+      q.put(None)
+
+    for t in threads:
+      t.join()
+
+    results = []
+    for thread_result in threads_results:
+      results.extend(thread_result)
+
+    return results
+
 
 
   @staticmethod
-  def search_cluster(cluster_data, groum_path, cluster_info,
-                     filter_for_bugs = False):
+  def search_cluster(cluster_data):
     """
     Search for similarities and anomalies inside a single lattice
     """
     current_path = os.path.join(cluster_data.cluster_path,
                                 "all_clusters",
-                                "cluster_%d" % cluster_info.id)
+                                "cluster_%d" % cluster_data.cluster_info.id)
     lattice_path = os.path.join(current_path,
-                                "cluster_%d_lattice.bin" % cluster_info.id)
+                                "cluster_%d_lattice.bin" % cluster_data.cluster_info.id)
 
     if (os.path.exists(lattice_path)):
       logging.debug("Searching lattice %s..." % lattice_path)
       result = Search.call_iso(cluster_data,
-                               groum_path, lattice_path,
-                               int(cluster_info.id),
-                               filter_for_bugs)
+                               lattice_path,
+                               int(cluster_data.cluster_info.id))
     else:
       logging.debug("Lattice file %s not found" % lattice_path)
       result = None
@@ -380,11 +453,7 @@ class Search():
 
 
   @staticmethod
-  def call_iso(cluster_data,
-               groum_path,
-               lattice_path,
-               cluster_id,
-               filter_for_bugs = False):
+  def call_iso(cluster_data, lattice_path, cluster_id):
     """
     Search the element in the lattice that are similar to the groum
     """
@@ -394,7 +463,7 @@ class Search():
     os.close(search_file)
 
     args = [cluster_data.search_lattice_path,
-            "-q", groum_path,
+            "-q", cluster_data.groum_path,
             "-l", lattice_path,
             "-o", search_path]
     logging.debug("Command line %s" % " ".join(args))
@@ -426,8 +495,7 @@ class Search():
     else:
       logging.info("Search finished...")
 
-      result = Search.formatOutput(cluster_data, search_path, cluster_id,
-                                   filter_for_bugs)
+      result = Search.formatOutput(cluster_data, search_path, cluster_id)
 
     if os.path.isfile(search_path):
       os.remove(search_path)
@@ -468,7 +536,7 @@ class Search():
     return (res_type, subsumes_ref, subsumes_anom)
 
   @staticmethod
-  def formatOutput(cluster_data, search_path, cluster_id, filter_for_bugs=False):
+  def formatOutput(cluster_data, search_path, cluster_id):
     """
     Read the results from the search and produce the json output
     """
@@ -509,7 +577,7 @@ class Search():
       # Just show ANOMALOUS_SUBSUMED patterns
       # anomaly_categories = ["ANOMALOUS_SUBSUMED", "CORRECT_SUBSUMED"]
       anomaly_categories = ["ANOMALOUS_SUBSUMED"]
-      if (filter_for_bugs and (not res_type in anomaly_categories)):
+      if (cluster_data.filter_for_bugs and (not res_type in anomaly_categories)):
         logging.info("Filtering cluster (not anomalous or correct subsumed)")
         continue
 
