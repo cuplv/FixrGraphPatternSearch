@@ -115,7 +115,10 @@ class PatternFilters:
 
   def copy(self):
     other = PatternFilters()
-    other.blacklist = self.blacklist.copy()
+
+    for key, values in self.blacklist.iteritems():
+      other.blacklist[key] = [l for l in values]
+
     return other
 
   def __init__(self):
@@ -144,7 +147,7 @@ class PatternFilters:
           if (len(patterns) == 0):
             logging.info("Will skip cluster id %d" % cluster_id)
 
-          self.blacklist[cluster_id] = list(patterns)
+          self.blacklist[cluster_id] = patterns
     except Exception as e:
       logging.error(e.message)
       logging.error("Cannot read blacklist")
