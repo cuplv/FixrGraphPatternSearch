@@ -430,6 +430,23 @@ def explain_anomaly():
                     mimetype='application/json')
 
 
+def remote_debug():
+    content = request.get_json(force=True)
+    if content is None:
+        return get_malformed_request()
+
+    if not "msg" in content:
+        return get_malformed_request("msg not provided!")
+
+    # Just print the message
+    logging.debug("Received message:\n%s\n---\n" % content["msg"])
+
+    return Response(
+        json.dumps({}),
+        status=200,
+        mimetype='application/json')
+
+
 def flaskrun(default_host="127.0.0.1", default_port="5000"):
     p = optparse.OptionParser()
 
@@ -452,11 +469,11 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
 
     def usage(msg=""):
         if msg:
-            print "----%s----\n" % msg
+            print("----%s----\n" % msg)
             p.print_help()
-            print "Example of usage %s" % ("python search_service.py " \
+            print("Example of usage %s" % ("python search_service.py " \
                                            "-c <cluster_path>" \
-                                           "-i <searchlattice>")
+                                           "-i <searchlattice>"))
         sys.exit(1)
     opts, args = p.parse_args()
 
@@ -485,10 +502,13 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
     else:
         logging.basicConfig(level=logging.INFO)
 
-    app = create_app(opts.graph_path, opts.cluster_path,
+    app = create_app(opts.graph_path,
+                     opts.cluster_path,
                      opts.iso_path,
                      DB_NAME,
-                     srchost,srcport)
+                     srchost,
+                     srcport,
+                     opts.debug)
 
     app.run(
         debug=opts.debug,
@@ -498,10 +518,13 @@ def flaskrun(default_host="127.0.0.1", default_port="5000"):
     logging.info("Running server...")
 
 
-def create_app(graph_path, cluster_path, iso_path,
+def create_app(graph_path,
+               cluster_path,
+               iso_path,
                db_path = DB_NAME,
                src_client_address = None,
-               src_client_port = None):
+               src_client_port = None,
+               debug = False):
     app = Flask(__name__)
     app.config[TIMEOUT] = 360
     app.config[CLUSTER_PATH] = cluster_path
@@ -537,6 +560,9 @@ def create_app(graph_path, cluster_path, iso_path,
     app.route('/inspect_anomaly', methods=['POST'])(inspect_anomaly)
     app.route('/explain_anomaly', methods=['POST'])(explain_anomaly)
     app.route('/process_muse_data', methods=['POST'])(process_muse_data)
+
+    if debug:
+        app.route('/remote_debug', methods=['POST'])(remote_debug)
 
 
     return app
