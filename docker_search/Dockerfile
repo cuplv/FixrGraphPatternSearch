@@ -74,7 +74,11 @@ RUN echo "Cloning repo..."
 RUN git clone https://github.com/cuplv/biggroum \
     && cd biggroum \
     && git checkout develop \
-    && git submodule update --init --recursive
+    && git submodule update --init --recursive \
+    && cd FixrGrapPatternSearch \
+    && git fetch \
+    && git checkout --track origin/remote_debug \
+    && git pull
 
 # Build the graph mining/frequent itemset mining tool
 RUN cd biggroum/FixrGraphIso \
