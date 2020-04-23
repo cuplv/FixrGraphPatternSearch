@@ -599,6 +599,10 @@ class Search():
         logging.info("Filtering blacklisted pattern %d %d..." % (int(cluster_id),
                                                                  int(bin_id)))
         continue
+      else:
+        logging.info("Processing pattern %d %d..." % (int(cluster_id),
+                                                      int(bin_id)))
+
 
       # Process the reference pattern, and set it as
       # popular key in the result
